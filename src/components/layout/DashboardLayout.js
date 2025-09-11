@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import {
+    Home,
+    Search,
+    Calendar,
+    MessageSquare,
+    CheckSquare,
+    Users,
+    Settings,
+    BookOpen,
+    BarChart,
+    Menu,
+    X
+} from 'lucide-react';
+
+const DashboardLayout = ({ userRole, children }) => {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const { user, logout } = useAuth();
+    const location = useLocation();
+
+    // Define navigation items based on user role
+    const getNavigationItems = () => {
+        const commonItems = [
+            { name: 'Dashboard', href: `/${userRole}`, icon: Home },
+            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
+            { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
+            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
+        ];
+
+        const roleSpecificItems = {
+            student: [
+                { name: 'Find Tutors', href: '/student/tutors', icon: Search },
+                { name: 'My Sessions', href: '/student/sessions', icon: BookOpen }
+            ],
+            tutor: [
+                { name: 'My Students', href: '/tutor/students', icon: Users },
+                { name: 'My Sessions', href: '/tutor/sessions', icon: BookOpen },
+                { name: 'Analytics', href: '/tutor/analytics', icon: BarChart }
+            ],
+            admin: [
+                { name: 'Users', href: '/admin/users', icon: Users },
+                { name: 'Sessions', href: '/admin/sessions', icon: BookOpen },
+                { name: 'Analytics', href: '/admin/analytics', icon: BarChart }
+            ]
+        };
+
+        return [
+            ...commonItems,
+            ...roleSpecificItems[userRole],
+            { name: 'Settings', href: `/${userRole}/settings`, icon: Settings }
+        ];
+    };
+
+    const navigation = getNavigationItems();
+
+    const isCurrentPath = (href) => {
+        if (href === `/${userRole}`) {
+            return location.pathname === href;
+        }
+        return location.pathname.startsWith(href);
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 flex">
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'block' : 'hidden'} fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform lg:translate-x-0 lg:static lg:inset-0 lg:block transition-transform duration-300 ease-in-out`}>
+                <div className="flex items-center justify-between h-16 px-6 bg-primary-600 text-white">
+                    <Link to="/" className="font-bold text-lg">
+                        Tutor Connect
+                    </Link>
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="lg:hidden"
+                    >
+                        <X className="h-6 w-6" />
+                    </button>
+                </div>
+
+                {/* User Profile Section */}
+                <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center">
+                        <img
+                            className="h-10 w-10 rounded-full object-cover"
+                            src={user?.profile?.avatar}
+                            alt={user?.profile?.firstName}
+                        />
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-900">
+                                {user?.profile?.firstName} {user?.profile?.lastName}
+                            </p>
+                            <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Navigation */}
+                <nav className="mt-6 px-3">
+                    <div className="space-y-1">
+                        {navigation.map((item) => {
+                            const Icon = item.icon;
+                            const current = isCurrentPath(item.href);
+
+                            return (
+                                <Link
+                                    key={item.name}
+                                    to={item.href}
+                                    className={`${current
+                                        ? 'bg-primary-50 text-primary-600 border-r-2 border-primary-600'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                        } group flex items-center px-3 py-2 text-sm font-medium rounded-l-md transition-colors`}
+                                    onClick={() => setSidebarOpen(false)}
+                                >
+                                    <Icon
+                                        className={`${current ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'
+                                            } mr-3 h-5 w-5 transition-colors`}
+                                    />
+                                    {item.name}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </nav>
+
+                {/* Bottom section */}
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <button
+                        onClick={logout}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Top bar */}
+                <header className="bg-white shadow-sm border-b border-gray-200">
+                    <div className="flex items-center justify-between px-6 py-4">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="text-gray-500 hover:text-gray-700 lg:hidden"
+                        >
+                            <Menu className="h-6 w-6" />
+                        </button>
+
+                        <div className="flex items-center space-x-4">
+                            {/* Notifications could go here */}
+                            <div className="text-sm text-gray-500">
+                                {new Date().toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Main content area */}
+                <main className="flex-1 overflow-y-auto">
+                    <div className="p-6">
+                        {children}
+                    </div>
+                </main>
+            </div>
+
+            {/* Sidebar overlay for mobile */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 z-40 lg:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                >
+                    <div className="absolute inset-0 bg-black opacity-50"></div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default DashboardLayout;
