@@ -31,7 +31,7 @@ A comprehensive web platform connecting students with tutors, featuring intellig
 
 ## 📁 Project Structure
 
-```
+```text
 src/
 ├── components/
 │   ├── auth/          # Login, Signup components
@@ -140,7 +140,54 @@ Try the application with these demo accounts:
 - Email: `carol@example.com`
 - Password: `admin123`
 
-## 📊 Mock Data
+## � Deployment
+
+### Live Demo
+
+The application is deployed on GitHub Pages and can be accessed at:
+**[https://Abhinaykotla.github.io/Tutor_Connect_Group2](https://Abhinaykotla.github.io/Tutor_Connect_Group2)**
+
+### Deploy to GitHub Pages
+
+This project is configured for easy deployment to GitHub Pages:
+
+1. **Build and Deploy**
+
+   ```bash
+   npm run deploy
+   ```
+
+   This command will:
+   - Build the production version of the app
+   - Deploy it to the `gh-pages` branch
+   - Make it available on GitHub Pages
+
+2. **Manual Deployment**
+
+   If you need to deploy manually:
+
+   ```bash
+   npm run build
+   npx gh-pages -d build
+   ```
+
+### Deployment Configuration
+
+The deployment is configured in `package.json`:
+
+- **Homepage**: Points to your GitHub Pages URL
+- **Predeploy Script**: Automatically builds before deployment
+- **Deploy Script**: Uses gh-pages to deploy the build folder
+
+**Note**: The application uses `HashRouter` instead of `BrowserRouter` to ensure proper routing on GitHub Pages. URLs will have a `#` symbol (e.g., `/#/student/dashboard`) which is normal for GitHub Pages deployments.
+
+### Requirements for Deployment
+
+- Repository must be public (for free GitHub Pages)
+- GitHub Pages must be enabled in repository settings
+- The `gh-pages` package is installed as a dev dependency
+
+## �📊 Mock Data
 
 The application includes comprehensive mock data:
 
