@@ -22,12 +22,21 @@ const DashboardLayout = ({ userRole, children }) => {
 
     // Define navigation items based on user role
     const getNavigationItems = () => {
-        const commonItems = [
+        // Base common items for students and tutors
+        const baseCommonItems = [
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
             { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
             { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
             { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
         ];
+
+        // Admin gets different common items (no calendar or tasks)
+        const adminCommonItems = [
+            { name: 'Dashboard', href: `/${userRole}`, icon: Home },
+            { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare }
+        ];
+
+        const commonItems = userRole === 'admin' ? adminCommonItems : baseCommonItems;
 
         const roleSpecificItems = {
             student: [
