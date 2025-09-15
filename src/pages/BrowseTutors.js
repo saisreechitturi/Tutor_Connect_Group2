@@ -1,0 +1,289 @@
+import React, { useState } from 'react';
+import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
+import { tutorProfiles, users } from '../data';
+import { Link } from 'react-router-dom';
+
+const BrowseTutors = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState('');
+    const [priceRange, setPriceRange] = useState('');
+    const [sortBy, setSortBy] = useState('rating');
+
+    // Combine tutor profiles with user data
+    const tutorsWithProfiles = tutorProfiles.map(profile => {
+        const user = users.find(u => u.id === profile.userId);
+        return { ...profile, user };
+    });
+
+    // Get unique subjects from tutors
+    const subjects = [...new Set(tutorsWithProfiles.flatMap(tutor => tutor.subjects))].sort();
+
+    // Filter tutors based on search criteria
+    const filteredTutors = tutorsWithProfiles.filter(tutor => {
+        const matchesSearch = !searchTerm ||
+            tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            tutor.user.profile.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tutor.user.profile.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tutor.user.profile.bio.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesSubject = !selectedSubject || tutor.subjects.includes(selectedSubject);
+
+        const matchesPrice = !priceRange ||
+            (priceRange === 'low' && tutor.hourlyRate <= 30) ||
+            (priceRange === 'medium' && tutor.hourlyRate > 30 && tutor.hourlyRate <= 60) ||
+            (priceRange === 'high' && tutor.hourlyRate > 60);
+
+        return matchesSearch && matchesSubject && matchesPrice;
+    });
+
+    // Sort tutors
+    const sortedTutors = [...filteredTutors].sort((a, b) => {
+        switch (sortBy) {
+            case 'rating':
+                return b.rating - a.rating;
+            case 'price_low':
+                return a.hourlyRate - b.hourlyRate;
+            case 'price_high':
+                return b.hourlyRate - a.hourlyRate;
+            case 'experience':
+                return b.experience - a.experience;
+            default:
+                return b.rating - a.rating;
+        }
+    });
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center">
+                        <h1 className="text-4xl font-bold mb-4">Find Your Perfect Tutor</h1>
+                        <p className="text-xl text-primary-100">
+                            Browse our network of expert tutors and find the perfect match for your learning needs
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Search and Filters */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {/* Search Input */}
+                        <div className="lg:col-span-2">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search tutors, subjects..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Subject Filter */}
+                        <div>
+                            <select
+                                value={selectedSubject}
+                                onChange={(e) => setSelectedSubject(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value="">All Subjects</option>
+                                {subjects.map((subject) => (
+                                    <option key={subject} value={subject}>
+                                        {subject}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Price Range Filter */}
+                        <div>
+                            <select
+                                value={priceRange}
+                                onChange={(e) => setPriceRange(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value="">Any Price</option>
+                                <option value="low">Under $30/hr</option>
+                                <option value="medium">$30-60/hr</option>
+                                <option value="high">Over $60/hr</option>
+                            </select>
+                        </div>
+
+                        {/* Sort By */}
+                        <div>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                                <option value="rating">Highest Rated</option>
+                                <option value="price_low">Price: Low to High</option>
+                                <option value="price_high">Price: High to Low</option>
+                                <option value="experience">Most Experienced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Results Count */}
+                    <div className="mt-4 text-sm text-gray-600">
+                        Showing {sortedTutors.length} of {tutorsWithProfiles.length} tutors
+                    </div>
+                </div>
+
+                {/* Tutors Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {sortedTutors.map((tutor) => (
+                        <div key={tutor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            {/* Tutor Header */}
+                            <div className="flex items-start space-x-4 mb-4">
+                                <img
+                                    src={tutor.user.profile.avatar}
+                                    alt={`${tutor.user.profile.firstName} ${tutor.user.profile.lastName}`}
+                                    className="w-16 h-16 rounded-full object-cover"
+                                />
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        {tutor.user.profile.firstName} {tutor.user.profile.lastName}
+                                    </h3>
+                                    <div className="flex items-center mt-1">
+                                        <div className="flex items-center">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className={`h-4 w-4 ${i < Math.floor(tutor.rating)
+                                                            ? 'text-yellow-400 fill-current'
+                                                            : 'text-gray-300'
+                                                        }`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <span className="ml-2 text-sm text-gray-600">
+                                            {tutor.rating} ({tutor.totalReviews} reviews)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Subjects */}
+                            <div className="mb-4">
+                                <div className="flex flex-wrap gap-2">
+                                    {tutor.subjects.slice(0, 3).map((subject) => (
+                                        <span
+                                            key={subject}
+                                            className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                                        >
+                                            {subject}
+                                        </span>
+                                    ))}
+                                    {tutor.subjects.length > 3 && (
+                                        <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                                            +{tutor.subjects.length - 3} more
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Bio */}
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.user.profile.bio}</p>
+
+                            {/* Stats */}
+                            <div className="grid grid-cols-3 gap-4 mb-4 text-center">
+                                <div>
+                                    <div className="flex items-center justify-center mb-1">
+                                        <DollarSign className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <p className="text-lg font-semibold text-gray-900">${tutor.hourlyRate}</p>
+                                    <p className="text-xs text-gray-500">per hour</p>
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-center mb-1">
+                                        <BookOpen className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <p className="text-lg font-semibold text-gray-900">{tutor.totalSessions}</p>
+                                    <p className="text-xs text-gray-500">sessions</p>
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-center mb-1">
+                                        <Clock className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <p className="text-lg font-semibold text-gray-900">{tutor.experience}</p>
+                                    <p className="text-xs text-gray-500">experience</p>
+                                </div>
+                            </div>
+
+                            {/* Availability */}
+                            <div className="mb-4">
+                                <div className="flex items-center text-sm text-gray-600">
+                                    <Clock className="h-4 w-4 mr-1" />
+                                    <span>Available most days</span>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="space-y-2">
+                                <Link
+                                    to="/signup"
+                                    className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors text-center block font-medium"
+                                >
+                                    Book Session
+                                </Link>
+                                <button className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                                    View Profile
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* No Results */}
+                {sortedTutors.length === 0 && (
+                    <div className="text-center py-12">
+                        <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No tutors found</h3>
+                        <p className="text-gray-500 mb-4">Try adjusting your search criteria to find more tutors.</p>
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setSelectedSubject('');
+                                setPriceRange('');
+                                setSortBy('rating');
+                            }}
+                            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                        >
+                            Clear Filters
+                        </button>
+                    </div>
+                )}
+
+                {/* Call to Action */}
+                <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-8 text-white text-center">
+                    <h2 className="text-2xl font-bold mb-4">Ready to Start Learning?</h2>
+                    <p className="text-primary-100 mb-6">
+                        Join thousands of students who have found their perfect tutor on Tutor Connect
+                    </p>
+                    <div className="space-x-4">
+                        <Link
+                            to="/signup"
+                            className="bg-white text-primary-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium inline-block"
+                        >
+                            Get Started Free
+                        </Link>
+                        <Link
+                            to="/login"
+                            className="border border-white text-white px-6 py-3 rounded-lg hover:bg-white hover:text-primary-600 transition-colors font-medium inline-block"
+                        >
+                            Sign In
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default BrowseTutors;

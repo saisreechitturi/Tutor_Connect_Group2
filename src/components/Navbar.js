@@ -78,6 +78,12 @@ function Navbar() {
                             </>
                         ) : (
                             <>
+                                <Link to="/about" className="hover:text-primary-100 transition-colors">
+                                    About Us
+                                </Link>
+                                <Link to="/browse-tutors" className="hover:text-primary-100 transition-colors">
+                                    Browse Tutors
+                                </Link>
                                 <Link to="/login" className="hover:text-primary-100 transition-colors">
                                     Sign In
                                 </Link>
@@ -134,6 +140,20 @@ function Navbar() {
                                 </>
                             ) : (
                                 <>
+                                    <Link
+                                        to="/about"
+                                        className="block px-3 py-2 text-base font-medium hover:text-primary-100 transition-colors"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        About Us
+                                    </Link>
+                                    <Link
+                                        to="/browse-tutors"
+                                        className="block px-3 py-2 text-base font-medium hover:text-primary-100 transition-colors"
+                                        onClick={() => setIsOpen(false)}
+                                    >
+                                        Browse Tutors
+                                    </Link>
                                     <Link
                                         to="/login"
                                         className="block px-3 py-2 text-base font-medium hover:text-primary-100 transition-colors"

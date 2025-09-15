@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
+import AboutUs from './pages/AboutUs';
+import BrowseTutors from './pages/BrowseTutors';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import StudentRoutes from './routes/StudentRoutes';
@@ -43,6 +45,28 @@ function App() {
                             element={
                                 <ProtectedRoute requireAuth={false}>
                                     <Signup />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/about"
+                            element={
+                                <ProtectedRoute requireAuth={false}>
+                                    <>
+                                        <Navbar />
+                                        <AboutUs />
+                                    </>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/browse-tutors"
+                            element={
+                                <ProtectedRoute requireAuth={false}>
+                                    <>
+                                        <Navbar />
+                                        <BrowseTutors />
+                                    </>
                                 </ProtectedRoute>
                             }
                         />
