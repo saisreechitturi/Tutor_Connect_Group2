@@ -7,7 +7,7 @@ const BrowseTutors = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [priceRange, setPriceRange] = useState('');
-    const [sortBy, setSortBy] = useState('rating');
+    const [sortBy, setSortBy] = useState('price_low');
 
     // Combine tutor profiles with user data
     const tutorsWithProfiles = tutorProfiles.map(profile => {
@@ -39,16 +39,12 @@ const BrowseTutors = () => {
     // Sort tutors
     const sortedTutors = [...filteredTutors].sort((a, b) => {
         switch (sortBy) {
-            case 'rating':
-                return b.rating - a.rating;
             case 'price_low':
                 return a.hourlyRate - b.hourlyRate;
             case 'price_high':
                 return b.hourlyRate - a.hourlyRate;
-            case 'experience':
-                return b.experience - a.experience;
             default:
-                return b.rating - a.rating;
+                return a.hourlyRate - b.hourlyRate;
         }
     });
 
@@ -121,10 +117,9 @@ const BrowseTutors = () => {
                                 onChange={(e) => setSortBy(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             >
-                                <option value="rating">Highest Rated</option>
+                                {/* Ranking removed per scope simplification */}
                                 <option value="price_low">Price: Low to High</option>
                                 <option value="price_high">Price: High to Low</option>
-                                <option value="experience">Most Experienced</option>
                             </select>
                         </div>
                     </div>
@@ -251,7 +246,7 @@ const BrowseTutors = () => {
                                 setSearchTerm('');
                                 setSelectedSubject('');
                                 setPriceRange('');
-                                setSortBy('rating');
+                                setSortBy('price_low');
                             }}
                             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
                         >

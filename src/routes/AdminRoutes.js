@@ -3,8 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminUserManagement from '../pages/AdminUserManagement';
 import AdminSessionManagement from '../pages/AdminSessionManagement';
-import AdminPlatformAnalytics from '../pages/AdminPlatformAnalytics';
-import AdminMessagesSystem from '../pages/AdminMessagesSystem';
+// Removed advanced analytics and admin messaging per scope simplification
 
 const AdminDashboard = () => (
     <div className="space-y-6">
@@ -47,8 +46,7 @@ const AdminRoutes = () => {
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUserManagement />} />
                 <Route path="sessions" element={<AdminSessionManagement />} />
-                <Route path="analytics" element={<AdminPlatformAnalytics />} />
-                <Route path="messages" element={<AdminMessagesSystem />} />
+                {/* Analytics and Admin Messaging removed */}
                 <Route path="settings" element={<div className="p-4">System Settings - Coming Soon</div>} />
             </Routes>
         </DashboardLayout>

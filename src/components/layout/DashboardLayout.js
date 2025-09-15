@@ -30,10 +30,9 @@ const DashboardLayout = ({ userRole, children }) => {
             { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
         ];
 
-        // Admin gets different common items (no calendar or tasks)
+        // Admin gets different common items (no calendar or tasks) and no platform messages
         const adminCommonItems = [
-            { name: 'Dashboard', href: `/${userRole}`, icon: Home },
-            { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare }
+            { name: 'Dashboard', href: `/${userRole}`, icon: Home }
         ];
 
         const commonItems = userRole === 'admin' ? adminCommonItems : baseCommonItems;
@@ -50,8 +49,7 @@ const DashboardLayout = ({ userRole, children }) => {
             ],
             admin: [
                 { name: 'Users', href: '/admin/users', icon: Users },
-                { name: 'Sessions', href: '/admin/sessions', icon: BookOpen },
-                { name: 'Analytics', href: '/admin/analytics', icon: BarChart }
+                { name: 'Sessions', href: '/admin/sessions', icon: BookOpen }
             ]
         };
 

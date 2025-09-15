@@ -94,7 +94,6 @@ const TutorSettings = () => {
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
-        { id: 'availability', label: 'Availability', icon: Calendar },
         { id: 'rates', label: 'Rates & Pricing', icon: DollarSign },
         { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'privacy', label: 'Privacy', icon: Shield },
@@ -165,8 +164,8 @@ const TutorSettings = () => {
                                 key={id}
                                 onClick={() => setActiveTab(id)}
                                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${activeTab === id
-                                        ? 'border-primary-500 text-primary-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-primary-500 text-primary-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -275,86 +274,7 @@ const TutorSettings = () => {
                         </div>
                     )}
 
-                    {activeTab === 'availability' && (
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Availability Settings</h3>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                                        <select
-                                            value={availability.timezone}
-                                            onChange={(e) => handleInputChange('availability', 'timezone', e.target.value)}
-                                            className="input-field"
-                                        >
-                                            <option value="America/Los_Angeles">Pacific Time</option>
-                                            <option value="America/Denver">Mountain Time</option>
-                                            <option value="America/Chicago">Central Time</option>
-                                            <option value="America/New_York">Eastern Time</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Buffer Time (minutes)</label>
-                                        <select
-                                            value={availability.bufferTime}
-                                            onChange={(e) => handleInputChange('availability', 'bufferTime', parseInt(e.target.value))}
-                                            className="input-field"
-                                        >
-                                            <option value={0}>No buffer</option>
-                                            <option value={15}>15 minutes</option>
-                                            <option value={30}>30 minutes</option>
-                                            <option value={60}>1 hour</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h4 className="font-medium text-gray-900">Weekly Schedule</h4>
-                                    {Object.entries(availability.schedule).map(([day, daySettings]) => (
-                                        <div key={day} className="border border-gray-200 rounded-lg p-4">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center space-x-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={daySettings.enabled}
-                                                        onChange={(e) => {
-                                                            const newSchedule = { ...availability.schedule };
-                                                            newSchedule[day].enabled = e.target.checked;
-                                                            setAvailability(prev => ({ ...prev, schedule: newSchedule }));
-                                                        }}
-                                                        className="rounded border-gray-300"
-                                                    />
-                                                    <h5 className="font-medium text-gray-900 capitalize">{day}</h5>
-                                                </div>
-                                            </div>
-                                            {daySettings.enabled && (
-                                                <TimeSlotManager
-                                                    day={day}
-                                                    slots={daySettings.slots}
-                                                    onUpdate={(day, slots) => {
-                                                        const newSchedule = { ...availability.schedule };
-                                                        newSchedule[day].slots = slots;
-                                                        setAvailability(prev => ({ ...prev, schedule: newSchedule }));
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="flex justify-end pt-4">
-                                    <button
-                                        onClick={() => handleSave('availability')}
-                                        className="btn-primary flex items-center space-x-2"
-                                    >
-                                        <Save className="h-4 w-4" />
-                                        <span>Save Availability</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Availability tab removed per scope simplification */}
 
                     {activeTab === 'rates' && (
                         <div className="space-y-6">

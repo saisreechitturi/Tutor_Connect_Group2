@@ -44,8 +44,7 @@ export const messages = [
         content: "Hi Bob! Thanks for the great React session yesterday.",
         type: "text",
         timestamp: "2024-09-11T09:15:00Z",
-        edited: false,
-        attachments: []
+        edited: false
     },
     {
         id: 2,
@@ -54,8 +53,7 @@ export const messages = [
         content: "You're welcome! You're making great progress with React hooks.",
         type: "text",
         timestamp: "2024-09-11T09:45:00Z",
-        edited: false,
-        attachments: []
+        edited: false
     },
     {
         id: 3,
@@ -64,8 +62,7 @@ export const messages = [
         content: "Looking forward to our next session!",
         type: "text",
         timestamp: "2024-09-11T10:30:00Z",
-        edited: false,
-        attachments: []
+        edited: false
     },
     {
         id: 4,
@@ -74,26 +71,16 @@ export const messages = [
         content: "Hi Alice! I've prepared some materials for our upcoming statistics session.",
         type: "text",
         timestamp: "2024-09-11T13:15:00Z",
-        edited: false,
-        attachments: []
+        edited: false
     },
     {
         id: 5,
         conversationId: 2,
         senderId: 5,
-        content: "Here's the document with practice problems we discussed.",
+        content: "Here's the practice problems document I mentioned in our last session.",
         type: "text",
         timestamp: "2024-09-11T13:30:00Z",
-        edited: false,
-        attachments: [
-            {
-                id: 1,
-                name: "statistics_practice_problems.pdf",
-                type: "application/pdf",
-                size: 245760,
-                url: "/files/statistics_practice_problems.pdf"
-            }
-        ]
+        edited: false
     },
     {
         id: 6,
@@ -102,16 +89,11 @@ export const messages = [
         content: "Could you share the practice problems you mentioned?",
         type: "text",
         timestamp: "2024-09-11T14:20:00Z",
-        edited: false,
-        attachments: []
+        edited: false
     }
 ];
 
-// Message types
+// Message types (simplified - no file attachments)
 export const messageTypes = [
-    "text",
-    "image",
-    "file",
-    "video",
-    "audio"
+    "text"
 ];
