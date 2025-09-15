@@ -198,18 +198,89 @@ This collection is optimized for tutor discovery and filtering:
     tutorFeedbackAt: Firebase.Timestamp
   },
   
+  // Payment information (PayPal frontend-only)
+  payment: {
+    id: "pay_abc123",
+    amount: 45.00,
+    currency: "USD",
+    status: "completed", // "pending" | "completed" | "failed" | "refunded"
+    paymentMethod: "paypal",
+    paypalOrderId: "8XE65426FR5234902", // PayPal order ID from frontend
+    paidAt: Firebase.Timestamp,
+    platformFee: 4.50,
+    tutorPayout: 40.50
+  },
+  
   // Cancellation info (if applicable)
   cancellationReason: null,
   cancelledBy: null,
   cancelledAt: null,
-  refundAmount: null,
+  refund: {
+    amount: null,
+    reason: null,
+    refundedAt: null
+  },
   
   createdAt: Firebase.Timestamp,
   updatedAt: Firebase.Timestamp
 }
 ```
 
-### 5. Tasks Collection
+### 5. Payments Collection
+
+**Path:** `payments/{paymentId}`
+
+```javascript
+{
+  id: "pay_abc123",
+  sessionId: "session_789ghi",
+  studentId: "user_123abc",
+  tutorId: "user_456def",
+  amount: 45.00,
+  currency: "USD",
+  status: "completed", // "pending" | "completed" | "failed" | "refunded"
+  paymentMethod: "paypal",
+  paypalOrderId: "8XE65426FR5234902", // PayPal order ID from frontend
+  
+  // Denormalized session info for easy access
+  sessionInfo: {
+    subject: "React Development",
+    scheduledStart: Firebase.Timestamp,
+    durationMinutes: 60
+  },
+  
+  // Denormalized user info
+  student: {
+    id: "user_123abc",
+    name: "Alice Johnson",
+    email: "student@example.com"
+  },
+  tutor: {
+    id: "user_456def",
+    name: "Bob Smith",
+    email: "tutor@example.com"
+  },
+  
+  // Payment timing
+  paidAt: Firebase.Timestamp,
+  
+  // Platform fees and payouts (for future manual processing)
+  platformFee: 4.50, // 10% platform fee
+  tutorPayout: 40.50, // Amount owed to tutor after fees
+  
+  // Refund information (if applicable)
+  refund: {
+    amount: null,
+    reason: null,
+    refundedAt: null
+  },
+  
+  createdAt: Firebase.Timestamp,
+  updatedAt: Firebase.Timestamp
+}
+```
+
+### 6. Tasks Collection
 
 **Path:** `tasks/{taskId}`
 
@@ -239,7 +310,7 @@ This collection is optimized for tutor discovery and filtering:
 }
 ```
 
-### 6. Calendar Events Collection
+### 7. Calendar Events Collection
 
 **Path:** `calendarEvents/{eventId}`
 
@@ -276,7 +347,7 @@ This collection is optimized for tutor discovery and filtering:
 }
 ```
 
-### 7. Conversations Collection
+### 8. Conversations Collection
 
 **Path:** `conversations/{conversationId}`
 
@@ -325,7 +396,7 @@ This collection is optimized for tutor discovery and filtering:
 }
 ```
 
-### 8. Messages Subcollection
+### 8.1. Messages Subcollection
 
 **Path:** `conversations/{conversationId}/messages/{messageId}`
 
@@ -498,7 +569,25 @@ db.collection('sessions')
   .orderBy('scheduledStart')
 ```
 
-3. **Get conversation messages (real-time):**
+3. **Get user's payment history:**
+
+```javascript
+db.collection('payments')
+  .where('studentId', '==', userId)
+  .orderBy('createdAt', 'desc')
+  .limit(20)
+```
+
+4. **Get tutor's completed payments:**
+
+```javascript
+db.collection('payments')
+  .where('tutorId', '==', tutorId)
+  .where('status', '==', 'completed')
+  .orderBy('paidAt', 'desc')
+```
+
+5. **Get conversation messages (real-time):**
 
 ```javascript
 db.collection('conversations')
@@ -515,8 +604,11 @@ These indexes need to be created in the Firebase Console:
 1. `tutorSearchIndex`: `subjects` (array) + `isAcceptingStudents` (ascending) + `rating` (descending)
 2. `sessions`: `studentId` (ascending) + `status` (ascending) + `scheduledStart` (ascending)
 3. `sessions`: `tutorId` (ascending) + `status` (ascending) + `scheduledStart` (ascending)
-4. `tasks`: `userId` (ascending) + `status` (ascending) + `dueDate` (ascending)
-5. `calendarEvents`: `userId` (ascending) + `startAt` (ascending)
+4. `payments`: `studentId` (ascending) + `createdAt` (descending)
+5. `payments`: `tutorId` (ascending) + `status` (ascending) + `paidAt` (descending)
+6. `payments`: `sessionId` (ascending) + `status` (ascending)
+7. `tasks`: `userId` (ascending) + `status` (ascending) + `dueDate` (ascending)
+8. `calendarEvents`: `userId` (ascending) + `startAt` (ascending)
 
 ## Migration Strategy
 

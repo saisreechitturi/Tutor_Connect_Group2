@@ -115,6 +115,31 @@ CREATE TABLE session_feedback (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Session payments (PayPal frontend-only)
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES users(id),
+    tutor_id UUID NOT NULL REFERENCES users(id),
+    amount NUMERIC(8,2) NOT NULL CHECK (amount > 0),
+    currency VARCHAR(3) DEFAULT 'USD',
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+    payment_method VARCHAR(20) DEFAULT 'paypal',
+    paypal_order_id TEXT, -- PayPal order ID from frontend
+    paid_at TIMESTAMPTZ,
+    refunded_at TIMESTAMPTZ,
+    refund_amount NUMERIC(8,2) CHECK (refund_amount >= 0),
+    refund_reason TEXT,
+    platform_fee NUMERIC(8,2) DEFAULT 0 CHECK (platform_fee >= 0),
+    tutor_payout NUMERIC(8,2), -- Amount paid to tutor after fees
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_refund CHECK (
+        (status = 'refunded' AND refunded_at IS NOT NULL AND refund_amount IS NOT NULL) OR
+        (status != 'refunded' AND refunded_at IS NULL)
+    )
+);
+
 -- ============================================================================
 -- STUDENT TASK MANAGEMENT
 -- ============================================================================
@@ -246,6 +271,14 @@ CREATE INDEX idx_sessions_status ON sessions(status);
 CREATE INDEX idx_sessions_student_status ON sessions(student_id, status);
 CREATE INDEX idx_sessions_tutor_status ON sessions(tutor_id, status);
 
+-- Payment indexes
+CREATE INDEX idx_payments_session_id ON payments(session_id);
+CREATE INDEX idx_payments_student_id ON payments(student_id);
+CREATE INDEX idx_payments_tutor_id ON payments(tutor_id);
+CREATE INDEX idx_payments_status ON payments(status);
+CREATE INDEX idx_payments_student_status ON payments(student_id, status);
+CREATE INDEX idx_payments_created ON payments(created_at);
+
 -- Task indexes
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
@@ -285,6 +318,7 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW
 CREATE TRIGGER update_tutor_profiles_updated_at BEFORE UPDATE ON tutor_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_session_feedback_updated_at BEFORE UPDATE ON session_feedback FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_calendar_events_updated_at BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
