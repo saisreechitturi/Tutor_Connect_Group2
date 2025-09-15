@@ -37,24 +37,7 @@ const Login = () => {
         setLoading(false);
     };
 
-    // Demo login buttons for testing
-    const handleDemoLogin = async (role) => {
-        const demoCredentials = {
-            student: { email: 'alice@example.com', password: 'password123' },
-            tutor: { email: 'bob@example.com', password: 'password123' },
-            admin: { email: 'carol@example.com', password: 'admin123' }
-        };
 
-        setLoading(true);
-        const creds = demoCredentials[role];
-        const result = await login(creds.email, creds.password);
-
-        if (!result.success) {
-            setError(result.error);
-        }
-
-        setLoading(false);
-    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -142,43 +125,7 @@ const Login = () => {
                         </button>
                     </div>
 
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300" />
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-gray-50 text-gray-500">Or try demo accounts</span>
-                            </div>
-                        </div>
 
-                        <div className="mt-6 grid grid-cols-3 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => handleDemoLogin('student')}
-                                className="btn-secondary text-xs"
-                                disabled={loading}
-                            >
-                                Demo Student
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleDemoLogin('tutor')}
-                                className="btn-secondary text-xs"
-                                disabled={loading}
-                            >
-                                Demo Tutor
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleDemoLogin('admin')}
-                                className="btn-secondary text-xs"
-                                disabled={loading}
-                            >
-                                Demo Admin
-                            </button>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>

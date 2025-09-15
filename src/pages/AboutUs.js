@@ -32,9 +32,9 @@ const AboutUs = () => {
             description: "Visionary leader driving innovation in educational technology and student success."
         },
         {
-            name: "Adarsh Cherukuri",
-            role: "Chief Technology Officer",
-            description: "Technology expert specializing in AI-powered learning solutions and platform architecture."
+            name: "Sai Prathyusha Celoth",
+            role: "Head of Academic Affairs",
+            description: "Educational expert developing curriculum standards and tutor quality assurance programs."
         },
         {
             name: "Chandan Cheni",
@@ -42,14 +42,14 @@ const AboutUs = () => {
             description: "Product strategist focused on creating intuitive learning experiences and user engagement."
         },
         {
+            name: "Adarsh Cherukuri",
+            role: "Chief Technology Officer",
+            description: "Technology expert specializing in AI-powered learning solutions and platform architecture."
+        },
+        {
             name: "Maatheswaran Kannan Chellapandian",
             role: "Head of Operations",
             description: "Operations specialist ensuring seamless platform performance and user satisfaction."
-        },
-        {
-            name: "Sai Prathyusha Celoth",
-            role: "Head of Academic Affairs",
-            description: "Educational expert developing curriculum standards and tutor quality assurance programs."
         }
     ];
 

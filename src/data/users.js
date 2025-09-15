@@ -74,7 +74,7 @@ export const users = [
             firstName: "David",
             lastName: "Wilson",
             phone: "+1234567894",
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+            avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
             bio: "Professional physicist with expertise in quantum mechanics and thermodynamics",
             location: "Boston, MA",
             joinedDate: "2023-08-20"
@@ -90,7 +90,7 @@ export const users = [
             firstName: "Maria",
             lastName: "Garcia",
             phone: "+1234567895",
-            avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150",
+            avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
             bio: "Spanish literature professor and native speaker specializing in language instruction",
             location: "Miami, FL",
             joinedDate: "2023-07-10"
