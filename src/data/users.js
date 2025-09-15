@@ -2,9 +2,9 @@
 export const users = [
     {
         id: 1,
-        email: "alice@example.com",
+        email: "student@example.com",
         username: "alice_student",
-        password: "password123", // Mock password
+        password: "demo",
         role: "student",
         profile: {
             firstName: "Alice",
@@ -18,9 +18,9 @@ export const users = [
     },
     {
         id: 2,
-        email: "bob@example.com",
+        email: "tutor@example.com",
         username: "bob_tutor",
-        password: "password123",
+        password: "demo",
         role: "tutor",
         profile: {
             firstName: "Bob",
@@ -34,9 +34,9 @@ export const users = [
     },
     {
         id: 3,
-        email: "carol@example.com",
+        email: "admin@example.com",
         username: "carol_admin",
-        password: "admin123",
+        password: "demo",
         role: "admin",
         profile: {
             firstName: "Carol",
@@ -50,34 +50,50 @@ export const users = [
     },
     {
         id: 4,
-        email: "david@example.com",
-        username: "david_student",
-        password: "password123",
-        role: "student",
-        profile: {
-            firstName: "David",
-            lastName: "Brown",
-            phone: "+1234567893",
-            avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-            bio: "Mathematics major seeking help with advanced calculus",
-            location: "Boston, MA",
-            joinedDate: "2024-02-01"
-        }
-    },
-    {
-        id: 5,
-        email: "emma@example.com",
+        email: "tutor2@example.com",
         username: "emma_tutor",
-        password: "password123",
+        password: "demo",
         role: "tutor",
         profile: {
             firstName: "Emma",
             lastName: "Davis",
-            phone: "+1234567894",
+            phone: "+1234567893",
             avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
             bio: "PhD in Mathematics, specializing in calculus and linear algebra",
             location: "Chicago, IL",
             joinedDate: "2023-09-15"
+        }
+    },
+    {
+        id: 5,
+        email: "tutor3@example.com",
+        username: "david_tutor",
+        password: "demo",
+        role: "tutor",
+        profile: {
+            firstName: "David",
+            lastName: "Wilson",
+            phone: "+1234567894",
+            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+            bio: "Professional physicist with expertise in quantum mechanics and thermodynamics",
+            location: "Boston, MA",
+            joinedDate: "2023-08-20"
+        }
+    },
+    {
+        id: 6,
+        email: "tutor4@example.com",
+        username: "maria_tutor",
+        password: "demo",
+        role: "tutor",
+        profile: {
+            firstName: "Maria",
+            lastName: "Garcia",
+            phone: "+1234567895",
+            avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150",
+            bio: "Spanish literature professor and native speaker specializing in language instruction",
+            location: "Miami, FL",
+            joinedDate: "2023-07-10"
         }
     }
 ];

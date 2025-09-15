@@ -66,7 +66,7 @@ const AboutUs = () => {
             <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-6">About Tutor Connect</h1>
+                        <h1 className="text-4xl md:text-5xl font-bold mb-6">About TutorConnect</h1>
                         <p className="text-xl md:text-2xl text-primary-100 max-w-3xl mx-auto">
                             Empowering students worldwide through personalized tutoring and AI-powered learning solutions
                         </p>
@@ -101,7 +101,7 @@ const AboutUs = () => {
                 {/* Features Section */}
                 <div className="mb-16">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose Tutor Connect?</h2>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose TutorConnect?</h2>
                         <p className="text-lg text-gray-600">
                             We're committed to providing the best learning experience through innovation and dedication
                         </p>
@@ -129,7 +129,7 @@ const AboutUs = () => {
                         <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
                         <div className="prose prose-lg text-gray-600 max-w-none">
                             <p className="mb-4">
-                                Tutor Connect was founded in 2020 with a simple yet powerful vision: to make quality education
+                                TutorConnect was founded in 2025 with a simple yet powerful vision: to make quality education
                                 accessible to students everywhere. Our founders, experienced educators and technologists,
                                 recognized the growing need for personalized learning solutions in an increasingly digital world.
                             </p>

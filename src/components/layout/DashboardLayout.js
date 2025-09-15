@@ -68,7 +68,7 @@ const DashboardLayout = ({ userRole, children }) => {
             <div className={`${sidebarOpen ? 'block' : 'hidden'} fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform lg:translate-x-0 lg:static lg:inset-0 lg:block transition-transform duration-300 ease-in-out`}>
                 <div className="flex items-center justify-between h-16 px-6 bg-primary-600 text-white">
                     <Link to="/" className="font-bold text-lg">
-                        Tutor Connect
+                        TutorConnect
                     </Link>
                     <button
                         onClick={() => setSidebarOpen(false)}

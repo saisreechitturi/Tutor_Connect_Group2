@@ -27,7 +27,7 @@ function Navbar() {
                 <div className="flex justify-between items-center py-4">
                     {/* Logo */}
                     <Link to="/" className="font-bold text-xl hover:text-primary-100 transition-colors">
-                        Tutor Connect
+                        TutorConnect
                     </Link>
 
                     {/* Desktop Navigation */}

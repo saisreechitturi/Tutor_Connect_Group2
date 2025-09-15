@@ -156,8 +156,8 @@ const BrowseTutors = () => {
                                                 <Star
                                                     key={i}
                                                     className={`h-4 w-4 ${i < Math.floor(tutor.rating)
-                                                            ? 'text-yellow-400 fill-current'
-                                                            : 'text-gray-300'
+                                                        ? 'text-yellow-400 fill-current'
+                                                        : 'text-gray-300'
                                                         }`}
                                                 />
                                             ))}
@@ -264,7 +264,7 @@ const BrowseTutors = () => {
                 <div className="mt-12 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-8 text-white text-center">
                     <h2 className="text-2xl font-bold mb-4">Ready to Start Learning?</h2>
                     <p className="text-primary-100 mb-6">
-                        Join thousands of students who have found their perfect tutor on Tutor Connect
+                        Join thousands of students who have found their perfect tutor on TutorConnect
                     </p>
                     <div className="space-x-4">
                         <Link
