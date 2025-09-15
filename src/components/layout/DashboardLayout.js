@@ -72,10 +72,10 @@ const DashboardLayout = ({ userRole, children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* Sidebar */}
-            <div className={`${sidebarOpen ? 'block' : 'hidden'} fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform lg:translate-x-0 lg:static lg:inset-0 lg:block transition-transform duration-300 ease-in-out`}>
-                <div className="flex items-center justify-between h-16 px-6 bg-primary-600 text-white">
+            <div className={`${sidebarOpen ? 'block' : 'hidden'} fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform lg:translate-x-0 lg:static lg:inset-0 lg:block transition-transform duration-300 ease-in-out flex flex-col`}>
+                <div className="flex items-center justify-between h-16 px-6 bg-primary-600 text-white flex-shrink-0">
                     <Link to="/" className="font-bold text-lg">
                         TutorConnect
                     </Link>
@@ -88,7 +88,7 @@ const DashboardLayout = ({ userRole, children }) => {
                 </div>
 
                 {/* User Profile Section */}
-                <div className="p-6 border-b border-gray-200">
+                <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             {user?.profile?.avatar ? (
@@ -119,7 +119,7 @@ const DashboardLayout = ({ userRole, children }) => {
                 </div>
 
                 {/* Navigation */}
-                <nav className="mt-6 px-3">
+                <nav className="flex-1 mt-6 px-3 overflow-y-auto">
                     <div className="space-y-1">
                         {navigation.map((item) => {
                             const Icon = item.icon;
@@ -147,10 +147,10 @@ const DashboardLayout = ({ userRole, children }) => {
                 </nav>
 
                 {/* Bottom section */}
-                <div className="absolute bottom-0 left-0 right-0 p-3">
+                <div className="p-3 flex-shrink-0">
                     <button
                         onClick={logout}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md transition-colors"
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors"
                     >
                         Sign Out
                     </button>
