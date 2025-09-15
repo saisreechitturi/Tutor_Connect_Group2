@@ -372,23 +372,3 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_conversation_last_message_trigger 
     AFTER INSERT ON messages 
     FOR EACH ROW EXECUTE FUNCTION update_conversation_last_message();
-
--- ============================================================================
--- SAMPLE DATA INSERTION (Optional)
--- ============================================================================
-
--- Insert sample admin user
--- INSERT INTO users (email, password_hash, role, email_verified) 
--- VALUES ('admin@tutorconnect.com', '$2b$10$...', 'admin', true);
-
--- Insert sample student
--- INSERT INTO users (email, password_hash, role, email_verified) 
--- VALUES ('student@example.com', '$2b$10$...', 'student', true);
-
--- Insert sample tutor
--- INSERT INTO users (email, password_hash, role, email_verified) 
--- VALUES ('tutor@example.com', '$2b$10$...', 'tutor', true);
-
--- ============================================================================
--- END OF SCHEMA
--- ============================================================================
