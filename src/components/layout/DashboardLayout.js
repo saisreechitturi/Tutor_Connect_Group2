@@ -90,11 +90,25 @@ const DashboardLayout = ({ userRole, children }) => {
                 {/* User Profile Section */}
                 <div className="p-6 border-b border-gray-200">
                     <div className="flex items-center">
-                        <img
-                            className="h-10 w-10 rounded-full object-cover"
-                            src={user?.profile?.avatar}
-                            alt={user?.profile?.firstName}
-                        />
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            {user?.profile?.avatar ? (
+                                <img
+                                    className="h-10 w-10 rounded-full object-cover"
+                                    src={user?.profile?.avatar}
+                                    alt={user?.profile?.firstName}
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
+                            ) : null}
+                            <div
+                                className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium"
+                                style={{ display: user?.profile?.avatar ? 'none' : 'flex' }}
+                            >
+                                {user?.profile?.firstName?.[0]}{user?.profile?.lastName?.[0]}
+                            </div>
+                        </div>
                         <div className="ml-3">
                             <p className="text-sm font-medium text-gray-900">
                                 {user?.profile?.firstName} {user?.profile?.lastName}
