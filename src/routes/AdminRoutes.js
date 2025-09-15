@@ -1,6 +1,10 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import AdminUserManagement from '../pages/AdminUserManagement';
+import AdminSessionManagement from '../pages/AdminSessionManagement';
+import AdminPlatformAnalytics from '../pages/AdminPlatformAnalytics';
+import AdminTasksManagement from '../pages/AdminTasksManagement';
 
 const AdminDashboard = () => (
     <div className="space-y-6">
@@ -41,10 +45,10 @@ const AdminRoutes = () => {
         <DashboardLayout userRole="admin">
             <Routes>
                 <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<div className="p-4">User Management - Coming Soon</div>} />
-                <Route path="sessions" element={<div className="p-4">Session Management - Coming Soon</div>} />
-                <Route path="analytics" element={<div className="p-4">Platform Analytics - Coming Soon</div>} />
-                <Route path="tasks" element={<div className="p-4">Tasks - Coming Soon</div>} />
+                <Route path="users" element={<AdminUserManagement />} />
+                <Route path="sessions" element={<AdminSessionManagement />} />
+                <Route path="analytics" element={<AdminPlatformAnalytics />} />
+                <Route path="tasks" element={<AdminTasksManagement />} />
                 <Route path="calendar" element={<div className="p-4">Calendar - Coming Soon</div>} />
                 <Route path="messages" element={<div className="p-4">Messages - Coming Soon</div>} />
                 <Route path="settings" element={<div className="p-4">System Settings - Coming Soon</div>} />

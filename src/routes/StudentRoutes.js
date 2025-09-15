@@ -7,6 +7,7 @@ import TutorSearch from '../components/ui/TutorSearch';
 import Calendar from '../components/ui/Calendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
+import StudentSettings from '../pages/StudentSettings';
 
 const StudentRoutes = () => {
     return (
@@ -18,7 +19,7 @@ const StudentRoutes = () => {
                 <Route path="tasks" element={<TaskManager />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="messages" element={<Messages />} />
-                <Route path="settings" element={<div className="p-4">Settings - Coming Soon</div>} />
+                <Route path="settings" element={<StudentSettings />} />
             </Routes>
         </DashboardLayout>
     );

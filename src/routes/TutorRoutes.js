@@ -4,6 +4,10 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import Calendar from '../components/ui/Calendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
+import TutorStudents from '../pages/TutorStudents';
+import TutorAnalytics from '../pages/TutorAnalytics';
+import TutorTasks from '../pages/TutorTasks';
+import TutorSettings from '../pages/TutorSettings';
 
 const TutorDashboard = () => (
     <div className="space-y-6">
@@ -27,13 +31,13 @@ const TutorRoutes = () => {
         <DashboardLayout userRole="tutor">
             <Routes>
                 <Route index element={<TutorDashboard />} />
-                <Route path="students" element={<div className="p-4">My Students - Coming Soon</div>} />
+                <Route path="students" element={<TutorStudents />} />
                 <Route path="sessions" element={<MySessions />} />
-                <Route path="analytics" element={<div className="p-4">Analytics - Coming Soon</div>} />
-                <Route path="tasks" element={<div className="p-4">Tasks - Coming Soon</div>} />
+                <Route path="analytics" element={<TutorAnalytics />} />
+                <Route path="tasks" element={<TutorTasks />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="messages" element={<Messages />} />
-                <Route path="settings" element={<div className="p-4">Settings - Coming Soon</div>} />
+                <Route path="settings" element={<TutorSettings />} />
             </Routes>
         </DashboardLayout>
     );
