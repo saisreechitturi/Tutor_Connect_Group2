@@ -31,7 +31,9 @@ Firebase Firestore is a NoSQL document database that organizes data into collect
     bio: "Computer Science student interested in algorithms and web development",
     location: "New York, NY",
     timezone: "America/New_York",
-    joinedDate: "2024-01-15"
+    joinedDate: "2024-01-15",
+    // Admin-specific fields (only for admin users)
+    adminSubjects: ["Mathematics", "Computer Science", "Physics"] // Subjects admin oversees
   },
   
   // User preferences
@@ -247,7 +249,7 @@ This collection is optimized for tutor discovery and filtering:
   userId: "user_123abc",
   title: "React Tutoring Session",
   description: "One-on-one React development session with Bob",
-  type: "session", // "session" | "exam" | "deadline" | "study-group" | "personal"
+  type: "session", // "session" | "exam" | "deadline" | "personal"
   startAt: Firebase.Timestamp,
   endAt: Firebase.Timestamp,
   location: "Online - Zoom",
@@ -281,7 +283,7 @@ This collection is optimized for tutor discovery and filtering:
 ```javascript
 {
   id: "conv_303pqr",
-  type: "direct", // "direct" | "session" | "group"
+  type: "direct", // "direct" | "session" (1-to-1 only)
   title: null, // Usually null for direct messages
   lastMessageAt: Firebase.Timestamp,
   
@@ -355,40 +357,7 @@ This collection is optimized for tutor discovery and filtering:
 }
 ```
 
-### 9. Admin Announcements Collection
-
-**Path:** `adminAnnouncements/{announcementId}`
-
-```javascript
-{
-  id: "ann_505vwx",
-  title: "Platform Maintenance Scheduled",
-  content: "We will be performing scheduled maintenance on Sunday, January 21st from 2:00 AM to 4:00 AM EST. During this time, the platform may be temporarily unavailable.",
-  priority: "high", // "low" | "medium" | "high"
-  status: "published", // "draft" | "published" | "archived"
-  audience: "all", // "all" | "students" | "tutors" | "admins"
-  
-  // Author info (denormalized)
-  authorUserId: "admin_001",
-  authorName: "System Admin",
-  
-  // Publishing info
-  publishedAt: Firebase.Timestamp,
-  expiresAt: Firebase.Timestamp,
-  
-  // Engagement metrics
-  viewCount: 1247,
-  viewedBy: ["user_123abc", "user_456def"], // Array of user IDs who viewed
-  
-  // Tags for categorization
-  tags: ["maintenance", "system"],
-  
-  createdAt: Firebase.Timestamp,
-  updatedAt: Firebase.Timestamp
-}
-```
-
-### 10. User Stats Collection (Optional)
+### 9. User Stats Collection (Optional)
 
 **Path:** `userStats/{userId}`
 
@@ -428,7 +397,7 @@ For analytics and dashboard displays:
 }
 ```
 
-### 11. AI Interaction Logs Collection (Optional)
+### 10. AI Interaction Logs Collection (Optional)
 
 **Path:** `aiLogs/{logId}`
 
@@ -490,7 +459,7 @@ service cloud.firestore {
         request.auth.uid == resource.data.userId;
     }
     
-    // Conversations are readable by participants
+    // Conversations are readable by participants (1-to-1 only)
     match /conversations/{conversationId} {
       allow read, write: if request.auth != null && 
         request.auth.uid in resource.data.participantIds;
@@ -500,13 +469,6 @@ service cloud.firestore {
         allow read, write: if request.auth != null && 
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
       }
-    }
-    
-    // Admin announcements are publicly readable
-    match /adminAnnouncements/{announcementId} {
-      allow read: if true;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }

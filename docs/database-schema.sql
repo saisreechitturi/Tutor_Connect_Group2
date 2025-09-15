@@ -148,7 +148,7 @@ CREATE TABLE calendar_events (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    type VARCHAR(20) NOT NULL CHECK (type IN ('session', 'exam', 'deadline', 'study-group', 'personal')),
+    type VARCHAR(20) NOT NULL CHECK (type IN ('session', 'exam', 'deadline', 'personal')),
     start_at TIMESTAMPTZ NOT NULL,
     end_at TIMESTAMPTZ NOT NULL,
     location TEXT,
@@ -169,10 +169,10 @@ CREATE TABLE calendar_events (
 -- MESSAGING SYSTEM
 -- ============================================================================
 
--- Conversations
+-- Conversations (1-to-1 only)
 CREATE TABLE conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type VARCHAR(20) DEFAULT 'direct' CHECK (type IN ('direct', 'session', 'group')),
+    type VARCHAR(20) DEFAULT 'direct' CHECK (type IN ('direct', 'session')),
     title TEXT,
     last_message_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -200,26 +200,6 @@ CREATE TABLE messages (
     edited_at TIMESTAMPTZ,
     reply_to_id UUID REFERENCES messages(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- ADMIN SYSTEM
--- ============================================================================
-
--- Simple admin announcements
-CREATE TABLE admin_announcements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
-    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
-    audience VARCHAR(20) DEFAULT 'all' CHECK (audience IN ('all', 'students', 'tutors', 'admins')),
-    author_user_id UUID NOT NULL REFERENCES users(id),
-    published_at TIMESTAMPTZ,
-    expires_at TIMESTAMPTZ,
-    view_count INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
@@ -308,7 +288,6 @@ CREATE TRIGGER update_session_feedback_updated_at BEFORE UPDATE ON session_feedb
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_calendar_events_updated_at BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_admin_announcements_updated_at BEFORE UPDATE ON admin_announcements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
 -- FUNCTIONS FOR BUSINESS LOGIC
