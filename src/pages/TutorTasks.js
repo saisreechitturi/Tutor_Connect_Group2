@@ -11,9 +11,9 @@ const TutorTasks = () => {
     const tasks = [
         {
             id: 1,
-            title: 'Review Alice\'s React Project',
-            description: 'Review and provide feedback on Alice Johnson\'s React portfolio project. Focus on component structure and state management.',
-            student: { name: 'Alice Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150' },
+            title: 'Review Sai Prathyusha\'s React Project',
+            description: 'Review and provide feedback on Sai Prathyusha Celoth\'s React portfolio project. Focus on component structure and state management.',
+            student: { name: 'Sai Prathyusha Celoth', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150' },
             subject: 'React',
             priority: 'high',
             status: 'pending',
@@ -26,8 +26,8 @@ const TutorTasks = () => {
         {
             id: 2,
             title: 'Prepare Node.js API Lesson',
-            description: 'Create lesson materials for Mike Chen\'s upcoming session on building REST APIs with Node.js and Express.',
-            student: { name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
+            description: 'Create lesson materials for Chandan Cheni\'s upcoming session on building REST APIs with Node.js and Express.',
+            student: { name: 'Chandan Cheni', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
             subject: 'Node.js',
             priority: 'medium',
             status: 'in-progress',
@@ -40,8 +40,8 @@ const TutorTasks = () => {
         {
             id: 3,
             title: 'Grade JavaScript Assignment',
-            description: 'Grade and provide feedback on Sarah\'s JavaScript fundamentals assignment covering loops, functions, and arrays.',
-            student: { name: 'Sarah Williams', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
+            description: 'Grade and provide feedback on Maatheswaran\'s JavaScript fundamentals assignment covering loops, functions, and arrays.',
+            student: { name: 'Maatheswaran Kannan Chellapandian', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
             subject: 'JavaScript',
             priority: 'medium',
             status: 'completed',
@@ -54,8 +54,8 @@ const TutorTasks = () => {
         {
             id: 4,
             title: 'Create Database Schema Exercise',
-            description: 'Design a practical database exercise for Mike\'s upcoming database design session.',
-            student: { name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
+            description: 'Design a practical database exercise for Chandan\'s upcoming database design session.',
+            student: { name: 'Chandan Cheni', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
             subject: 'Database Design',
             priority: 'low',
             status: 'pending',
@@ -68,8 +68,8 @@ const TutorTasks = () => {
         {
             id: 5,
             title: 'Follow up on Missed Session',
-            description: 'Reach out to David about the missed session and reschedule. Provide makeup materials.',
-            student: { name: 'David Brown', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
+            description: 'Reach out to Ananya about the missed session and reschedule. Provide makeup materials.',
+            student: { name: 'Ananya Sharma', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
             subject: 'General',
             priority: 'high',
             status: 'pending',
@@ -233,9 +233,9 @@ const TutorTasks = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
                             <select className="input-field">
                                 <option>Select a student...</option>
-                                <option>Alice Johnson</option>
-                                <option>Mike Chen</option>
-                                <option>Sarah Williams</option>
+                                <option>Sai Prathyusha Celoth</option>
+                                <option>Chandan Cheni</option>
+                                <option>Maatheswaran Kannan Chellapandian</option>
                             </select>
                         </div>
                         <div>
@@ -370,8 +370,8 @@ const TutorTasks = () => {
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab
-                                        ? 'bg-primary-600 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-primary-600 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                             >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)} ({taskCounts[tab]})

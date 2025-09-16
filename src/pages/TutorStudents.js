@@ -12,7 +12,7 @@ const TutorStudents = () => {
     const students = [
         {
             id: 1,
-            name: 'Alice Johnson',
+            name: 'Sai Prathyusha Celoth',
             email: 'student@example.com',
             avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
             joinedDate: '2024-01-15',
@@ -35,8 +35,8 @@ const TutorStudents = () => {
         },
         {
             id: 2,
-            name: 'Mike Chen',
-            email: 'mike.chen@example.com',
+            name: 'Chandan Cheni',
+            email: 'chandan.cheni@example.com',
             avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
             joinedDate: '2024-02-20',
             totalSessions: 18,
@@ -58,8 +58,8 @@ const TutorStudents = () => {
         },
         {
             id: 3,
-            name: 'Sarah Williams',
-            email: 'sarah.w@example.com',
+            name: 'Maatheswaran Kannan Chellapandian',
+            email: 'maatheswaran.kannan@example.com',
             avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
             joinedDate: '2024-03-10',
             totalSessions: 8,

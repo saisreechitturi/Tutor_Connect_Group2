@@ -2,7 +2,7 @@
 export const tutorProfiles = [
     {
         id: 1,
-        userId: 2, // Bob Smith
+        userId: 3, // Sai Sree Chitturi
         hourlyRate: 45,
         subjects: ["JavaScript", "React", "Node.js", "Full-Stack Development"],
         experience: "5+ years",
@@ -28,7 +28,7 @@ export const tutorProfiles = [
     },
     {
         id: 2,
-        userId: 4, // Emma Davis
+        userId: 4, // Chandan Cheni
         hourlyRate: 60,
         subjects: ["Calculus", "Linear Algebra", "Statistics", "Differential Equations"],
         experience: "8+ years",
@@ -54,7 +54,7 @@ export const tutorProfiles = [
     },
     {
         id: 3,
-        userId: 5, // David Wilson
+        userId: 5, // Maatheswaran Kannan Chellapandian
         hourlyRate: 55,
         subjects: ["Physics", "Quantum Mechanics", "Thermodynamics", "Mechanics"],
         experience: "7+ years",

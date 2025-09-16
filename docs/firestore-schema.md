@@ -24,8 +24,8 @@ Firebase Firestore is a NoSQL document database that organizes data into collect
   
   // Profile data (denormalized for performance)
   profile: {
-    firstName: "Alice",
-    lastName: "Johnson",
+    firstName: "Sai Prathyusha",
+    lastName: "Celoth",
     phone: "+1234567890",
     avatarUrl: "https://images.unsplash.com/...",
     bio: "Computer Science student interested in algorithms and web development",
@@ -123,9 +123,9 @@ This collection is optimized for tutor discovery and filtering:
   tutorId: "user_456def",
   
   // Denormalized user data for search
-  name: "Bob Smith",
-  firstName: "Bob",
-  lastName: "Smith",
+  name: "Sai Sree Chitturi",
+  firstName: "Sai Sree",
+  lastName: "Chitturi",
   avatarUrl: "https://images.unsplash.com/...",
   
   // Search-optimized fields
@@ -173,17 +173,17 @@ This collection is optimized for tutor discovery and filtering:
   // Denormalized user data for easy display
   student: {
     id: "user_123abc",
-    name: "Alice Johnson",
-    firstName: "Alice",
-    lastName: "Johnson",
+    name: "Sai Prathyusha Celoth",
+    firstName: "Sai Prathyusha",
+    lastName: "Celoth",
     avatar: "https://images.unsplash.com/...",
     email: "student@example.com"
   },
   tutor: {
     id: "user_456def",
-    name: "Bob Smith",
-    firstName: "Bob",
-    lastName: "Smith",
+    name: "Sai Sree Chitturi",
+    firstName: "Sai Sree",
+    lastName: "Chitturi",
     avatar: "https://images.unsplash.com/...",
     email: "tutor@example.com"
   },
@@ -193,7 +193,7 @@ This collection is optimized for tutor discovery and filtering:
     studentRating: 5,
     tutorRating: 5,
     studentComment: "Excellent explanation of React hooks!",
-    tutorComment: "Alice is a quick learner, great questions!",
+    tutorComment: "Sai Prathyusha is a quick learner, great questions!",
     studentFeedbackAt: Firebase.Timestamp,
     tutorFeedbackAt: Firebase.Timestamp
   },
@@ -252,12 +252,12 @@ This collection is optimized for tutor discovery and filtering:
   // Denormalized user info
   student: {
     id: "user_123abc",
-    name: "Alice Johnson",
+    name: "Sai Prathyusha Celoth",
     email: "student@example.com"
   },
   tutor: {
     id: "user_456def",
-    name: "Bob Smith",
+    name: "Sai Sree Chitturi",
     email: "tutor@example.com"
   },
   
@@ -319,7 +319,7 @@ This collection is optimized for tutor discovery and filtering:
   id: "event_202mno",
   userId: "user_123abc",
   title: "React Tutoring Session",
-  description: "One-on-one React development session with Bob",
+  description: "One-on-one React development session with Sai Sree",
   type: "session", // "session" | "exam" | "deadline" | "personal"
   startAt: Firebase.Timestamp,
   endAt: Firebase.Timestamp,
@@ -362,9 +362,9 @@ This collection is optimized for tutor discovery and filtering:
   participants: {
     "user_123abc": {
       id: "user_123abc",
-      name: "Alice Johnson",
-      firstName: "Alice",
-      lastName: "Johnson",
+      name: "Sai Prathyusha Celoth",
+      firstName: "Sai Prathyusha",
+      lastName: "Celoth",
       avatar: "https://images.unsplash.com/...",
       role: "student",
       lastReadAt: Firebase.Timestamp,
@@ -373,9 +373,9 @@ This collection is optimized for tutor discovery and filtering:
     },
     "user_456def": {
       id: "user_456def",
-      name: "Bob Smith",
-      firstName: "Bob",
-      lastName: "Smith",
+      name: "Sai Sree Chitturi",
+      firstName: "Sai Sree",
+      lastName: "Chitturi",
       avatar: "https://images.unsplash.com/...",
       role: "tutor",
       lastReadAt: Firebase.Timestamp,
@@ -406,11 +406,11 @@ This collection is optimized for tutor discovery and filtering:
   senderId: "user_123abc",
   
   // Denormalized sender info
-  senderName: "Alice Johnson",
+  senderName: "Sai Prathyusha Celoth",
   senderAvatar: "https://images.unsplash.com/...",
   senderRole: "student",
   
-  content: "Hi Bob! Thanks for the great React session yesterday.",
+  content: "Hi Sai Sree! Thanks for the great React session yesterday.",
   type: "text", // "text" | "system"
   
   // Message features

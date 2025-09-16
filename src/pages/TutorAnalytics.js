@@ -47,10 +47,10 @@ const TutorAnalytics = () => {
             { name: 'Node.js', sessions: 5, earnings: 225, avgRating: 4.7 }
         ],
         recentSessions: [
-            { id: 1, student: 'Alice Johnson', subject: 'React Hooks', date: '2024-09-12', duration: 1.5, rating: 5, earnings: 67.5 },
-            { id: 2, student: 'Mike Chen', subject: 'Node.js APIs', date: '2024-09-11', duration: 1.0, rating: 5, earnings: 45 },
-            { id: 3, student: 'Sarah Williams', subject: 'JavaScript Basics', date: '2024-09-10', duration: 1.0, rating: 4, earnings: 45 },
-            { id: 4, student: 'David Brown', subject: 'React Components', date: '2024-09-09', duration: 2.0, rating: 5, earnings: 90 }
+            { id: 1, student: 'Sai Prathyusha Celoth', subject: 'React Hooks', date: '2024-09-12', duration: 1.5, rating: 5, earnings: 67.5 },
+            { id: 2, student: 'Chandan Cheni', subject: 'Node.js APIs', date: '2024-09-11', duration: 1.0, rating: 5, earnings: 45 },
+            { id: 3, student: 'Maatheswaran Kannan Chellapandian', subject: 'JavaScript Basics', date: '2024-09-10', duration: 1.0, rating: 4, earnings: 45 },
+            { id: 4, student: 'Ananya Sharma', subject: 'React Components', date: '2024-09-09', duration: 2.0, rating: 5, earnings: 90 }
         ],
         performance: {
             punctuality: 95,

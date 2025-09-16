@@ -69,8 +69,8 @@ const StudentSettings = () => {
                                 key={id}
                                 onClick={() => setActiveTab(id)}
                                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${activeTab === id
-                                        ? 'border-primary-500 text-primary-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-primary-500 text-primary-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -323,9 +323,9 @@ const StudentSettings = () => {
                                     <h4 className="font-medium text-gray-900 mb-4">Recent Transactions</h4>
                                     <div className="space-y-2">
                                         {[
-                                            { date: 'Sep 10, 2025', description: 'JavaScript Tutoring Session - Bob Smith', amount: '$45.00' },
-                                            { date: 'Sep 8, 2025', description: 'Calculus Tutoring Session - Emma Davis', amount: '$60.00' },
-                                            { date: 'Sep 5, 2025', description: 'Physics Tutoring Session - David Wilson', amount: '$55.00' }
+                                            { date: 'Sep 10, 2025', description: 'JavaScript Tutoring Session - Sai Sree Chitturi', amount: '$45.00' },
+                                            { date: 'Sep 8, 2025', description: 'Calculus Tutoring Session - Chandan Cheni', amount: '$60.00' },
+                                            { date: 'Sep 5, 2025', description: 'Physics Tutoring Session - Maatheswaran Kannan Chellapandian', amount: '$55.00' }
                                         ].map((transaction, index) => (
                                             <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                                                 <div>
