@@ -508,10 +508,6 @@ const AdminPlatformAnalytics = () => {
                                     <span className="text-gray-500">Student Satisfaction</span>
                                     <span className="font-medium">4.6/5</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Dispute Rate</span>
-                                    <span className="font-medium">2.1%</span>
-                                </div>
                             </div>
                         </div>
                     </div>

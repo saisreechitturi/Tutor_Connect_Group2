@@ -70,24 +70,6 @@ const AdminSessionManagement = () => {
             resources: ['quantum_physics_guide.pdf']
         },
         {
-            id: 'SES003',
-            tutor: { name: 'Prof. David Kim', id: 'TUT003', rating: 4.8 },
-            student: { name: 'Ryan Thompson', id: 'STU002', grade: '11th Grade' },
-            subject: 'Chemistry',
-            status: 'disputed',
-            type: 'video',
-            scheduledTime: '2024-01-15 10:00',
-            duration: 60,
-            actualDuration: 30,
-            rate: 40,
-            totalEarnings: 20,
-            location: 'Online',
-            notes: 'Session ended early due to technical issues',
-            rating: 2,
-            issues: ['Technical difficulties', 'Payment dispute'],
-            resources: ['chemistry_lab_report.pdf']
-        },
-        {
             id: 'SES004',
             tutor: { name: 'Lisa Anderson', id: 'TUT004', rating: 4.9 },
             student: { name: 'Sophie Davis', id: 'STU003', grade: '9th Grade' },
@@ -148,7 +130,6 @@ const AdminSessionManagement = () => {
         totalSessions: sessions.length,
         completedSessions: sessions.filter(s => s.status === 'completed').length,
         inProgressSessions: sessions.filter(s => s.status === 'in-progress').length,
-        disputedSessions: sessions.filter(s => s.status === 'disputed').length,
         scheduledSessions: sessions.filter(s => s.status === 'scheduled').length,
         cancelledSessions: sessions.filter(s => s.status === 'cancelled').length,
         totalEarnings: sessions.reduce((sum, s) => sum + s.totalEarnings, 0),
@@ -173,7 +154,6 @@ const AdminSessionManagement = () => {
         switch (status) {
             case 'completed': return 'bg-green-100 text-green-800';
             case 'in-progress': return 'bg-blue-100 text-blue-800';
-            case 'disputed': return 'bg-red-100 text-red-800';
             case 'scheduled': return 'bg-yellow-100 text-yellow-800';
             case 'cancelled': return 'bg-gray-100 text-gray-800';
             default: return 'bg-gray-100 text-gray-800';
@@ -184,7 +164,6 @@ const AdminSessionManagement = () => {
         switch (status) {
             case 'completed': return <CheckCircle className="w-4 h-4" />;
             case 'in-progress': return <Activity className="w-4 h-4" />;
-            case 'disputed': return <AlertTriangle className="w-4 h-4" />;
             case 'scheduled': return <Calendar className="w-4 h-4" />;
             case 'cancelled': return <XCircle className="w-4 h-4" />;
             default: return <Clock className="w-4 h-4" />;
@@ -220,19 +199,13 @@ const AdminSessionManagement = () => {
         setSelectedSession(null);
     };
 
-    const handleResolveDispute = (sessionId, resolution) => {
-        // Mock dispute resolution
-        console.log(`Resolving dispute for session ${sessionId}:`, resolution);
-        closeModal();
-    };
-
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Session Management</h1>
-                    <p className="text-gray-600">Oversee all tutoring sessions, handle disputes, and monitor platform activity</p>
+                    <p className="text-gray-600">Oversee all tutoring sessions and monitor platform activity</p>
                 </div>
 
                 {/* Statistics Cards */}
@@ -273,17 +246,6 @@ const AdminSessionManagement = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <AlertTriangle className="h-8 w-8 text-red-600" />
-                            </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">Disputed Sessions</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.disputedSessions}</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Filters and Search */}
@@ -312,7 +274,6 @@ const AdminSessionManagement = () => {
                                     <option value="all">All Status</option>
                                     <option value="completed">Completed</option>
                                     <option value="in-progress">In Progress</option>
-                                    <option value="disputed">Disputed</option>
                                     <option value="scheduled">Scheduled</option>
                                     <option value="cancelled">Cancelled</option>
                                 </select>
@@ -339,15 +300,14 @@ const AdminSessionManagement = () => {
                                     { key: 'all', label: 'All Sessions', count: stats.totalSessions },
                                     { key: 'completed', label: 'Completed', count: stats.completedSessions },
                                     { key: 'in-progress', label: 'In Progress', count: stats.inProgressSessions },
-                                    { key: 'disputed', label: 'Disputed', count: stats.disputedSessions },
                                     { key: 'scheduled', label: 'Scheduled', count: stats.scheduledSessions }
                                 ].map((tab) => (
                                     <button
                                         key={tab.key}
                                         onClick={() => setActiveTab(tab.key)}
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
-                                                ? 'border-blue-500 text-blue-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            ? 'border-blue-500 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                             }`}
                                     >
                                         {tab.label} ({tab.count})
@@ -446,11 +406,6 @@ const AdminSessionManagement = () => {
                                             >
                                                 <Eye className="w-5 h-5" />
                                             </button>
-                                            {session.status === 'disputed' && (
-                                                <button className="text-red-600 hover:text-red-900">
-                                                    <AlertTriangle className="w-5 h-5" />
-                                                </button>
-                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -589,7 +544,7 @@ const AdminSessionManagement = () => {
                                         <div className="bg-red-50 rounded-lg p-4">
                                             <h4 className="font-semibold text-red-900 mb-3 flex items-center">
                                                 <AlertTriangle className="w-5 h-5 mr-2" />
-                                                Issues & Disputes
+                                                Session Issues
                                             </h4>
                                             <div className="space-y-2">
                                                 {selectedSession.issues.map((issue, index) => (
@@ -599,28 +554,6 @@ const AdminSessionManagement = () => {
                                                     </div>
                                                 ))}
                                             </div>
-                                            {selectedSession.status === 'disputed' && (
-                                                <div className="mt-4 space-y-2">
-                                                    <button
-                                                        onClick={() => handleResolveDispute(selectedSession.id, 'refund-student')}
-                                                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm"
-                                                    >
-                                                        Resolve - Refund Student
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleResolveDispute(selectedSession.id, 'favor-tutor')}
-                                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm"
-                                                    >
-                                                        Resolve - Favor Tutor
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleResolveDispute(selectedSession.id, 'partial-refund')}
-                                                        className="w-full bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 text-sm"
-                                                    >
-                                                        Resolve - Partial Refund
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                     )}
                                 </div>
