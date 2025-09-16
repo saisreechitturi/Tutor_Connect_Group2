@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminUserManagement from '../pages/AdminUserManagement';
 import AdminSessionManagement from '../pages/AdminSessionManagement';
+import AdminSettings from '../pages/AdminSettings';
 // Removed advanced analytics and admin messaging per scope simplification
 
 const AdminDashboard = () => (
@@ -47,7 +48,7 @@ const AdminRoutes = () => {
                 <Route path="users" element={<AdminUserManagement />} />
                 <Route path="sessions" element={<AdminSessionManagement />} />
                 {/* Analytics and Admin Messaging removed */}
-                <Route path="settings" element={<div className="p-4">System Settings - Coming Soon</div>} />
+                <Route path="settings" element={<AdminSettings />} />
             </Routes>
         </DashboardLayout>
     );
