@@ -29,12 +29,12 @@ router.get('/', [
     const offset = parseInt(req.query.offset) || 0;
 
     let queryText = `
-    SELECT u.id, u.first_name, u.last_name, u.avatar_url, u.bio, u.location,
-           tp.title, tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions,
-           tp.languages, tp.specializations
+    SELECT u.id, u.first_name, u.last_name, u.profile_image_url, u.bio,
+           tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions,
+           tp.languages, tp.education, tp.is_available
     FROM users u
     JOIN tutor_profiles tp ON u.id = tp.user_id
-    WHERE u.role = 'tutor' AND u.status = 'active'
+    WHERE u.role = 'tutor' AND u.is_active = true
   `;
 
     const params = [];
@@ -69,16 +69,15 @@ router.get('/', [
         name: `${row.first_name} ${row.last_name}`,
         firstName: row.first_name,
         lastName: row.last_name,
-        avatarUrl: row.avatar_url,
+        profileImageUrl: row.profile_image_url,
         bio: row.bio,
-        location: row.location,
-        title: row.title,
         hourlyRate: row.hourly_rate,
         experienceYears: row.experience_years,
         rating: row.rating,
         totalSessions: row.total_sessions,
         languages: row.languages,
-        specializations: row.specializations
+        education: row.education,
+        isAvailable: row.is_available
     }));
 
     res.json({ tutors });
@@ -87,12 +86,12 @@ router.get('/', [
 // Get specific tutor profile
 router.get('/:id', asyncHandler(async (req, res) => {
     const result = await query(`
-    SELECT u.id, u.first_name, u.last_name, u.avatar_url, u.bio, u.location, u.timezone,
-           tp.title, tp.hourly_rate, tp.experience_years, tp.education, tp.certifications,
-           tp.languages, tp.specializations, tp.rating, tp.total_sessions, tp.total_earnings
+    SELECT u.id, u.first_name, u.last_name, u.profile_image_url, u.bio,
+           tp.hourly_rate, tp.experience_years, tp.education,
+           tp.languages, tp.rating, tp.total_sessions, tp.is_available
     FROM users u
     JOIN tutor_profiles tp ON u.id = tp.user_id
-    WHERE u.id = $1 AND u.role = 'tutor' AND u.status = 'active'
+    WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true
   `, [req.params.id]);
 
     if (result.rows.length === 0) {

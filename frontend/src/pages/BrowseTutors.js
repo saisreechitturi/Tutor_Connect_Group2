@@ -1,39 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
-import { tutorProfiles, users } from '../data';
 import { Link } from 'react-router-dom';
 
 const BrowseTutors = () => {
+    const [tutors, setTutors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [priceRange, setPriceRange] = useState('');
     const [sortBy, setSortBy] = useState('price_low');
 
-    // Combine tutor profiles with user data
-    const tutorsWithProfiles = tutorProfiles.map(profile => {
-        const user = users.find(u => u.id === profile.userId);
-        return { ...profile, user };
-    });
+    // Fetch tutors from database
+    useEffect(() => {
+        fetchTutors();
+    }, []);
 
-    // Get unique subjects from tutors
-    const subjects = [...new Set(tutorsWithProfiles.flatMap(tutor => tutor.subjects))].sort();
+    const fetchTutors = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('http://localhost:5000/api/tutors');
+            if (!response.ok) {
+                throw new Error('Failed to fetch tutors');
+            }
+            const data = await response.json();
+            setTutors(data.tutors || []);
+        } catch (err) {
+            setError(err.message);
+            console.error('Error fetching tutors:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+                    <p className="mt-4 text-gray-600">Loading tutors from database...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">Error loading tutors: {error}</p>
+                    <button
+                        onClick={fetchTutors}
+                        className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Get unique subjects from tutors (placeholder - we'll need to fetch subjects separately)
+    const subjects = ['Mathematics', 'Physics', 'Spanish', 'Chemistry', 'Biology'];
 
     // Filter tutors based on search criteria
-    const filteredTutors = tutorsWithProfiles.filter(tutor => {
+    const filteredTutors = tutors.filter(tutor => {
         const matchesSearch = !searchTerm ||
-            tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            tutor.user.profile.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tutor.user.profile.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tutor.user.profile.bio.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesSubject = !selectedSubject || tutor.subjects.includes(selectedSubject);
+            tutor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tutor.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (tutor.bio && tutor.bio.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesPrice = !priceRange ||
             (priceRange === 'low' && tutor.hourlyRate <= 30) ||
             (priceRange === 'medium' && tutor.hourlyRate > 30 && tutor.hourlyRate <= 60) ||
             (priceRange === 'high' && tutor.hourlyRate > 60);
 
-        return matchesSearch && matchesSubject && matchesPrice;
+        return matchesSearch && matchesPrice;
     });
 
     // Sort tutors
@@ -43,6 +87,8 @@ const BrowseTutors = () => {
                 return a.hourlyRate - b.hourlyRate;
             case 'price_high':
                 return b.hourlyRate - a.hourlyRate;
+            case 'rating':
+                return b.rating - a.rating;
             default:
                 return a.hourlyRate - b.hourlyRate;
         }

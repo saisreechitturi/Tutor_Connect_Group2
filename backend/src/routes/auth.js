@@ -93,7 +93,7 @@ router.post('/login', [
 
     // Find user
     const result = await query(
-        'SELECT id, email, password_hash, role, first_name, last_name, status FROM users WHERE email = $1',
+        'SELECT id, email, password_hash, role, first_name, last_name, is_active FROM users WHERE email = $1',
         [email]
     );
 
@@ -104,7 +104,7 @@ router.post('/login', [
     const user = result.rows[0];
 
     // Check if user is active
-    if (user.status !== 'active') {
+    if (!user.is_active) {
         return res.status(401).json({ message: 'Account is not active' });
     }
 
@@ -139,10 +139,10 @@ router.post('/login', [
 // Get current user profile
 router.get('/me', require('../middleware/auth').authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(`
-    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.avatar_url, 
-           u.bio, u.location, u.timezone, u.status, u.created_at,
-           tp.title, tp.hourly_rate, tp.experience_years, tp.education, tp.certifications,
-           tp.languages, tp.specializations, tp.rating, tp.total_sessions, tp.total_earnings
+    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.profile_image_url, 
+           u.bio, u.is_active, u.created_at,
+           tp.hourly_rate, tp.experience_years, tp.education,
+           tp.languages, tp.rating, tp.total_sessions
     FROM users u
     LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
     WHERE u.id = $1
@@ -162,24 +162,18 @@ router.get('/me', require('../middleware/auth').authenticateToken, asyncHandler(
             lastName: user.last_name,
             role: user.role,
             phone: user.phone,
-            avatarUrl: user.avatar_url,
+            profileImageUrl: user.profile_image_url,
             bio: user.bio,
-            location: user.location,
-            timezone: user.timezone,
-            status: user.status,
+            isActive: user.is_active,
             createdAt: user.created_at,
             ...(user.role === 'tutor' && {
                 profile: {
-                    title: user.title,
                     hourlyRate: user.hourly_rate,
                     experienceYears: user.experience_years,
                     education: user.education,
-                    certifications: user.certifications,
                     languages: user.languages,
-                    specializations: user.specializations,
                     rating: user.rating,
-                    totalSessions: user.total_sessions,
-                    totalEarnings: user.total_earnings
+                    totalSessions: user.total_sessions
                 }
             })
         }
