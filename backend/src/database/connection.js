@@ -14,15 +14,18 @@ const connectDatabase = async () => {
                 } : false
             }
             : {
-                host: process.env.DATABASE_HOST,
-                port: process.env.DATABASE_PORT || 5432,
-                database: process.env.DATABASE_NAME,
-                user: process.env.DATABASE_USER,
-                password: process.env.DATABASE_PASSWORD,
+                host: process.env.DATABASE_HOST || process.env.DB_HOST,
+                port: process.env.DATABASE_PORT || process.env.DB_PORT || 5432,
+                database: process.env.DATABASE_NAME || process.env.DB_NAME,
+                user: process.env.DATABASE_USER || process.env.DB_USER,
+                password: process.env.DATABASE_PASSWORD || process.env.DB_PASSWORD,
                 ssl: process.env.DB_SSL_REQUIRED === 'true' ? {
                     rejectUnauthorized: false
                 } : false
             };
+
+        // Debug logging
+        // logger.info(`Database config: host=${connectionConfig.host}, database=${connectionConfig.database}, user=${connectionConfig.user}, password=${connectionConfig.password ? 'SET' : 'NOT SET'}`);
 
         pool = new Pool({
             ...connectionConfig,

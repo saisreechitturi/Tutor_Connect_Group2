@@ -6,8 +6,11 @@
     "scripts": {
         "start": "node src/server.js",
         "dev": "nodemon src/server.js",
+        "db:setup": "node src/database/setup.js",
         "db:migrate": "node src/database/migrate.js",
-        "db:seed": "node src/database/seed.js"
+        "db:seed": "node src/database/seed.js",
+        "db:reset": "node src/database/migrate.js --reset && node src/database/seed.js",
+        "db:full-setup": "node src/database/setup.js && node src/database/seed.js"
     },
     "dependencies": {
         "express": "^4.18.2",
