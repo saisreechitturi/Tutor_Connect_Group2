@@ -1,53 +1,72 @@
 # TutorConnect
 
-A comprehensive web platform connecting students with tutors, featuring intelligent study planning, AI-powered assistance, and seamless session management.
+A comprehensive tutoring platform connecting students with expert tutors, featuring AI-powered study assistance, task management, and real-time communication.
 
-## 🚀 Features
+## 🏗️ Architecture
 
-### Phase 2 (Current) - Frontend Development
+This project has been **restructured for Render deployment** with:
 
-- **Authentication System**: Login/signup with role-based access (Student, Tutor, Admin)
-- **Responsive Dashboards**: Tailored interfaces for each user role
-- **Tutor Search**: Advanced filtering and sorting of available tutors
-- **Task Management**: Comprehensive study planner with progress tracking
-- **AI Chatbot**: Intelligent study assistant with contextual responses
-- **Session Management**: Book and manage tutoring sessions
-- **Real-time Messaging**: Communication between students and tutors
-- **Calendar Integration**: Schedule management and deadline tracking
+- **Backend**: Node.js/Express API with PostgreSQL
+- **Frontend**: React SPA with Tailwind CSS  
+- **Database**: PostgreSQL with comprehensive schema
+- **Authentication**: JWT-based auth system
+- **Deployment**: Optimized for Render with auto-scaling
 
-### User Roles
+## 🚀 Quick Start
 
-- **Students**: Find tutors, manage study tasks, track progress
-- **Tutors**: Manage students, sessions, and earnings
-- **Admins**: Platform oversight, user management, analytics
+### For Render Deployment
 
-## 🛠️ Technology Stack
+1. **Fork/Clone** this repository
+2. **Push to GitHub**
+3. **Deploy to Render**:
+   - Connect your GitHub repo to Render
+   - Use the included `render.yaml` blueprint
+   - Render will auto-setup PostgreSQL and deploy both services
 
-- **Frontend**: React 18, TailwindCSS, React Router
-- **Icons**: Lucide React
-- **State Management**: React Context API
-- **Styling**: Tailwind CSS with custom design system
-- **Build Tool**: Create React App
+4. **Initialize Database**:
+
+   ```bash
+   # In Render backend shell
+   npm run db:migrate
+   ```
+
+📖 **Detailed deployment guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
+
+### For Local Development
+
+```bash
+# Install dependencies
+npm run setup
+
+# Set environment variables
+cp backend/.env.example backend/.env
+# Edit backend/.env with your settings
+
+# Run both frontend and backend
+npm run dev
+```
 
 ## 📁 Project Structure
 
-```text
-src/
-├── components/
-│   ├── auth/          # Login, Signup components
-│   ├── dashboard/     # Role-specific dashboards
-│   ├── layout/        # Shared layout components
-│   └── ui/            # Reusable UI components
-├── context/           # React Context providers
-├── data/              # Mock data and schemas
-├── pages/             # Page components
-├── routes/            # Route configurations
-└── utils/             # Helper functions
 ```
-
-## 🎨 Design System
-
-### Colors
+tutor-connect/
+├── backend/                 # Express.js API
+│   ├── src/
+│   │   ├── routes/         # API endpoints
+│   │   ├── middleware/     # Auth & validation
+│   │   ├── database/       # Schema & migrations
+│   │   └── utils/          # Helpers
+│   └── package.json
+├── frontend/               # React application
+│   ├── src/
+│   │   ├── components/     # UI components
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # API integration
+│   │   └── context/        # State management
+│   └── package.json
+├── render.yaml            # Deployment config
+└── DEPLOYMENT.md          # Deployment guide
+```
 
 - **Primary**: Blue (#3b82f6, #2563eb, #1d4ed8)
 - **Secondary**: Gray shades for neutral elements

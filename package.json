@@ -1,40 +1,38 @@
 {
-    "name": "tutor-connect",
-    "version": "0.1.0",
-    "private": true,
-    "homepage": "https://Abhinaykotla.github.io/Tutor_Connect_Group2",
-    "dependencies": {
-        "firebase": "^12.2.1",
-        "lucide-react": "^0.279.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "react-router-dom": "^6.15.0",
-        "react-scripts": "5.0.1"
-    },
-    "devDependencies": {
-        "autoprefixer": "^10.4.15",
-        "gh-pages": "^6.3.0",
-        "postcss": "^8.4.29",
-        "tailwindcss": "^3.3.3"
-    },
+    "name": "tutor-connect-fullstack",
+    "version": "1.0.0",
+    "description": "Full-stack TutorConnect application with React frontend and Node.js backend",
+    "main": "backend/src/server.js",
     "scripts": {
-        "start": "react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
-        "eject": "react-scripts eject",
-        "predeploy": "npm run build",
-        "deploy": "gh-pages -d build"
+        "dev": "concurrently \"npm run server\" \"npm run client\"",
+        "server": "cd backend && npm run dev",
+        "client": "cd frontend && npm start",
+        "build": "cd backend && npm install && cd ../frontend && npm install && npm run build",
+        "start": "cd backend && npm start",
+        "setup": "npm run setup:backend && npm run setup:frontend",
+        "setup:backend": "cd backend && npm install",
+        "setup:frontend": "cd frontend && npm install",
+        "migrate": "cd backend && npm run db:migrate",
+        "seed": "cd backend && npm run db:seed"
     },
-    "browserslist": {
-        "production": [
-            ">0.2%",
-            "not dead",
-            "not op_mini all"
-        ],
-        "development": [
-            "last 1 chrome version",
-            "last 1 firefox version",
-            "last 1 safari version"
-        ]
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Abhinaykotla/Tutor_Connect_Group2.git"
+    },
+    "keywords": [
+        "tutoring",
+        "education",
+        "react",
+        "node.js",
+        "postgresql",
+        "fullstack"
+    ],
+    "author": "TutorConnect Team",
+    "license": "MIT",
+    "devDependencies": {
+        "concurrently": "^8.2.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
     }
 }
