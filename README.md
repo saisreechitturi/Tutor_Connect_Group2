@@ -2,7 +2,7 @@
 
 A comprehensive tutoring platform connecting students with expert tutors, featuring AI-powered study assistance, task management, and real-time communication.
 
-## 🏗️ Architecture
+## Architecture
 
 This project has been **restructured for Render deployment** with:
 
@@ -12,7 +12,7 @@ This project has been **restructured for Render deployment** with:
 - **Authentication**: JWT-based auth system
 - **Deployment**: Optimized for Render with auto-scaling
 
-## 🚀 Quick Start
+## Quick Start
 
 ### For Render Deployment
 
@@ -46,7 +46,7 @@ cp backend/.env.example backend/.env
 npm run dev
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 tutor-connect/
@@ -218,9 +218,9 @@ The application includes comprehensive mock data:
 - **Messages**: Chat conversations between users
 - **AI Responses**: Contextual chatbot interactions
 
-## 🏗️ Development Roadmap
+## Development Roadmap
 
-### Phase 1: Planning & Proposal ✅
+### Phase 1: Planning & Proposal [COMPLETED]
 
 - Requirements gathering and system design
 - Database schema and wireframes
@@ -274,7 +274,7 @@ The application includes comprehensive mock data:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -285,7 +285,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **AI Researcher**: Chatbot integration and intelligent features
 - **Backend Developer**: API and database design (Phase 3)
 
-## 📞 Support
+## Support
 
 For questions or support, please:
 

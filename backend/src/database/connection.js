@@ -5,11 +5,27 @@ let pool;
 
 const connectDatabase = async () => {
     try {
+        // Support both DATABASE_URL and individual connection parameters
+        const connectionConfig = process.env.DATABASE_URL
+            ? {
+                connectionString: process.env.DATABASE_URL,
+                ssl: process.env.NODE_ENV === 'production' ? {
+                    rejectUnauthorized: false
+                } : false
+            }
+            : {
+                host: process.env.DATABASE_HOST,
+                port: process.env.DATABASE_PORT || 5432,
+                database: process.env.DATABASE_NAME,
+                user: process.env.DATABASE_USER,
+                password: process.env.DATABASE_PASSWORD,
+                ssl: process.env.DB_SSL_REQUIRED === 'true' ? {
+                    rejectUnauthorized: false
+                } : false
+            };
+
         pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? {
-                rejectUnauthorized: false
-            } : false,
+            ...connectionConfig,
             max: 20,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
@@ -18,6 +34,7 @@ const connectDatabase = async () => {
         // Test the connection
         const client = await pool.connect();
         logger.info('Successfully connected to PostgreSQL database');
+        logger.info(`Database: ${process.env.DATABASE_NAME || 'from URL'}`);
         client.release();
 
         return pool;
