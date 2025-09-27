@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen } from 'lucide-react';
-import { tutorProfiles, users } from '../../data';
+import { tutorService } from '../../services';
 
 const TutorSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [tutors, setTutors] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [filters, setFilters] = useState({
         subject: '',
         maxRate: '',
@@ -12,31 +15,69 @@ const TutorSearch = () => {
     });
     const [sortBy, setSortBy] = useState('rating');
 
-    // Combine tutor profiles with user data
-    const tutorsWithProfiles = tutorProfiles.map(profile => {
-        const user = users.find(u => u.id === profile.userId);
-        return { ...profile, user };
-    });
+    useEffect(() => {
+        const fetchTutors = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const tutorsData = await tutorService.getAllTutors();
+                setTutors(tutorsData || []);
+            } catch (err) {
+                console.error('Error fetching tutors:', err);
+                setError('Failed to load tutors. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const filteredTutors = tutorsWithProfiles.filter(tutor => {
+        fetchTutors();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="text-red-600">
+                    <h3 className="font-medium">Error loading tutors</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    const filteredTutors = tutors.filter(tutor => {
         const matchesSearch = !searchTerm ||
-            tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            tutor.user.profile.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tutor.user.profile.lastName.toLowerCase().includes(searchTerm.toLowerCase());
+            (tutor.subjects && tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))) ||
+            (tutor.first_name && tutor.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (tutor.last_name && tutor.last_name.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesSubject = !filters.subject ||
-            tutor.subjects.some(subject => subject.toLowerCase().includes(filters.subject.toLowerCase()));
+            (tutor.subjects && tutor.subjects.some(subject => subject.toLowerCase().includes(filters.subject.toLowerCase())));
 
-        const matchesRate = !filters.maxRate || tutor.hourlyRate <= parseInt(filters.maxRate);
+        const matchesRate = !filters.maxRate || tutor.hourly_rate <= parseInt(filters.maxRate);
 
         const matchesRating = !filters.rating || tutor.rating >= parseFloat(filters.rating);
 
         return matchesSearch && matchesSubject && matchesRate && matchesRating;
     }).sort((a, b) => {
         switch (sortBy) {
-            case 'rating': return b.rating - a.rating;
-            case 'price': return a.hourlyRate - b.hourlyRate;
-            case 'experience': return b.totalSessions - a.totalSessions;
+            case 'rating': return (b.rating || 0) - (a.rating || 0);
+            case 'price': return (a.hourly_rate || 0) - (b.hourly_rate || 0);
+            case 'experience': return (b.total_sessions || 0) - (a.total_sessions || 0);
             default: return 0;
         }
     });
@@ -51,8 +92,8 @@ const TutorSearch = () => {
             <Star
                 key={i}
                 className={`h-4 w-4 ${i < Math.floor(rating)
-                        ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
+                    ? 'text-yellow-400 fill-current'
+                    : 'text-gray-300'
                     }`}
             />
         ));

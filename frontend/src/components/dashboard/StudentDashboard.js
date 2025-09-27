@@ -1,21 +1,88 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { sessions, tasks, calendarEvents } from '../../data';
+import { sessionService, taskService } from '../../services';
 import { Calendar, CheckSquare, BookOpen, Clock, TrendingUp } from 'lucide-react';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
+    const [sessions, setSessions] = useState([]);
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Get user-specific data
-    const userSessions = sessions.filter(s => s.studentId === user.id);
-    const userTasks = tasks.filter(t => t.userId === user.id);
-    const userEvents = calendarEvents.filter(e => e.userId === user.id);
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Fetch user sessions and tasks
+                const [sessionsData, tasksData] = await Promise.all([
+                    sessionService.getUserSessions(user.id),
+                    taskService.getUserTasks(user.id)
+                ]);
+
+                setSessions(sessionsData);
+                setTasks(tasksData);
+            } catch (err) {
+                console.error('Error fetching dashboard data:', err);
+                setError('Failed to load dashboard data. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user?.id) {
+            fetchDashboardData();
+        }
+    }, [user?.id]);
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-6 text-white">
+                    <div className="animate-pulse">
+                        <div className="h-8 bg-white/20 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-white/10 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                            <div className="animate-pulse">
+                                <div className="h-12 w-12 bg-gray-200 rounded-lg mb-4"></div>
+                                <div className="h-6 bg-gray-200 rounded w-16 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                    <h3 className="text-red-800 font-medium">Error loading dashboard</h3>
+                    <p className="text-red-600 mt-1">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Calculate stats
-    const upcomingSessions = userSessions.filter(s => s.status === 'scheduled').length;
-    const pendingTasks = userTasks.filter(t => t.status === 'pending').length;
-    const upcomingEvents = userEvents.filter(e => new Date(e.date) >= new Date()).length;
-    const completedTasks = userTasks.filter(t => t.status === 'completed').length;
+    const upcomingSessions = sessions.filter(s => s.status === 'scheduled').length;
+    const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+    const upcomingEvents = 0; // Calendar events will be implemented later
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
     const stats = [
         {
@@ -48,14 +115,14 @@ const StudentDashboard = () => {
         }
     ];
 
-    const recentSessions = userSessions
+    const recentSessions = sessions
         .filter(s => s.status === 'scheduled')
-        .sort((a, b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
+        .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))
         .slice(0, 3);
 
-    const urgentTasks = userTasks
+    const urgentTasks = tasks
         .filter(t => t.status !== 'completed')
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
         .slice(0, 3);
 
     return (
@@ -116,7 +183,7 @@ const StudentDashboard = () => {
                                         <div>
                                             <h3 className="font-medium text-gray-900">{session.subject}</h3>
                                             <p className="text-sm text-gray-600">
-                                                {new Date(session.scheduledDate).toLocaleDateString()} at {session.scheduledTime}
+                                                {new Date(session.scheduled_date).toLocaleDateString()} at {session.scheduled_time}
                                             </p>
                                         </div>
                                         <div className="flex items-center text-sm text-gray-500">
@@ -157,11 +224,11 @@ const StudentDashboard = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-medium text-gray-900">
-                                                Due: {new Date(task.dueDate).toLocaleDateString()}
+                                                Due: {new Date(task.due_date).toLocaleDateString()}
                                             </p>
                                             <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                        'bg-green-100 text-green-800'
+                                                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-green-100 text-green-800'
                                                 }`}>
                                                 {task.priority} priority
                                             </div>

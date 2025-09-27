@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, CheckSquare, Square, Clock, Calendar, Filter } from 'lucide-react';
-import { tasks, taskCategories, taskPriorities, taskStatuses } from '../../data/tasks';
+import { taskService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const TaskManager = () => {
     const { user } = useAuth();
-    const [userTasks, setUserTasks] = useState(
-        tasks.filter(task => task.userId === user.id)
-    );
+    const [userTasks, setUserTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [filter, setFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('dueDate');
+    const [sortBy, setSortBy] = useState('due_date');
     const [showAddForm, setShowAddForm] = useState(false);
 
     const [newTask, setNewTask] = useState({
@@ -17,9 +17,55 @@ const TaskManager = () => {
         description: '',
         category: 'General Studies',
         priority: 'medium',
-        dueDate: '',
-        estimatedHours: 1
+        due_date: '',
+        estimated_hours: 1
     });
+
+    useEffect(() => {
+        const fetchTasks = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const tasksData = await taskService.getUserTasks(user.id);
+                setUserTasks(tasksData);
+            } catch (err) {
+                console.error('Error fetching tasks:', err);
+                setError('Failed to load tasks. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user?.id) {
+            fetchTasks();
+        }
+    }, [user?.id]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                    <div className="space-y-4">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-16 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="text-red-600">
+                    <h3 className="font-medium">Error loading tasks</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     const filteredTasks = userTasks.filter(task => {
         if (filter === 'all') return true;
@@ -28,7 +74,7 @@ const TaskManager = () => {
         if (filter === 'completed') return task.status === 'completed';
         return true;
     }).sort((a, b) => {
-        if (sortBy === 'dueDate') return new Date(a.dueDate) - new Date(b.dueDate);
+        if (sortBy === 'due_date') return new Date(a.due_date) - new Date(b.due_date);
         if (sortBy === 'priority') {
             const priorityOrder = { high: 3, medium: 2, low: 1 };
             return priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -164,9 +210,9 @@ const TaskManager = () => {
                     <div
                         key={task.id}
                         className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${isOverdue(task.dueDate, task.status) ? 'border-l-red-500 bg-red-50' :
-                                task.status === 'completed' ? 'border-l-green-500' :
-                                    task.status === 'in-progress' ? 'border-l-blue-500' :
-                                        'border-l-gray-300'
+                            task.status === 'completed' ? 'border-l-green-500' :
+                                task.status === 'in-progress' ? 'border-l-blue-500' :
+                                    'border-l-gray-300'
                             }`}
                     >
                         <div className="flex items-start justify-between">

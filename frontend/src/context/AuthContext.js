@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authService } from '../services';
 
 const AuthContext = createContext();
 
@@ -23,16 +23,17 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         try {
-            const token = localStorage.getItem('authToken');
-            const savedUser = localStorage.getItem('user');
+            if (authService.isAuthenticated()) {
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    setUser(JSON.parse(savedUser));
+                }
 
-            if (token && savedUser) {
-                setUser(JSON.parse(savedUser));
-                // Optionally verify token with backend
+                // Verify token with backend
                 try {
-                    const response = await authAPI.getCurrentUser();
-                    setUser(response.data.user);
-                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    const userData = await authService.getCurrentUser();
+                    setUser(userData);
+                    localStorage.setItem('user', JSON.stringify(userData));
                 } catch (error) {
                     // Token might be expired, clear auth
                     logout();
@@ -50,16 +51,15 @@ export const AuthProvider = ({ children }) => {
             setError(null);
             setLoading(true);
 
-            const response = await authAPI.login({ email, password });
-            const { user: userData, token } = response.data;
+            const response = await authService.login(email, password);
+            const userData = response.user;
 
-            localStorage.setItem('authToken', token);
             localStorage.setItem('user', JSON.stringify(userData));
             setUser(userData);
 
             return { success: true, user: userData };
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Login failed';
+            const errorMessage = error.message || 'Login failed';
             setError(errorMessage);
             return { success: false, error: errorMessage };
         } finally {
@@ -72,16 +72,15 @@ export const AuthProvider = ({ children }) => {
             setError(null);
             setLoading(true);
 
-            const response = await authAPI.register(userData);
-            const { user: newUser, token } = response.data;
+            const response = await authService.register(userData);
+            const newUser = response.user;
 
-            localStorage.setItem('authToken', token);
             localStorage.setItem('user', JSON.stringify(newUser));
             setUser(newUser);
 
             return { success: true, user: newUser };
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Registration failed';
+            const errorMessage = error.message || 'Registration failed';
             setError(errorMessage);
             return { success: false, error: errorMessage };
         } finally {
@@ -91,11 +90,10 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            await authAPI.logout();
+            await authService.logout();
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             setUser(null);
         }

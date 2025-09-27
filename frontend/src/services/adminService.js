@@ -1,0 +1,315 @@
+import apiClient from './apiClient';
+
+class AdminService {
+    // Get all users (admin only)
+    async getAllUsers(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            // Add filters to query params
+            if (filters.role) queryParams.append('role', filters.role);
+            if (filters.isActive !== undefined) queryParams.append('isActive', filters.isActive);
+            if (filters.isVerified !== undefined) queryParams.append('isVerified', filters.isVerified);
+            if (filters.search) queryParams.append('search', filters.search);
+            if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+            if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+            if (filters.offset) queryParams.append('offset', filters.offset);
+
+            const endpoint = `/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get all users failed:', error);
+            throw error;
+        }
+    }
+
+    // Get user by ID (admin only)
+    async getUserById(userId) {
+        try {
+            const response = await apiClient.get(`/admin/users/${userId}`);
+            return response.user || response;
+        } catch (error) {
+            console.error('[AdminService] Get user by ID failed:', error);
+            throw error;
+        }
+    }
+
+    // Update user (admin only)
+    async updateUser(userId, updateData) {
+        try {
+            const response = await apiClient.put(`/admin/users/${userId}`, updateData);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Update user failed:', error);
+            throw error;
+        }
+    }
+
+    // Activate/Deactivate user (admin only)
+    async toggleUserStatus(userId, isActive) {
+        try {
+            const response = await apiClient.put(`/admin/users/${userId}/status`, {
+                isActive
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Toggle user status failed:', error);
+            throw error;
+        }
+    }
+
+    // Verify/Unverify user (admin only)
+    async toggleUserVerification(userId, isVerified) {
+        try {
+            const response = await apiClient.put(`/admin/users/${userId}/verification`, {
+                isVerified
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Toggle user verification failed:', error);
+            throw error;
+        }
+    }
+
+    // Get all sessions (admin only)
+    async getAllSessions(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            // Add filters to query params
+            if (filters.status) queryParams.append('status', filters.status);
+            if (filters.startDate) queryParams.append('startDate', filters.startDate);
+            if (filters.endDate) queryParams.append('endDate', filters.endDate);
+            if (filters.tutorId) queryParams.append('tutorId', filters.tutorId);
+            if (filters.studentId) queryParams.append('studentId', filters.studentId);
+            if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+            if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+            if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+            if (filters.offset) queryParams.append('offset', filters.offset);
+
+            const endpoint = `/admin/sessions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get all sessions failed:', error);
+            throw error;
+        }
+    }
+
+    // Get session by ID (admin only)
+    async getSessionById(sessionId) {
+        try {
+            const response = await apiClient.get(`/admin/sessions/${sessionId}`);
+            return response.session || response;
+        } catch (error) {
+            console.error('[AdminService] Get session by ID failed:', error);
+            throw error;
+        }
+    }
+
+    // Cancel session (admin only)
+    async cancelSession(sessionId, reason) {
+        try {
+            const response = await apiClient.put(`/admin/sessions/${sessionId}/cancel`, {
+                cancellationReason: reason
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Cancel session failed:', error);
+            throw error;
+        }
+    }
+
+    // Get platform analytics
+    async getAnalytics(timeframe = '30d') {
+        try {
+            const response = await apiClient.get(`/admin/analytics?timeframe=${timeframe}`);
+            return response.analytics || response;
+        } catch (error) {
+            console.error('[AdminService] Get analytics failed:', error);
+            throw error;
+        }
+    }
+
+    // Get user statistics
+    async getUserStats() {
+        try {
+            const response = await apiClient.get('/admin/stats/users');
+            return response.stats || response;
+        } catch (error) {
+            console.error('[AdminService] Get user stats failed:', error);
+            throw error;
+        }
+    }
+
+    // Get session statistics
+    async getSessionStats() {
+        try {
+            const response = await apiClient.get('/admin/stats/sessions');
+            return response.stats || response;
+        } catch (error) {
+            console.error('[AdminService] Get session stats failed:', error);
+            throw error;
+        }
+    }
+
+    // Get financial statistics
+    async getFinancialStats() {
+        try {
+            const response = await apiClient.get('/admin/stats/financial');
+            return response.stats || response;
+        } catch (error) {
+            console.error('[AdminService] Get financial stats failed:', error);
+            throw error;
+        }
+    }
+
+    // Get all subjects (admin only - with admin data)
+    async getAllSubjects() {
+        try {
+            const response = await apiClient.get('/admin/subjects');
+            return response.subjects || response;
+        } catch (error) {
+            console.error('[AdminService] Get all subjects failed:', error);
+            throw error;
+        }
+    }
+
+    // Create subject (admin only)
+    async createSubject(subjectData) {
+        try {
+            const response = await apiClient.post('/admin/subjects', subjectData);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Create subject failed:', error);
+            throw error;
+        }
+    }
+
+    // Update subject (admin only)
+    async updateSubject(subjectId, subjectData) {
+        try {
+            const response = await apiClient.put(`/admin/subjects/${subjectId}`, subjectData);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Update subject failed:', error);
+            throw error;
+        }
+    }
+
+    // Delete subject (admin only)
+    async deleteSubject(subjectId) {
+        try {
+            const response = await apiClient.delete(`/admin/subjects/${subjectId}`);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Delete subject failed:', error);
+            throw error;
+        }
+    }
+
+    // Get platform settings
+    async getPlatformSettings() {
+        try {
+            const response = await apiClient.get('/admin/settings');
+            return response.settings || response;
+        } catch (error) {
+            console.error('[AdminService] Get platform settings failed:', error);
+            throw error;
+        }
+    }
+
+    // Update platform settings
+    async updatePlatformSettings(settingsData) {
+        try {
+            const response = await apiClient.put('/admin/settings', settingsData);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Update platform settings failed:', error);
+            throw error;
+        }
+    }
+
+    // Get all payments (admin only)
+    async getAllPayments(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (filters.status) queryParams.append('status', filters.status);
+            if (filters.startDate) queryParams.append('startDate', filters.startDate);
+            if (filters.endDate) queryParams.append('endDate', filters.endDate);
+            if (filters.payerId) queryParams.append('payerId', filters.payerId);
+            if (filters.payeeId) queryParams.append('payeeId', filters.payeeId);
+            if (filters.sessionId) queryParams.append('sessionId', filters.sessionId);
+
+            const endpoint = `/admin/payments${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get all payments failed:', error);
+            throw error;
+        }
+    }
+
+    // Process refund (admin only)
+    async processRefund(paymentId, amount, reason) {
+        try {
+            const response = await apiClient.post(`/admin/payments/${paymentId}/refund`, {
+                amount,
+                reason
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Process refund failed:', error);
+            throw error;
+        }
+    }
+
+    // Send notification to users (admin only)
+    async sendNotification(notificationData) {
+        try {
+            const response = await apiClient.post('/admin/notifications', {
+                userIds: notificationData.userIds, // array of user IDs, or 'all'
+                type: notificationData.type,
+                title: notificationData.title,
+                message: notificationData.message,
+                data: notificationData.data
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Send notification failed:', error);
+            throw error;
+        }
+    }
+
+    // Get system logs (admin only)
+    async getSystemLogs(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (filters.level) queryParams.append('level', filters.level);
+            if (filters.startDate) queryParams.append('startDate', filters.startDate);
+            if (filters.endDate) queryParams.append('endDate', filters.endDate);
+            if (filters.service) queryParams.append('service', filters.service);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+
+            const endpoint = `/admin/logs${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response.logs || response;
+        } catch (error) {
+            console.error('[AdminService] Get system logs failed:', error);
+            throw error;
+        }
+    }
+}
+
+// Create and export singleton instance
+const adminService = new AdminService();
+export default adminService;

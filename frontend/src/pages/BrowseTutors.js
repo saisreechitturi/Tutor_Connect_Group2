@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { tutorService } from '../services';
 
 const BrowseTutors = () => {
     const [tutors, setTutors] = useState([]);
@@ -19,14 +20,11 @@ const BrowseTutors = () => {
     const fetchTutors = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:5000/api/tutors');
-            if (!response.ok) {
-                throw new Error('Failed to fetch tutors');
-            }
-            const data = await response.json();
-            setTutors(data.tutors || []);
+            setError(null);
+            const data = await tutorService.getAllTutors();
+            setTutors(data || []);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Failed to fetch tutors');
             console.error('Error fetching tutors:', err);
         } finally {
             setLoading(false);

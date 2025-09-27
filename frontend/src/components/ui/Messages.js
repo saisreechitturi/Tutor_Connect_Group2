@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Send, Search, MoreVertical, Phone, Video, Plus, Users, X } from 'lucide-react';
-import { messages, users } from '../../data';
+import { messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const Messages = () => {
@@ -10,21 +10,68 @@ const Messages = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showNewConversation, setShowNewConversation] = useState(false);
     const [activeTab, setActiveTab] = useState('conversations'); // 'conversations' or 'contacts'
+    const [messages, setMessages] = useState([]);
+    const [conversations, setConversations] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Get user messages and group by conversation
-    const userMessages = messages.filter(m =>
-        m.senderId === user.id || m.recipientId === user.id
-    );
+    useEffect(() => {
+        const fetchMessages = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const messagesData = await messageService.getUserMessages(user.id);
+                setMessages(messagesData);
 
-    // Group messages by conversation
-    const conversations = userMessages.reduce((acc, message) => {
-        const otherUserId = message.senderId === user.id ? message.recipientId : message.senderId;
-        if (!acc[otherUserId]) {
-            acc[otherUserId] = [];
+                // Group messages by conversation
+                const conversationsMap = messagesData.reduce((acc, message) => {
+                    const otherUserId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
+                    if (!acc[otherUserId]) {
+                        acc[otherUserId] = [];
+                    }
+                    acc[otherUserId].push(message);
+                    return acc;
+                }, {});
+
+                setConversations(conversationsMap);
+            } catch (err) {
+                console.error('Error fetching messages:', err);
+                setError('Failed to load messages. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user?.id) {
+            fetchMessages();
         }
-        acc[otherUserId].push(message);
-        return acc;
-    }, {});
+    }, [user?.id]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="h-16 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="text-red-600">
+                    <h3 className="font-medium">Error loading messages</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     // Get latest message for each conversation
     const conversationList = Object.entries(conversations).map(([userId, msgs]) => {
@@ -136,8 +183,8 @@ const Messages = () => {
                             <button
                                 onClick={() => setActiveTab('conversations')}
                                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'conversations'
-                                        ? 'bg-white text-primary-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                    ? 'bg-white text-primary-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900'
                                     }`}
                             >
                                 <MessageSquare className="h-4 w-4 inline mr-1" />
@@ -146,8 +193,8 @@ const Messages = () => {
                             <button
                                 onClick={() => setActiveTab('contacts')}
                                 className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'contacts'
-                                        ? 'bg-white text-primary-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                    ? 'bg-white text-primary-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900'
                                     }`}
                             >
                                 <Users className="h-4 w-4 inline mr-1" />
@@ -211,8 +258,8 @@ const Messages = () => {
                                                             {conversation.user?.profile?.firstName} {conversation.user?.profile?.lastName}
                                                         </p>
                                                         <span className={`text-xs px-2 py-1 rounded-full ${conversation.user?.role === 'tutor' ? 'bg-blue-100 text-blue-700' :
-                                                                conversation.user?.role === 'student' ? 'bg-green-100 text-green-700' :
-                                                                    'bg-purple-100 text-purple-700'
+                                                            conversation.user?.role === 'student' ? 'bg-green-100 text-green-700' :
+                                                                'bg-purple-100 text-purple-700'
                                                             }`}>
                                                             {conversation.user?.role}
                                                         </span>
@@ -280,8 +327,8 @@ const Messages = () => {
                                                         {contact.profile?.firstName} {contact.profile?.lastName}
                                                     </p>
                                                     <span className={`text-xs px-2 py-1 rounded-full ${contact.role === 'tutor' ? 'bg-blue-100 text-blue-700' :
-                                                            contact.role === 'student' ? 'bg-green-100 text-green-700' :
-                                                                'bg-purple-100 text-purple-700'
+                                                        contact.role === 'student' ? 'bg-green-100 text-green-700' :
+                                                            'bg-purple-100 text-purple-700'
                                                         }`}>
                                                         {contact.role}
                                                     </span>
@@ -494,8 +541,8 @@ const Messages = () => {
                                                     {contact.profile?.firstName} {contact.profile?.lastName}
                                                 </p>
                                                 <span className={`text-xs px-2 py-1 rounded-full ${contact.role === 'tutor' ? 'bg-blue-100 text-blue-700' :
-                                                        contact.role === 'student' ? 'bg-green-100 text-green-700' :
-                                                            'bg-purple-100 text-purple-700'
+                                                    contact.role === 'student' ? 'bg-green-100 text-green-700' :
+                                                        'bg-purple-100 text-purple-700'
                                                     }`}>
                                                     {contact.role}
                                                 </span>

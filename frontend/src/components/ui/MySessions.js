@@ -1,20 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, MapPin, Star, Filter, Plus } from 'lucide-react';
-import { sessions } from '../../data';
+import { sessionService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const MySessions = () => {
     const { user } = useAuth();
     const [filter, setFilter] = useState('all');
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [sessions, setSessions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Get user sessions
-    const userSessions = sessions.filter(s =>
-        user.role === 'student' ? s.studentId === user.id : s.tutorId === user.id
-    );
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                let sessionsData = [];
+                if (user.role === 'student') {
+                    sessionsData = await sessionService.getUserSessions(user.id);
+                } else {
+                    sessionsData = await sessionService.getTutorSessions(user.id);
+                }
+
+                setSessions(sessionsData);
+            } catch (err) {
+                console.error('Error fetching sessions:', err);
+                setError('Failed to load sessions. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user?.id) {
+            fetchSessions();
+        }
+    }, [user?.id, user?.role]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="text-red-600">
+                    <h3 className="font-medium">Error loading sessions</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     // Filter sessions based on status
-    const filteredSessions = userSessions.filter(session => {
+    const filteredSessions = sessions.filter(session => {
         if (filter === 'all') return true;
         return session.status === filter;
     });
@@ -95,8 +146,8 @@ const MySessions = () => {
                                 key={tab.key}
                                 onClick={() => setFilter(tab.key)}
                                 className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${filter === tab.key
-                                        ? 'border-primary-500 text-primary-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-primary-500 text-primary-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 {tab.label}
