@@ -1,6 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
-import { aiResponses, aiSuggestions } from '../../data/ai';
+
+// Mock AI data - in a real app this would come from an AI service
+const aiResponses = {
+    greeting: "Hello! I'm your TutorConnect AI assistant. I can help you with scheduling sessions, finding tutors, or answering questions about the platform.",
+    scheduling: "I can help you schedule a tutoring session. What subject are you looking for help with?",
+    tutors: "I can recommend tutors based on your needs. What subject and skill level are you looking for?",
+    help: "I'm here to help with any questions about TutorConnect. You can ask me about scheduling, finding tutors, managing your profile, or platform features.",
+    default: "That's a great question! Let me help you with that. Could you provide more specific details?"
+};
+
+const aiSuggestions = [
+    "Find a math tutor",
+    "Schedule a session",
+    "How do I pay for sessions?",
+    "Update my profile",
+    "Cancel a session",
+    "Rate my tutor"
+];
 
 const AIChatbot = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -137,8 +154,8 @@ const AIChatbot = () => {
                         )}
                         <div
                             className={`max-w-xs px-3 py-2 rounded-lg ${message.type === 'user'
-                                    ? 'bg-primary-600 text-white'
-                                    : 'bg-gray-100 text-gray-800'
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-gray-100 text-gray-800'
                                 }`}
                         >
                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>

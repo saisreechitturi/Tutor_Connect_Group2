@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { adminService, sessionService } from '../services';
 import {
     Calendar,
     Clock,
@@ -30,122 +31,92 @@ const AdminSessionManagement = () => {
     const [showModal, setShowModal] = useState(false);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterType, setFilterType] = useState('all');
+    const [sessions, setSessions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock session data
-    const sessions = [
-        {
-            id: 'SES001',
-            tutor: { name: 'Dr. Sarah Johnson', id: 'TUT001', rating: 4.9 },
-            student: { name: 'Alex Chen', id: 'STU001', grade: '10th Grade' },
-            subject: 'Advanced Mathematics',
-            status: 'completed',
-            type: 'video',
-            scheduledTime: '2024-01-15 14:00',
-            duration: 60,
-            actualDuration: 58,
-            rate: 45,
-            totalEarnings: 45,
-            location: 'Online',
-            notes: 'Great progress on calculus derivatives',
-            rating: 5,
-            issues: [],
-            resources: ['calculus_notes.pdf', 'practice_problems.pdf']
-        },
-        {
-            id: 'SES002',
-            tutor: { name: 'Michael Rodriguez', id: 'TUT002', rating: 4.7 },
-            student: { name: 'Emma Wilson', id: 'STU001', grade: '12th Grade' },
-            subject: 'Physics',
-            status: 'in-progress',
-            type: 'in-person',
-            scheduledTime: '2024-01-15 16:00',
-            duration: 90,
-            actualDuration: 45,
-            rate: 50,
-            totalEarnings: 37.5,
-            location: 'Central Library, Room 204',
-            notes: 'Working on quantum mechanics concepts',
-            rating: null,
-            issues: [],
-            resources: ['quantum_physics_guide.pdf']
-        },
-        {
-            id: 'SES004',
-            tutor: { name: 'Lisa Anderson', id: 'TUT004', rating: 4.9 },
-            student: { name: 'Sophie Davis', id: 'STU003', grade: '9th Grade' },
-            subject: 'English Literature',
-            status: 'scheduled',
-            type: 'in-person',
-            scheduledTime: '2024-01-16 15:30',
-            duration: 75,
-            actualDuration: null,
-            rate: 35,
-            totalEarnings: 43.75,
-            location: 'Student\'s Home',
-            notes: 'First session - Shakespeare introduction',
-            rating: null,
-            issues: [],
-            resources: []
-        },
-        {
-            id: 'SES005',
-            tutor: { name: 'Dr. Sarah Johnson', id: 'TUT001', rating: 4.9 },
-            student: { name: 'James Miller', id: 'STU004', grade: '12th Grade' },
-            subject: 'Calculus',
-            status: 'cancelled',
-            type: 'video',
-            scheduledTime: '2024-01-14 13:00',
-            duration: 60,
-            actualDuration: 0,
-            rate: 45,
-            totalEarnings: 0,
-            location: 'Online',
-            notes: 'Student cancelled 2 hours before session',
-            rating: null,
-            issues: ['Late cancellation'],
-            resources: []
-        },
-        {
-            id: 'SES006',
-            tutor: { name: 'Michael Rodriguez', id: 'TUT002', rating: 4.7 },
-            student: { name: 'Isabella Garcia', id: 'STU005', grade: '10th Grade' },
-            subject: 'Biology',
-            status: 'completed',
-            type: 'phone',
-            scheduledTime: '2024-01-14 17:00',
-            duration: 45,
-            actualDuration: 47,
-            rate: 50,
-            totalEarnings: 39.17,
-            location: 'Phone Call',
-            notes: 'Reviewed cell biology and mitosis',
-            rating: 4,
-            issues: [],
-            resources: ['cell_biology_diagram.png', 'mitosis_worksheet.pdf']
+    useEffect(() => {
+        fetchSessions();
+    }, []);
+
+    const fetchSessions = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const sessionsData = await adminService.getAllSessions();
+            setSessions(sessionsData || []);
+        } catch (err) {
+            console.error('Error fetching sessions:', err);
+            setError('Failed to load sessions. Please try again.');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                            <div className="space-y-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <h3 className="text-red-800 font-medium">Error loading sessions</h3>
+                        <p className="text-red-600 mt-1">{error}</p>
+                        <button
+                            onClick={fetchSessions}
+                            className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // Summary statistics
     const stats = {
         totalSessions: sessions.length,
         completedSessions: sessions.filter(s => s.status === 'completed').length,
-        inProgressSessions: sessions.filter(s => s.status === 'in-progress').length,
+        inProgressSessions: sessions.filter(s => s.status === 'in-progress' || s.status === 'scheduled').length,
         scheduledSessions: sessions.filter(s => s.status === 'scheduled').length,
         cancelledSessions: sessions.filter(s => s.status === 'cancelled').length,
-        totalEarnings: sessions.reduce((sum, s) => sum + s.totalEarnings, 0),
-        averageRating: sessions.filter(s => s.rating).reduce((sum, s, _, arr) => sum + s.rating / arr.length, 0),
-        totalDuration: sessions.reduce((sum, s) => sum + (s.actualDuration || 0), 0)
+        totalEarnings: sessions.reduce((sum, s) => sum + (s.total_earnings || s.totalEarnings || 0), 0),
+        averageRating: sessions.filter(s => s.rating).reduce((sum, s, _, arr) => sum + (s.rating || 0) / arr.length, 0) || 0,
+        totalDuration: sessions.reduce((sum, s) => sum + (s.actual_duration || s.actualDuration || s.duration || 0), 0)
     };
 
     // Filter sessions
     const filteredSessions = sessions.filter(session => {
-        const matchesSearch = session.tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            session.student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            session.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            session.id.toLowerCase().includes(searchTerm.toLowerCase());
+        const tutorName = session.tutor_name || (session.tutor && session.tutor.name) || '';
+        const studentName = session.student_name || (session.student && session.student.name) || '';
+        const sessionId = session.id || '';
+        const subject = session.subject || '';
+
+        const matchesSearch = tutorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            sessionId.toString().toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesStatus = filterStatus === 'all' || session.status === filterStatus;
-        const matchesType = filterType === 'all' || session.type === filterType;
+        const matchesType = filterType === 'all' || session.session_type === filterType || session.type === filterType;
 
         return matchesSearch && matchesStatus && matchesType;
     });

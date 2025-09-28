@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { tutorService, sessionService } from '../services';
 import { Search, Filter, MessageCircle, Calendar, BookOpen, Star, Clock, TrendingUp, Award } from 'lucide-react';
 
 const TutorStudents = () => {
@@ -7,84 +8,80 @@ const TutorStudents = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock students data
-    const students = [
-        {
-            id: 1,
-            name: 'Sai Prathyusha Celoth',
-            email: 'student@example.com',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-            joinedDate: '2024-01-15',
-            totalSessions: 24,
-            completedSessions: 22,
-            upcomingSessions: 2,
-            avgRating: 4.8,
-            subjects: ['JavaScript', 'React'],
-            progress: 85,
-            lastSession: '2024-09-12',
-            status: 'active',
-            hoursLearned: 36,
-            achievements: ['Fast Learner', 'Consistent Attendance'],
-            notes: 'Excellent progress in React components. Needs more practice with hooks.',
-            phoneNumber: '+1234567890',
-            timezone: 'EST',
-            learningGoals: ['Master React hooks', 'Build a full-stack application', 'Learn TypeScript'],
-            weakAreas: ['State management', 'API integration'],
-            strongAreas: ['HTML/CSS', 'Basic JavaScript', 'Problem solving']
-        },
-        {
-            id: 2,
-            name: 'Chandan Cheni',
-            email: 'chandan.cheni@example.com',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-            joinedDate: '2024-02-20',
-            totalSessions: 18,
-            completedSessions: 16,
-            upcomingSessions: 1,
-            avgRating: 4.9,
-            subjects: ['Node.js', 'Database Design'],
-            progress: 72,
-            lastSession: '2024-09-10',
-            status: 'active',
-            hoursLearned: 27,
-            achievements: ['Quick Learner', 'Great Questions'],
-            notes: 'Strong understanding of backend concepts. Ready for advanced topics.',
-            phoneNumber: '+1234567891',
-            timezone: 'PST',
-            learningGoals: ['Master Node.js', 'Learn MongoDB', 'Build REST APIs'],
-            weakAreas: ['Database optimization', 'Authentication'],
-            strongAreas: ['Server concepts', 'JavaScript', 'Problem analysis']
-        },
-        {
-            id: 3,
-            name: 'Maatheswaran Kannan Chellapandian',
-            email: 'maatheswaran.kannan@example.com',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-            joinedDate: '2024-03-10',
-            totalSessions: 8,
-            completedSessions: 6,
-            upcomingSessions: 0,
-            avgRating: 4.5,
-            subjects: ['Web Development Basics'],
-            progress: 45,
-            lastSession: '2024-08-28',
-            status: 'inactive',
-            hoursLearned: 12,
-            achievements: ['First Steps'],
-            notes: 'Taking a break due to work commitments. Planning to resume next month.',
-            phoneNumber: '+1234567892',
-            timezone: 'CST',
-            learningGoals: ['Learn HTML/CSS', 'Understand JavaScript basics', 'Create first website'],
-            weakAreas: ['JavaScript fundamentals', 'CSS positioning'],
-            strongAreas: ['HTML structure', 'Design thinking']
+    useEffect(() => {
+        fetchStudents();
+    }, [user?.id]);
+
+    const fetchStudents = async () => {
+        if (!user?.id) return;
+
+        try {
+            setLoading(true);
+            setError(null);
+            const studentsData = await tutorService.getTutorStudents(user.id);
+            setStudents(studentsData || []);
+        } catch (err) {
+            console.error('Error fetching students:', err);
+            setError('Failed to load students. Please try again.');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} className="bg-white rounded-lg p-6">
+                                    <div className="h-16 bg-gray-200 rounded-full w-16 mx-auto mb-4"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <h3 className="text-red-800 font-medium">Error loading students</h3>
+                        <p className="text-red-600 mt-1">{error}</p>
+                        <button
+                            onClick={fetchStudents}
+                            className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const filteredStudents = students.filter(student => {
-        const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()));
+        const studentName = student.first_name && student.last_name ?
+            `${student.first_name} ${student.last_name}` :
+            student.name || '';
+        const email = student.email || '';
+        const subjects = student.subjects || [];
+
+        const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesFilter = filterStatus === 'all' || student.status === filterStatus;
 

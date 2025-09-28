@@ -1,89 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, Clock, CheckCircle, AlertCircle, User, BookOpen, Edit, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { taskService } from '../services';
 
 const TutorTasks = () => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock tasks data
-    const tasks = [
-        {
-            id: 1,
-            title: 'Review Sai Prathyusha\'s React Project',
-            description: 'Review and provide feedback on Sai Prathyusha Celoth\'s React portfolio project. Focus on component structure and state management.',
-            student: { name: 'Sai Prathyusha Celoth', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150' },
-            subject: 'React',
-            priority: 'high',
-            status: 'pending',
-            dueDate: '2024-09-16',
-            createdDate: '2024-09-10',
-            estimatedTime: 2,
-            type: 'review',
-            notes: 'Student struggled with useEffect hooks in our last session'
-        },
-        {
-            id: 2,
-            title: 'Prepare Node.js API Lesson',
-            description: 'Create lesson materials for Chandan Cheni\'s upcoming session on building REST APIs with Node.js and Express.',
-            student: { name: 'Chandan Cheni', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-            subject: 'Node.js',
-            priority: 'medium',
-            status: 'in-progress',
-            dueDate: '2024-09-15',
-            createdDate: '2024-09-08',
-            estimatedTime: 1.5,
-            type: 'preparation',
-            notes: 'Include authentication examples'
-        },
-        {
-            id: 3,
-            title: 'Grade JavaScript Assignment',
-            description: 'Grade and provide feedback on Maatheswaran\'s JavaScript fundamentals assignment covering loops, functions, and arrays.',
-            student: { name: 'Maatheswaran Kannan Chellapandian', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
-            subject: 'JavaScript',
-            priority: 'medium',
-            status: 'completed',
-            dueDate: '2024-09-12',
-            createdDate: '2024-09-05',
-            estimatedTime: 1,
-            type: 'grading',
-            notes: 'Student shows good progress in basic concepts'
-        },
-        {
-            id: 4,
-            title: 'Create Database Schema Exercise',
-            description: 'Design a practical database exercise for Chandan\'s upcoming database design session.',
-            student: { name: 'Chandan Cheni', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-            subject: 'Database Design',
-            priority: 'low',
-            status: 'pending',
-            dueDate: '2024-09-20',
-            createdDate: '2024-09-12',
-            estimatedTime: 2.5,
-            type: 'preparation',
-            notes: 'Focus on normalization and relationships'
-        },
-        {
-            id: 5,
-            title: 'Follow up on Missed Session',
-            description: 'Reach out to Ananya about the missed session and reschedule. Provide makeup materials.',
-            student: { name: 'Ananya Sharma', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
-            subject: 'General',
-            priority: 'high',
-            status: 'pending',
-            dueDate: '2024-09-14',
-            createdDate: '2024-09-13',
-            estimatedTime: 0.5,
-            type: 'follow-up',
-            notes: 'Student had emergency, very understanding'
+    useEffect(() => {
+        fetchTasks();
+    }, [user?.id]);
+
+    const fetchTasks = async () => {
+        if (!user?.id) return;
+
+        try {
+            setLoading(true);
+            setError(null);
+            const tasksData = await taskService.getUserTasks(user.id);
+            setTasks(tasksData || []);
+        } catch (err) {
+            console.error('Error fetching tasks:', err);
+            setError('Failed to load tasks. Please try again.');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
-    const [taskList, setTaskList] = useState(tasks);
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+                        <div className="space-y-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="bg-white rounded-lg p-6">
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-    const filteredTasks = taskList.filter(task => {
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <h3 className="text-red-800 font-medium">Error loading tasks</h3>
+                        <p className="text-red-600 mt-1">{error}</p>
+                        <button
+                            onClick={fetchTasks}
+                            className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const filteredTasks = tasks.filter(task => {
         const matchesTab = activeTab === 'all' || task.status === activeTab;
         const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||

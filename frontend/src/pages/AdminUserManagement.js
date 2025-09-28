@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, User, Mail, Phone, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { adminService } from '../services';
 
 const AdminUserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -7,118 +8,77 @@ const AdminUserManagement = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedUser, setSelectedUser] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock users data (extended from existing data)
-    const users = [
-        {
-            id: 1,
-            firstName: 'Alice',
-            lastName: 'Johnson',
-            email: 'student@example.com',
-            phone: '+1234567890',
-            role: 'student',
-            status: 'active',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-            joinedDate: '2024-01-15',
-            lastLogin: '2024-09-14',
-            location: 'New York, NY',
-            totalSessions: 24,
-            totalSpent: 1080
-        },
-        {
-            id: 2,
-            firstName: 'Bob',
-            lastName: 'Smith',
-            email: 'tutor@example.com',
-            phone: '+1234567891',
-            role: 'tutor',
-            status: 'active',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-            joinedDate: '2023-08-20',
-            lastLogin: '2024-09-14',
-            location: 'San Francisco, CA',
-            totalSessions: 156,
-            totalEarned: 7020,
-            rating: 4.8,
-            subjects: ['JavaScript', 'React', 'Node.js'],
-            verified: true
-        },
-        {
-            id: 3,
-            firstName: 'Carol',
-            lastName: 'Williams',
-            email: 'admin@example.com',
-            phone: '+1234567892',
-            role: 'admin',
-            status: 'active',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-            joinedDate: '2023-05-10',
-            lastLogin: '2024-09-14',
-            location: 'Austin, TX'
-        },
-        {
-            id: 4,
-            firstName: 'Emma',
-            lastName: 'Davis',
-            email: 'tutor2@example.com',
-            phone: '+1234567893',
-            role: 'tutor',
-            status: 'active',
-            avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-            joinedDate: '2023-09-15',
-            lastLogin: '2024-09-13',
-            location: 'Chicago, IL',
-            totalSessions: 203,
-            totalEarned: 12180,
-            rating: 4.9,
-            subjects: ['Calculus', 'Linear Algebra', 'Statistics'],
-            verified: true
-        },
-        {
-            id: 5,
-            firstName: 'David',
-            lastName: 'Wilson',
-            email: 'tutor3@example.com',
-            phone: '+1234567894',
-            role: 'tutor',
-            status: 'pending',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-            joinedDate: '2023-08-20',
-            lastLogin: '2024-09-12',
-            location: 'Boston, MA',
-            totalSessions: 178,
-            totalEarned: 9790,
-            rating: 4.7,
-            subjects: ['Physics', 'Quantum Mechanics'],
-            verified: false
-        },
-        {
-            id: 6,
-            firstName: 'Maria',
-            lastName: 'Garcia',
-            email: 'tutor4@example.com',
-            phone: '+1234567895',
-            role: 'tutor',
-            status: 'suspended',
-            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-            joinedDate: '2023-07-10',
-            lastLogin: '2024-09-05',
-            location: 'Miami, FL',
-            totalSessions: 245,
-            totalEarned: 8575,
-            rating: 4.8,
-            subjects: ['Spanish', 'Literature'],
-            verified: true
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const usersData = await adminService.getAllUsers();
+            setUsers(usersData || []);
+        } catch (err) {
+            console.error('Error fetching users:', err);
+            setError('Failed to load users. Please try again.');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
-    const [userList, setUserList] = useState(users);
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                            <div className="space-y-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="h-16 bg-gray-200 rounded-lg"></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <h3 className="text-red-800 font-medium">Error loading users</h3>
+                        <p className="text-red-600 mt-1">{error}</p>
+                        <button
+                            onClick={fetchUsers}
+                            className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200 transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const [userList, setUserList] = useState([]);
+
+    useEffect(() => {
+        setUserList(users);
+    }, [users]);
 
     const filteredUsers = userList.filter(user => {
         const matchesSearch =
-            user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (user.first_name && user.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (user.last_name && user.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (user.subjects && user.subjects.some(subject =>
                 subject.toLowerCase().includes(searchTerm.toLowerCase())
             ));
@@ -148,15 +108,27 @@ const AdminUserManagement = () => {
         }
     };
 
-    const updateUserStatus = (userId, newStatus) => {
-        setUserList(prev => prev.map(user =>
-            user.id === userId ? { ...user, status: newStatus } : user
-        ));
+    const updateUserStatus = async (userId, newStatus) => {
+        try {
+            await adminService.updateUserStatus(userId, newStatus);
+            setUserList(prev => prev.map(user =>
+                user.id === userId ? { ...user, status: newStatus } : user
+            ));
+        } catch (err) {
+            console.error('Error updating user status:', err);
+            alert('Failed to update user status. Please try again.');
+        }
     };
 
-    const deleteUser = (userId) => {
+    const deleteUser = async (userId) => {
         if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            setUserList(prev => prev.filter(user => user.id !== userId));
+            try {
+                await adminService.deleteUser(userId);
+                setUserList(prev => prev.filter(user => user.id !== userId));
+            } catch (err) {
+                console.error('Error deleting user:', err);
+                alert('Failed to delete user. Please try again.');
+            }
         }
     };
 

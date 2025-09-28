@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
-import { calendarEvents } from '../../data';
 import { useAuth } from '../../context/AuthContext';
 
 const Calendar = () => {
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // TODO: Replace with API call to fetch calendar events
+    const calendarEvents = [];
 
     // Get user events
     const userEvents = calendarEvents.filter(event => event.userId === user.id);
@@ -154,8 +156,8 @@ const Calendar = () => {
                                                     </div>
                                                 )}
                                                 <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-2 ${event.type === 'session' ? 'bg-blue-100 text-blue-800' :
-                                                        event.type === 'assignment' ? 'bg-red-100 text-red-800' :
-                                                            'bg-green-100 text-green-800'
+                                                    event.type === 'assignment' ? 'bg-red-100 text-red-800' :
+                                                        'bg-green-100 text-green-800'
                                                     }`}>
                                                     {event.type}
                                                 </div>
