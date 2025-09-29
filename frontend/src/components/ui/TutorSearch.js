@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen } from 'lucide-react';
 import { tutorService } from '../../services';
+import BookSessionModal from '../modals/BookSessionModal';
 
 const TutorSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +15,8 @@ const TutorSearch = () => {
         availability: ''
     });
     const [sortBy, setSortBy] = useState('rating');
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedTutor, setSelectedTutor] = useState(null);
 
     useEffect(() => {
         const fetchTutors = async () => {
@@ -86,9 +89,16 @@ const TutorSearch = () => {
         }
     });
 
-    const handleBookSession = (tutorId) => {
-        // Mock booking - in real app would navigate to booking page
-        alert(`Booking session with tutor ${tutorId}. This would open the booking modal in a real app.`);
+    const handleBookSession = (tutor) => {
+        setSelectedTutor(tutor);
+        setShowBookingModal(true);
+    };
+
+    const handleSessionBooked = (newSession) => {
+        // You can add any additional logic here, like showing a success message
+        console.log('Session booked successfully:', newSession);
+        setShowBookingModal(false);
+        setSelectedTutor(null);
     };
 
     const renderStars = (rating) => {
@@ -277,7 +287,7 @@ const TutorSearch = () => {
 
                         {/* Action Button */}
                         <button
-                            onClick={() => handleBookSession(tutor.id)}
+                            onClick={() => handleBookSession(tutor)}
                             className="w-full btn-primary"
                         >
                             Book Session
@@ -295,6 +305,17 @@ const TutorSearch = () => {
                     </p>
                 </div>
             )}
+
+            {/* Book Session Modal */}
+            <BookSessionModal
+                isOpen={showBookingModal}
+                onClose={() => {
+                    setShowBookingModal(false);
+                    setSelectedTutor(null);
+                }}
+                onSessionBooked={handleSessionBooked}
+                selectedTutor={selectedTutor}
+            />
         </div>
     );
 };

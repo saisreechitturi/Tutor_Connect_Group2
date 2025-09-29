@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { tutorService } from '../services';
+import BookSessionModal from '../components/modals/BookSessionModal';
 
 const BrowseTutors = () => {
     const [tutors, setTutors] = useState([]);
@@ -11,6 +12,8 @@ const BrowseTutors = () => {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [priceRange, setPriceRange] = useState('');
     const [sortBy, setSortBy] = useState('price_low');
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedTutor, setSelectedTutor] = useState(null);
 
     // Fetch tutors from database
     useEffect(() => {
@@ -29,6 +32,17 @@ const BrowseTutors = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleBookSession = (tutor) => {
+        setSelectedTutor(tutor);
+        setShowBookingModal(true);
+    };
+
+    const handleSessionBooked = (newSession) => {
+        console.log('Session booked successfully:', newSession);
+        setShowBookingModal(false);
+        setSelectedTutor(null);
     };
 
     // Show loading state
@@ -271,12 +285,12 @@ const BrowseTutors = () => {
 
                             {/* Action Buttons */}
                             <div className="space-y-2">
-                                <Link
-                                    to="/signup"
+                                <button
+                                    onClick={() => handleBookSession(tutor)}
                                     className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors text-center block font-medium"
                                 >
                                     Book Session
-                                </Link>
+                                </button>
                                 <button className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                                     View Profile
                                 </button>
@@ -327,6 +341,16 @@ const BrowseTutors = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Book Session Modal */}
+            {showBookingModal && (
+                <BookSessionModal
+                    isOpen={showBookingModal}
+                    onClose={() => setShowBookingModal(false)}
+                    onSessionBooked={handleSessionBooked}
+                    selectedTutor={selectedTutor}
+                />
+            )}
         </div>
     );
 };

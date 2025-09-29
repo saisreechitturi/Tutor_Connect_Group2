@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { sessionService, taskService } from '../../services';
+import AddTaskModal from '../modals/AddTaskModal';
+import BookSessionModal from '../modals/BookSessionModal';
 
 const Calendar = () => {
     const { user } = useAuth();
@@ -11,6 +13,8 @@ const Calendar = () => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+    const [showBookSessionModal, setShowBookSessionModal] = useState(false);
 
     useEffect(() => {
         const fetchCalendarData = async () => {
@@ -37,6 +41,14 @@ const Calendar = () => {
             fetchCalendarData();
         }
     }, [user?.id]);
+
+    const handleTaskAdded = (newTask) => {
+        setTasks(prev => [...prev, newTask]);
+    };
+
+    const handleSessionBooked = (newSession) => {
+        setSessions(prev => [...prev, newSession]);
+    };
 
     // Convert sessions and tasks to calendar events
     const getCalendarEvents = () => {
@@ -254,16 +266,16 @@ const Calendar = () => {
                                                 )}
                                                 <div className="flex items-center justify-between mt-2">
                                                     <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${event.type === 'session' ? 'bg-blue-100 text-blue-800' :
-                                                            event.type === 'task' ? 'bg-green-100 text-green-800' :
-                                                                'bg-gray-100 text-gray-800'
+                                                        event.type === 'task' ? 'bg-green-100 text-green-800' :
+                                                            'bg-gray-100 text-gray-800'
                                                         }`}>
                                                         {event.type === 'session' ? 'Session' : 'Task'}
                                                     </div>
                                                     {event.status && (
                                                         <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${event.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                                event.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                                                    event.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                                                                        'bg-gray-100 text-gray-800'
+                                                            event.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                                                event.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-gray-100 text-gray-800'
                                                             }`}>
                                                             {event.status}
                                                         </div>
@@ -271,8 +283,8 @@ const Calendar = () => {
                                                 </div>
                                                 {event.priority && (
                                                     <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${event.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                                            event.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-green-100 text-green-800'
+                                                        event.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-green-100 text-green-800'
                                                         }`}>
                                                         {event.priority} priority
                                                     </div>
@@ -289,11 +301,17 @@ const Calendar = () => {
                             <div className="bg-white rounded-lg border border-gray-200 p-4">
                                 <h3 className="font-medium text-gray-900 mb-3">Quick Actions</h3>
                                 <div className="space-y-2">
-                                    <button className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-primary-700 transition-colors flex items-center justify-center">
+                                    <button
+                                        onClick={() => setShowAddTaskModal(true)}
+                                        className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-primary-700 transition-colors flex items-center justify-center"
+                                    >
                                         <Plus className="h-4 w-4 mr-1" />
                                         Add Task
                                     </button>
-                                    <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center">
+                                    <button
+                                        onClick={() => setShowBookSessionModal(true)}
+                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                    >
                                         <Plus className="h-4 w-4 mr-1" />
                                         Book Session
                                     </button>
@@ -308,6 +326,20 @@ const Calendar = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Add Task Modal */}
+            <AddTaskModal
+                isOpen={showAddTaskModal}
+                onClose={() => setShowAddTaskModal(false)}
+                onTaskAdded={handleTaskAdded}
+            />
+
+            {/* Book Session Modal */}
+            <BookSessionModal
+                isOpen={showBookSessionModal}
+                onClose={() => setShowBookSessionModal(false)}
+                onSessionBooked={handleSessionBooked}
+            />
         </div>
     );
 };

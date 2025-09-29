@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CheckSquare, Square, Clock, Calendar, Filter } from 'lucide-react';
+import { Plus, CheckSquare, Square, Clock, Calendar, Filter, X, AlertCircle } from 'lucide-react';
 import { taskService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
+import AddTaskModal from '../modals/AddTaskModal';
+import TaskDetailsModal from '../modals/TaskDetailsModal';
 
 const TaskManager = () => {
     const { user } = useAuth();
     const [userTasks, setUserTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [updateError, setUpdateError] = useState(null);
     const [filter, setFilter] = useState('all');
     const [sortBy, setSortBy] = useState('due_date');
     const [showAddForm, setShowAddForm] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [showTaskDetails, setShowTaskDetails] = useState(false);
 
-    const [newTask, setNewTask] = useState({
-        title: '',
-        description: '',
-        category: 'General Studies',
-        priority: 'medium',
-        dueDate: '',
-        estimatedDuration: 60 // in minutes
-    });
+    const handleTaskAdded = (newTask) => {
+        setUserTasks(prev => [...prev, newTask]);
+    };
+
+    const handleTaskUpdated = (updatedTask) => {
+        setUserTasks(prev => prev.map(task =>
+            task.id === updatedTask.id ? updatedTask : task
+        ));
+    };
+
+    const handleTaskClick = (task) => {
+        setSelectedTask(task);
+        setShowTaskDetails(true);
+    };
 
     useEffect(() => {
         const fetchTasks = async () => {
@@ -58,11 +69,47 @@ const TaskManager = () => {
 
     if (error) {
         return (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="text-red-600">
-                    <h3 className="font-medium">Error loading tasks</h3>
-                    <p className="text-sm mt-1">{error}</p>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Task Manager</h1>
+                        <p className="text-gray-600 mt-1">Organize and track your study tasks</p>
+                    </div>
+                    <button
+                        onClick={() => setShowAddForm(true)}
+                        className="btn-primary mt-4 sm:mt-0 inline-flex items-center"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Task
+                    </button>
                 </div>
+
+                {/* Error Display */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-start justify-between">
+                        <div className="text-red-600">
+                            <h3 className="font-medium">Error loading tasks</h3>
+                            <p className="text-sm mt-1">{error}</p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setError(null);
+                                window.location.reload();
+                            }}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+
+                {/* Add Task Modal */}
+                <AddTaskModal
+                    isOpen={showAddForm}
+                    onClose={() => setShowAddForm(false)}
+                    onTaskAdded={handleTaskAdded}
+                />
             </div>
         );
     }
@@ -88,6 +135,7 @@ const TaskManager = () => {
             const task = userTasks.find(t => t.id === taskId);
             if (!task) return;
 
+            // Optimistically update UI first
             let updateData = {};
             if (task.status === 'pending') {
                 updateData.status = 'in-progress';
@@ -99,40 +147,38 @@ const TaskManager = () => {
                 updateData.progress = 0;
             }
 
-            await taskService.updateTask(taskId, updateData);
-
-            // Update local state
+            // Update local state immediately for better UX
             setUserTasks(prev => prev.map(t => {
                 if (t.id === taskId) {
                     return { ...t, ...updateData };
                 }
                 return t;
             }));
+
+            // Try to update on server
+            try {
+                await taskService.updateTask(taskId, updateData);
+                // Clear any existing errors on success
+                setError(null);
+            } catch (apiError) {
+                // Revert the optimistic update on API failure
+                setUserTasks(prev => prev.map(t => {
+                    if (t.id === taskId) {
+                        return task; // Revert to original task state
+                    }
+                    return t;
+                }));
+
+                console.error('Failed to update task on server:', apiError);
+                setUpdateError('Failed to update task. Please check your internet connection and try again.');
+                // Auto-dismiss error after 5 seconds
+                setTimeout(() => setUpdateError(null), 5000);
+            }
         } catch (error) {
             console.error('Failed to update task:', error);
-            setError('Failed to update task. Please try again.');
-        }
-    };
-
-    const addTask = async (e) => {
-        e.preventDefault();
-        if (!newTask.title.trim()) return;
-
-        try {
-            const createdTask = await taskService.createTask(newTask);
-            setUserTasks(prev => [...prev, createdTask]);
-            setNewTask({
-                title: '',
-                description: '',
-                category: 'General Studies',
-                priority: 'medium',
-                dueDate: '',
-                estimatedDuration: 60
-            });
-            setShowAddForm(false);
-        } catch (error) {
-            console.error('Failed to create task:', error);
-            setError('Failed to create task. Please try again.');
+            setUpdateError('Failed to update task. Please try again.');
+            // Auto-dismiss error after 5 seconds
+            setTimeout(() => setUpdateError(null), 5000);
         }
     };
 
@@ -160,6 +206,25 @@ const TaskManager = () => {
 
     return (
         <div className="space-y-6">
+            {/* Inline Update Error Notification */}
+            {updateError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start justify-between">
+                    <div className="flex items-start">
+                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                        <div>
+                            <h3 className="text-red-800 font-medium text-sm">Task Update Failed</h3>
+                            <p className="text-red-600 text-sm mt-1">{updateError}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setUpdateError(null)}
+                        className="text-red-600 hover:text-red-800 flex-shrink-0"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -224,7 +289,10 @@ const TaskManager = () => {
                         <div className="flex items-start justify-between">
                             <div className="flex items-start space-x-3 flex-1">
                                 <button
-                                    onClick={() => toggleTaskStatus(task.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleTaskStatus(task.id);
+                                    }}
                                     className={`mt-1 ${getStatusColor(task.status)} hover:scale-110 transition-transform`}
                                 >
                                     {task.status === 'completed' ? (
@@ -234,8 +302,11 @@ const TaskManager = () => {
                                     )}
                                 </button>
 
-                                <div className="flex-1">
-                                    <h3 className={`font-semibold text-gray-900 ${task.status === 'completed' ? 'line-through text-gray-500' : ''
+                                <div
+                                    className="flex-1 cursor-pointer"
+                                    onClick={() => handleTaskClick(task)}
+                                >
+                                    <h3 className={`font-semibold text-gray-900 hover:text-blue-600 transition-colors ${task.status === 'completed' ? 'line-through text-gray-500' : ''
                                         }`}>
                                         {task.title}
                                     </h3>
@@ -307,123 +378,22 @@ const TaskManager = () => {
             )}
 
             {/* Add Task Modal */}
-            {showAddForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Task</h2>
+            <AddTaskModal
+                isOpen={showAddForm}
+                onClose={() => setShowAddForm(false)}
+                onTaskAdded={handleTaskAdded}
+            />
 
-                            <form onSubmit={addTask} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Task Title *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="input-field"
-                                        placeholder="Enter task title"
-                                        value={newTask.title}
-                                        onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        className="input-field"
-                                        rows="3"
-                                        placeholder="Enter task description"
-                                        value={newTask.description}
-                                        onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Category
-                                        </label>
-                                        <select
-                                            className="input-field"
-                                            value={newTask.category}
-                                            onChange={(e) => setNewTask(prev => ({ ...prev, category: e.target.value }))}
-                                        >
-                                            {taskCategories.map(category => (
-                                                <option key={category} value={category}>{category}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Priority
-                                        </label>
-                                        <select
-                                            className="input-field"
-                                            value={newTask.priority}
-                                            onChange={(e) => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
-                                        >
-                                            {taskPriorities.map(priority => (
-                                                <option key={priority.value} value={priority.value}>
-                                                    {priority.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Due Date *
-                                        </label>
-                                        <input
-                                            type="date"
-                                            required
-                                            className="input-field"
-                                            value={newTask.dueDate}
-                                            onChange={(e) => setNewTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Estimated Hours
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0.5"
-                                            step="0.5"
-                                            className="input-field"
-                                            value={newTask.estimatedHours}
-                                            onChange={(e) => setNewTask(prev => ({ ...prev, estimatedHours: parseFloat(e.target.value) }))}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end space-x-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddForm(false)}
-                                        className="btn-secondary"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn-primary"
-                                    >
-                                        Add Task
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Task Details Modal */}
+            <TaskDetailsModal
+                isOpen={showTaskDetails}
+                onClose={() => {
+                    setShowTaskDetails(false);
+                    setSelectedTask(null);
+                }}
+                task={selectedTask}
+                onTaskUpdated={handleTaskUpdated}
+            />
         </div>
     );
 };
