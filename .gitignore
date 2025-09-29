@@ -48,6 +48,12 @@ jspm_packages/
 .env.test.local
 .env.production.local
 
+# Database backups
+backups/
+*.sql
+*.backup
+*.dump
+
 # Logs
 logs
 *.log

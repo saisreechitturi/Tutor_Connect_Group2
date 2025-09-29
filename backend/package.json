@@ -10,7 +10,10 @@
         "db:migrate": "node src/database/migrate.js",
         "db:seed": "node src/database/seed.js",
         "db:reset": "node src/database/migrate.js --reset && node src/database/seed.js",
-        "db:full-setup": "node src/database/setup.js && node src/database/seed.js"
+        "db:full-setup": "node src/database/setup.js && node src/database/seed.js",
+        "db:backup": "node src/database/backup.js backup",
+        "db:backup-binary": "node src/database/backup.js backup tutorconnect_backup.backup custom",
+        "db:restore": "node src/database/backup.js restore"
     },
     "dependencies": {
         "axios": "^1.12.2",
