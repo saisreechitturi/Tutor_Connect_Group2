@@ -180,6 +180,50 @@ router.get('/me', require('../middleware/auth').authenticateToken, asyncHandler(
     });
 }));
 
+// Get user profile (alias for /me for frontend compatibility)
+router.get('/profile', require('../middleware/auth').authenticateToken, asyncHandler(async (req, res) => {
+    const result = await query(`
+    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.profile_image_url, 
+           u.bio, u.is_active, u.created_at,
+           tp.hourly_rate, tp.experience_years, tp.education,
+           tp.languages, tp.rating, tp.total_sessions
+    FROM users u
+    LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
+    WHERE u.id = $1
+  `, [req.user.id]);
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+        user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role,
+            phone: user.phone,
+            profileImageUrl: user.profile_image_url,
+            bio: user.bio,
+            isActive: user.is_active,
+            createdAt: user.created_at,
+            ...(user.role === 'tutor' && {
+                profile: {
+                    hourlyRate: user.hourly_rate,
+                    experienceYears: user.experience_years,
+                    education: user.education,
+                    languages: user.languages,
+                    rating: user.rating,
+                    totalSessions: user.total_sessions
+                }
+            })
+        }
+    });
+}));
+
 // Update password
 router.put('/password', [
     require('../middleware/auth').authenticateToken,

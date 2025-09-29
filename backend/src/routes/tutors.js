@@ -31,9 +31,21 @@ router.get('/', [
     let queryText = `
     SELECT u.id, u.first_name, u.last_name, u.profile_image_url, u.bio,
            tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions,
-           tp.languages, tp.education, tp.is_available
+           tp.languages, tp.education, tp.is_available,
+           COALESCE(
+               JSON_AGG(
+                   DISTINCT JSONB_BUILD_OBJECT(
+                       'id', s.id,
+                       'name', s.name,
+                       'proficiency', ts.proficiency_level
+                   )
+               ) FILTER (WHERE s.id IS NOT NULL), 
+               '[]'::json
+           ) as subjects
     FROM users u
     JOIN tutor_profiles tp ON u.id = tp.user_id
+    LEFT JOIN tutor_subjects ts ON tp.user_id = ts.tutor_id
+    LEFT JOIN subjects s ON ts.subject_id = s.id
     WHERE u.role = 'tutor' AND u.is_active = true
   `;
 
@@ -55,10 +67,11 @@ router.get('/', [
     }
 
     if (search) {
-        queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR tp.title ILIKE $${params.length + 1})`;
+        queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR tp.education ILIKE $${params.length + 1})`;
         params.push(`%${search}%`);
     }
 
+    queryText += ` GROUP BY u.id, u.first_name, u.last_name, u.profile_image_url, u.bio, tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions, tp.languages, tp.education, tp.is_available`;
     queryText += ` ORDER BY tp.rating DESC, tp.total_sessions DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
@@ -77,7 +90,8 @@ router.get('/', [
         totalSessions: row.total_sessions,
         languages: row.languages,
         education: row.education,
-        isAvailable: row.is_available
+        isAvailable: row.is_available,
+        subjects: row.subjects || []
     }));
 
     res.json({ tutors });
@@ -111,7 +125,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
     // Get recent reviews (if any)
     const reviewsResult = await query(`
     SELECT s.student_rating, s.student_feedback, u.first_name
-    FROM sessions s
+    FROM tutoring_sessions s
     JOIN users u ON s.student_id = u.id
     WHERE s.tutor_id = $1 AND s.student_rating IS NOT NULL
     ORDER BY s.updated_at DESC

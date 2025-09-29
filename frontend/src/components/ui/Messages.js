@@ -108,7 +108,6 @@ const Messages = () => {
     const sendMessage = () => {
         if (newMessage.trim() && selectedConversation) {
             // In a real app, this would send to backend
-            console.log('Sending message:', newMessage);
             setNewMessage('');
         }
     };

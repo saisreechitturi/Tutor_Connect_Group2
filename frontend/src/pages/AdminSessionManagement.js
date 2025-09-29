@@ -44,7 +44,7 @@ const AdminSessionManagement = () => {
             setLoading(true);
             setError(null);
             const sessionsData = await adminService.getAllSessions();
-            setSessions(sessionsData || []);
+            setSessions(sessionsData?.sessions || []);
         } catch (err) {
             console.error('Error fetching sessions:', err);
             setError('Failed to load sessions. Please try again.');

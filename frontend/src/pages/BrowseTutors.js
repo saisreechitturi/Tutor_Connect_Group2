@@ -21,7 +21,7 @@ const BrowseTutors = () => {
         try {
             setLoading(true);
             setError(null);
-            const data = await tutorService.getAllTutors();
+            const data = await tutorService.getTutors();
             setTutors(data || []);
         } catch (err) {
             setError(err.message || 'Failed to fetch tutors');

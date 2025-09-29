@@ -98,8 +98,8 @@ router.post('/', [
 
     // Verify recipient exists
     const recipientCheck = await query(
-        'SELECT id FROM users WHERE id = $1 AND status = $2',
-        [recipientId, 'active']
+        'SELECT id FROM users WHERE id = $1 AND is_active = $2',
+        [recipientId, true]
     );
 
     if (recipientCheck.rows.length === 0) {
@@ -109,7 +109,7 @@ router.post('/', [
     // If session message, verify session exists and user has access
     if (sessionId) {
         const sessionCheck = await query(
-            'SELECT id FROM sessions WHERE id = $1 AND (student_id = $2 OR tutor_id = $2)',
+            'SELECT id FROM tutoring_sessions WHERE id = $1 AND (student_id = $2 OR tutor_id = $2)',
             [sessionId, req.user.id]
         );
 

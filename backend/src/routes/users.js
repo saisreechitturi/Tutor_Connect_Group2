@@ -140,7 +140,7 @@ router.get('/:id/sessions', [
            student.first_name as student_first_name, student.last_name as student_last_name,
            tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name,
            sub.name as subject_name
-    FROM sessions s
+    FROM tutoring_sessions s
     JOIN users student ON s.student_id = student.id
     JOIN users tutor ON s.tutor_id = tutor.id
     LEFT JOIN subjects sub ON s.subject_id = sub.id

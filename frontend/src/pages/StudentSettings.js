@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { userService } from '../services';
 import { User, Mail, Phone, MapPin, Bell, Shield, CreditCard, Trash2, Save } from 'lucide-react';
 
 const StudentSettings = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('profile');
+    const [loading, setLoading] = useState(false);
+    const [saveStatus, setSaveStatus] = useState(null); // 'saving', 'success', 'error'
+
     const [formData, setFormData] = useState({
-        firstName: user?.profile?.firstName || '',
-        lastName: user?.profile?.lastName || '',
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
         email: user?.email || '',
-        phone: user?.profile?.phone || '',
-        location: user?.profile?.location || '',
-        bio: user?.profile?.bio || '',
-        avatar: user?.profile?.avatar || ''
+        phone: user?.phone || '',
+        location: user?.location || '',
+        bio: user?.bio || '',
+        avatarUrl: user?.avatarUrl || ''
     });
 
     const [notifications, setNotifications] = useState({
@@ -30,6 +34,37 @@ const StudentSettings = () => {
         allowMessages: true
     });
 
+    // Load user preferences on component mount
+    useEffect(() => {
+        if (user?.id) {
+            loadUserPreferences();
+            // Update form data when user changes
+            setFormData({
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                location: user.location || '',
+                bio: user.bio || '',
+                avatarUrl: user.avatarUrl || ''
+            });
+        }
+    }, [user]);
+
+    const loadUserPreferences = async () => {
+        try {
+            const preferences = await userService.getPreferences(user.id);
+            if (preferences.notifications) {
+                setNotifications(preferences.notifications);
+            }
+            if (preferences.privacy) {
+                setPrivacy(preferences.privacy);
+            }
+        } catch (error) {
+            console.error('Failed to load user preferences:', error);
+        }
+    };
+
     const handleInputChange = (section, field, value) => {
         if (section === 'profile') {
             setFormData(prev => ({ ...prev, [field]: value }));
@@ -40,10 +75,38 @@ const StudentSettings = () => {
         }
     };
 
-    const handleSave = (section) => {
-        // Mock save functionality
-        console.log(`Saving ${section} settings:`, section === 'profile' ? formData : section === 'notifications' ? notifications : privacy);
-        alert(`${section} settings saved successfully!`);
+    const handleSave = async (section) => {
+        if (!user?.id) {
+            setSaveStatus('error');
+            console.error('No user ID available');
+            return;
+        }
+
+        setLoading(true);
+        setSaveStatus('saving');
+
+        try {
+            if (section === 'profile') {
+                await userService.updateProfile(user.id, formData);
+                setSaveStatus('success');
+            } else if (section === 'notifications') {
+                await userService.updatePreferences(user.id, { notifications });
+                setSaveStatus('success');
+            } else if (section === 'privacy') {
+                await userService.updatePreferences(user.id, { privacy });
+                setSaveStatus('success');
+            }
+
+            // Clear success status after 3 seconds
+            setTimeout(() => setSaveStatus(null), 3000);
+        } catch (error) {
+            console.error(`Error saving ${section} settings:`, error);
+            setSaveStatus('error');
+            // Clear error status after 5 seconds
+            setTimeout(() => setSaveStatus(null), 5000);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const tabs = [
@@ -91,7 +154,7 @@ const StudentSettings = () => {
                                 <div className="flex items-center space-x-6 mb-6">
                                     <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100">
                                         <img
-                                            src={formData.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
+                                            src={formData.avatarUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
                                             alt="Profile"
                                             className="h-full w-full object-cover"
                                         />
@@ -177,12 +240,25 @@ const StudentSettings = () => {
                                 </div>
 
                                 <div className="flex justify-end pt-4">
+                                    {/* Status Messages */}
+                                    {saveStatus === 'success' && (
+                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
+                                            ✓ Profile saved successfully!
+                                        </div>
+                                    )}
+                                    {saveStatus === 'error' && (
+                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
+                                            ✗ Failed to save profile. Please try again.
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={() => handleSave('profile')}
-                                        className="btn-primary flex items-center space-x-2"
+                                        disabled={loading}
+                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <Save className="h-4 w-4" />
-                                        <span>Save Changes</span>
+                                        <span>{loading ? 'Saving...' : 'Save Changes'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -222,12 +298,25 @@ const StudentSettings = () => {
                                 </div>
 
                                 <div className="flex justify-end pt-4">
+                                    {/* Status Messages */}
+                                    {saveStatus === 'success' && activeTab === 'notifications' && (
+                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
+                                            ✓ Notification preferences saved!
+                                        </div>
+                                    )}
+                                    {saveStatus === 'error' && activeTab === 'notifications' && (
+                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
+                                            ✗ Failed to save preferences. Please try again.
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={() => handleSave('notifications')}
-                                        className="btn-primary flex items-center space-x-2"
+                                        disabled={loading}
+                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <Save className="h-4 w-4" />
-                                        <span>Save Preferences</span>
+                                        <span>{loading ? 'Saving...' : 'Save Preferences'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -282,12 +371,25 @@ const StudentSettings = () => {
                                 </div>
 
                                 <div className="flex justify-end pt-4">
+                                    {/* Status Messages */}
+                                    {saveStatus === 'success' && activeTab === 'privacy' && (
+                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
+                                            ✓ Privacy settings saved!
+                                        </div>
+                                    )}
+                                    {saveStatus === 'error' && activeTab === 'privacy' && (
+                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
+                                            ✗ Failed to save privacy settings. Please try again.
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={() => handleSave('privacy')}
-                                        className="btn-primary flex items-center space-x-2"
+                                        disabled={loading}
+                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <Save className="h-4 w-4" />
-                                        <span>Save Privacy Settings</span>
+                                        <span>{loading ? 'Saving...' : 'Save Privacy Settings'}</span>
                                     </button>
                                 </div>
                             </div>

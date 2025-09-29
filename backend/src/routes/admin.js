@@ -3,6 +3,7 @@ const { body, query: expressQuery, validationResult } = require('express-validat
 const { query } = require('../database/connection');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -18,103 +19,141 @@ router.get('/users', [
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
 ], asyncHandler(async (req, res) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    logger.info(`[${requestId}] Admin request: Get all users`, {
+        userId: req.user?.id,
+        userRole: req.user?.role,
+        filters: req.query
+    });
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        logger.warn(`[${requestId}] Validation failed:`, errors.array());
         return res.status(400).json({
             message: 'Validation failed',
             errors: errors.array()
         });
     }
 
-    const { role, status, search } = req.query;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = parseInt(req.query.offset) || 0;
+    try {
+        const { role, status, search } = req.query;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = parseInt(req.query.offset) || 0;
 
-    let queryText = `
-    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
-           tp.rating, tp.total_sessions
-    FROM users u
-    LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
-    WHERE 1=1
-  `;
+        logger.debug(`[${requestId}] Query parameters:`, { role, status, search, limit, offset });
 
-    const params = [];
+        let queryText = `
+        SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
+               tp.rating, tp.total_sessions
+        FROM users u
+        LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
+        WHERE 1=1
+      `;
 
-    if (role) {
-        queryText += ` AND u.role = $${params.length + 1}`;
-        params.push(role);
-    }
+        const params = [];
 
-    if (status) {
-        // Map status to is_active boolean
-        if (status === 'active') {
-            queryText += ` AND u.is_active = true`;
-        } else if (status === 'inactive') {
-            queryText += ` AND u.is_active = false`;
+        if (role) {
+            queryText += ` AND u.role = $${params.length + 1}`;
+            params.push(role);
         }
-    }
 
-    if (search) {
-        queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR u.email ILIKE $${params.length + 1})`;
-        params.push(`%${search}%`);
-    }
-
-    queryText += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
-
-    const result = await query(queryText, params);
-
-    const users = result.rows.map(row => ({
-        id: row.id,
-        email: row.email,
-        role: row.role,
-        firstName: row.first_name,
-        lastName: row.last_name,
-        phone: row.phone,
-        status: row.is_active ? 'active' : 'inactive',
-        isActive: row.is_active,
-        createdAt: row.created_at,
-        ...(row.role === 'tutor' && {
-            tutorStats: {
-                rating: row.rating || 0,
-                totalSessions: row.total_sessions || 0
+        if (status) {
+            // Map status to is_active boolean
+            if (status === 'active') {
+                queryText += ` AND u.is_active = true`;
+            } else if (status === 'inactive') {
+                queryText += ` AND u.is_active = false`;
             }
-        })
-    }));
-
-    // Get total count for pagination
-    let countQueryText = 'SELECT COUNT(*) FROM users WHERE 1=1';
-    const countParams = [];
-
-    if (role) {
-        countQueryText += ` AND role = $${countParams.length + 1}`;
-        countParams.push(role);
-    }
-
-    if (status) {
-        if (status === 'active') {
-            countQueryText += ` AND is_active = true`;
-        } else if (status === 'inactive') {
-            countQueryText += ` AND is_active = false`;
         }
-    }
 
-    if (search) {
-        countQueryText += ` AND (first_name ILIKE $${countParams.length + 1} OR last_name ILIKE $${countParams.length + 1} OR email ILIKE $${countParams.length + 1})`;
-        countParams.push(`%${search}%`);
-    }
-
-    const countResult = await query(countQueryText, countParams);
-
-    res.json({
-        users,
-        pagination: {
-            total: parseInt(countResult.rows[0].count),
-            limit,
-            offset,
-            hasMore: offset + limit < parseInt(countResult.rows[0].count)
+        if (search) {
+            queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR u.email ILIKE $${params.length + 1})`;
+            params.push(`%${search}%`);
         }
-    });
+
+        queryText += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(limit, offset);
+
+        logger.debug(`[${requestId}] Executing users query with ${params.length} parameters`);
+        const result = await query(queryText, params);
+        logger.info(`[${requestId}] Users query successful: ${result.rows.length} rows returned`);
+
+        const users = result.rows.map(row => ({
+            id: row.id,
+            email: row.email,
+            role: row.role,
+            firstName: row.first_name,
+            lastName: row.last_name,
+            phone: row.phone,
+            status: row.is_active ? 'active' : 'inactive',
+            isActive: row.is_active,
+            createdAt: row.created_at,
+            ...(row.role === 'tutor' && {
+                tutorStats: {
+                    rating: row.rating || 0,
+                    totalSessions: row.total_sessions || 0
+                }
+            })
+        }));
+
+        // Get total count for pagination
+        let countQueryText = 'SELECT COUNT(*) FROM users WHERE 1=1';
+        const countParams = [];
+
+        if (role) {
+            countQueryText += ` AND role = $${countParams.length + 1}`;
+            countParams.push(role);
+        }
+
+        if (status) {
+            if (status === 'active') {
+                countQueryText += ` AND is_active = true`;
+            } else if (status === 'inactive') {
+                countQueryText += ` AND is_active = false`;
+            }
+        }
+
+        if (search) {
+            countQueryText += ` AND (first_name ILIKE $${countParams.length + 1} OR last_name ILIKE $${countParams.length + 1} OR email ILIKE $${countParams.length + 1})`;
+            countParams.push(`%${search}%`);
+        }
+
+        logger.debug(`[${requestId}] Executing count query`);
+        const countResult = await query(countQueryText, countParams);
+        const totalCount = parseInt(countResult.rows[0].count);
+
+        logger.info(`[${requestId}] Admin users request completed successfully:`, {
+            usersReturned: users.length,
+            totalUsers: totalCount,
+            hasMore: offset + limit < totalCount
+        });
+
+        res.json({
+            users,
+            pagination: {
+                total: totalCount,
+                limit,
+                offset,
+                hasMore: offset + limit < totalCount
+            }
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Admin get users failed:`, {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+            userId: req.user?.id
+        });
+
+        // Return a more informative error response
+        res.status(500).json({
+            message: 'Failed to load users. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                code: error.code
+            } : undefined
+        });
+    }
 }));
 
 // Update user status
@@ -565,6 +604,108 @@ router.delete('/settings/:key', asyncHandler(async (req, res) => {
     }
 
     res.json({ message: 'Setting deleted successfully' });
+}));
+
+module.exports = router;
+
+// Populate tutor-subject relationships for demo data
+router.post('/populate-tutor-subjects', asyncHandler(async (req, res) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    logger.info(`[${requestId}] Admin request: Populate tutor-subject relationships`, {
+        userId: req.user?.id,
+        userRole: req.user?.role
+    });
+
+    try {
+        // First, clear existing relationships
+        await query('DELETE FROM tutor_subjects');
+        logger.info(`[${requestId}] Cleared existing tutor-subject relationships`);
+
+        // Get tutor and subject data
+        const tutors = await query('SELECT id, email, first_name, last_name FROM users WHERE role = $1', ['tutor']);
+        const subjects = await query('SELECT id, name FROM subjects');
+
+        logger.info(`[${requestId}] Found ${tutors.rows.length} tutors and ${subjects.rows.length} subjects`);
+
+        // Log tutor emails for debugging
+        tutors.rows.forEach(tutor => {
+            logger.info(`[${requestId}] Tutor: ${tutor.email}`);
+        });
+
+        // Create subject name to ID mapping
+        const subjectMap = {};
+        subjects.rows.forEach(subject => {
+            subjectMap[subject.name.toLowerCase()] = subject.id;
+        });
+
+        // Define tutor-subject mappings based on tutor names/background
+        const getSubjectsForTutor = (email, firstName, lastName) => {
+            // Check for specific seed file tutors first
+            if (email === 'sarah.math@tutorconnect.com') return ['mathematics'];
+            if (email === 'david.physics@tutorconnect.com') return ['physics', 'mathematics'];
+            if (email === 'maria.spanish@tutorconnect.com') return ['spanish'];
+
+            // Map based on names and reasonable assumptions
+            const fullName = `${firstName} ${lastName}`.toLowerCase();
+            const subjects = [];
+
+            if (fullName.includes('sarah') && fullName.includes('johnson')) {
+                subjects.push('mathematics', 'physics');
+            } else if (fullName.includes('michael') && fullName.includes('chen')) {
+                subjects.push('computer science', 'mathematics');
+            } else if (fullName.includes('david') && fullName.includes('chen')) {
+                subjects.push('physics', 'mathematics');
+            } else if (fullName.includes('david') && fullName.includes('kim')) {
+                subjects.push('computer science');
+            } else if (fullName.includes('emma') && fullName.includes('rodriguez')) {
+                subjects.push('spanish', 'english literature');
+            } else if (fullName.includes('maria') && fullName.includes('rodriguez')) {
+                subjects.push('spanish');
+            } else if (fullName.includes('demo') && fullName.includes('tutor')) {
+                subjects.push('mathematics');
+            } else {
+                // Default subjects for unrecognized tutors
+                subjects.push('mathematics');
+            }
+
+            return subjects;
+        };
+
+        let insertedCount = 0;
+
+        // Insert tutor-subject relationships
+        for (const tutor of tutors.rows) {
+            const subjectNames = getSubjectsForTutor(tutor.email, tutor.first_name, tutor.last_name);
+
+            logger.info(`[${requestId}] Processing tutor: ${tutor.email} (${tutor.first_name} ${tutor.last_name}) -> ${subjectNames.join(', ')}`);
+
+            for (const subjectName of subjectNames) {
+                const subjectId = subjectMap[subjectName.toLowerCase()];
+                if (subjectId) {
+                    await query(
+                        'INSERT INTO tutor_subjects (tutor_id, subject_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [tutor.id, subjectId]
+                    );
+                    insertedCount++;
+                    logger.debug(`[${requestId}] Added ${tutor.email} -> ${subjectName}`);
+                } else {
+                    logger.warn(`[${requestId}] Subject not found: ${subjectName} for tutor ${tutor.email}`);
+                }
+            }
+        }
+
+        logger.info(`[${requestId}] Successfully inserted ${insertedCount} tutor-subject relationships`);
+
+        res.json({
+            message: 'Tutor-subject relationships populated successfully',
+            tutorsProcessed: tutors.rows.length,
+            relationshipsCreated: insertedCount
+        });
+
+    } catch (error) {
+        logger.error(`[${requestId}] Error populating tutor-subject relationships:`, error);
+        throw error;
+    }
 }));
 
 module.exports = router;

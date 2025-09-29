@@ -28,10 +28,10 @@ router.get('/', [
 
     let queryText = `
     SELECT s.*, 
-           student.first_name as student_first_name, student.last_name as student_last_name, student.avatar_url as student_avatar,
-           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.avatar_url as tutor_avatar,
+           student.first_name as student_first_name, student.last_name as student_last_name, student.profile_image_url as student_avatar,
+           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.profile_image_url as tutor_avatar,
            sub.name as subject_name
-    FROM sessions s
+    FROM tutoring_sessions s
     JOIN users student ON s.student_id = student.id
     JOIN users tutor ON s.tutor_id = tutor.id
     LEFT JOIN subjects sub ON s.subject_id = sub.id
@@ -51,7 +51,7 @@ router.get('/', [
         queryText += ` AND s.tutor_id = $1`;
     }
 
-    queryText += ` ORDER BY s.scheduled_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    queryText += ` ORDER BY s.scheduled_start DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
     const result = await query(queryText, params);
@@ -114,8 +114,8 @@ router.post('/', [
 
     // Verify tutor exists and is active
     const tutorCheck = await query(
-        'SELECT id FROM users WHERE id = $1 AND role = $2 AND status = $3',
-        [tutorId, 'tutor', 'active']
+        'SELECT id FROM users WHERE id = $1 AND role = $2 AND is_active = $3',
+        [tutorId, 'tutor', true]
     );
 
     if (tutorCheck.rows.length === 0) {
@@ -124,15 +124,15 @@ router.post('/', [
 
     // Check for scheduling conflicts
     const conflictCheck = await query(`
-    SELECT id FROM sessions 
+    SELECT id FROM tutoring_sessions 
     WHERE tutor_id = $1 
     AND status IN ('scheduled', 'in_progress')
     AND (
-      (scheduled_at <= $2 AND scheduled_at + INTERVAL '1 minute' * duration_minutes > $2)
+      (scheduled_start <= $2 AND scheduled_end > $2)
       OR
-      (scheduled_at < $3 AND scheduled_at + INTERVAL '1 minute' * duration_minutes >= $3)
+      (scheduled_start < $3 AND scheduled_end >= $3)
       OR
-      (scheduled_at >= $2 AND scheduled_at < $3)
+      (scheduled_start >= $2 AND scheduled_start < $3)
     )
   `, [tutorId, scheduledAt, new Date(new Date(scheduledAt).getTime() + durationMinutes * 60000)]);
 
@@ -141,10 +141,10 @@ router.post('/', [
     }
 
     const result = await query(`
-    INSERT INTO sessions (student_id, tutor_id, subject_id, title, description, scheduled_at, duration_minutes, rate)
+    INSERT INTO tutoring_sessions (student_id, tutor_id, subject_id, title, description, scheduled_start, scheduled_end, hourly_rate)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
-  `, [req.user.id, tutorId, subjectId, title, description, scheduledAt, durationMinutes, rate]);
+  `, [req.user.id, tutorId, subjectId, title, description, scheduledAt, new Date(new Date(scheduledAt).getTime() + durationMinutes * 60000), rate]);
 
     const session = result.rows[0];
 
@@ -173,7 +173,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
            student.first_name as student_first_name, student.last_name as student_last_name, student.avatar_url as student_avatar,
            tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.avatar_url as tutor_avatar,
            sub.name as subject_name
-    FROM sessions s
+    FROM tutoring_sessions s
     JOIN users student ON s.student_id = student.id
     JOIN users tutor ON s.tutor_id = tutor.id
     LEFT JOIN subjects sub ON s.subject_id = sub.id
@@ -243,7 +243,7 @@ router.put('/:id', [
 
     // Check if session exists and user has access
     const sessionCheck = await query(
-        'SELECT student_id, tutor_id, status FROM sessions WHERE id = $1 AND (student_id = $2 OR tutor_id = $2)',
+        'SELECT student_id, tutor_id, status FROM tutoring_sessions WHERE id = $1 AND (student_id = $2 OR tutor_id = $2)',
         [req.params.id, req.user.id]
     );
 
@@ -297,7 +297,7 @@ router.put('/:id', [
     params.push(req.params.id);
 
     const result = await query(`
-    UPDATE sessions 
+    UPDATE tutoring_sessions 
     SET ${updateFields.join(', ')}
     WHERE id = $${++paramCount}
     RETURNING *
@@ -316,7 +316,7 @@ router.put('/:id', [
 // Cancel session
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(`
-    UPDATE sessions 
+    UPDATE tutoring_sessions 
     SET status = 'cancelled'
     WHERE id = $1 AND (student_id = $2 OR tutor_id = $2) AND status = 'scheduled'
     RETURNING id

@@ -18,8 +18,8 @@ const StudentDashboard = () => {
 
                 // Fetch user sessions and tasks
                 const [sessionsData, tasksData] = await Promise.all([
-                    sessionService.getUserSessions(user.id),
-                    taskService.getUserTasks(user.id)
+                    sessionService.getSessions({ role: 'student' }),
+                    taskService.getTasks()
                 ]);
 
                 setSessions(sessionsData);

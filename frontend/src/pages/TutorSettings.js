@@ -88,7 +88,7 @@ const TutorSettings = () => {
     };
 
     const handleSave = (section) => {
-        console.log(`Saving ${section} settings`);
+        // Settings save functionality would be implemented here
         alert(`${section} settings saved successfully!`);
     };
 
