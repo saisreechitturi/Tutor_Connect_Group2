@@ -147,17 +147,17 @@ Try the application with these demo accounts:
 **Student Account:**
 
 - Email: `alice@example.com`
-- Password: `password123`
+- Password: `demo`
 
 **Tutor Account:**
 
 - Email: `bob@example.com`
-- Password: `password123`
+- Password: `demo`
 
 **Admin Account:**
 
 - Email: `carol@example.com`
-- Password: `admin123`
+- Password: `demo`
 
 ## � Deployment
 
