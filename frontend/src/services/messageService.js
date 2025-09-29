@@ -61,7 +61,8 @@ class MessageService {
             return response;
         } catch (error) {
             console.error('[MessageService] Mark as read failed:', error);
-            throw error;
+            // Don't throw error for read status updates to avoid disrupting UX
+            return null;
         }
     }
 
@@ -76,7 +77,8 @@ class MessageService {
             return response;
         } catch (error) {
             console.error('[MessageService] Mark conversation as read failed:', error);
-            throw error;
+            // Don't throw error for read status updates to avoid disrupting UX
+            return null;
         }
     }
 
@@ -87,6 +89,7 @@ class MessageService {
             return response.count || 0;
         } catch (error) {
             console.error('[MessageService] Get unread count failed:', error);
+            // Return 0 instead of throwing to avoid disrupting UX
             return 0;
         }
     }

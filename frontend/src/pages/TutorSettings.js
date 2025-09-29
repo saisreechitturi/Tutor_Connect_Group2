@@ -73,6 +73,30 @@ const TutorSettings = () => {
         allowReviews: true
     });
 
+    const handlePhotoUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            // Check file size (1MB max)
+            if (file.size > 1024 * 1024) {
+                alert('File size must be less than 1MB');
+                return;
+            }
+
+            // Check file type
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setProfileData(prev => ({ ...prev, avatar: e.target.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleInputChange = (section, field, value) => {
         if (section === 'profile') {
             setProfileData(prev => ({ ...prev, [field]: value }));
@@ -184,15 +208,39 @@ const TutorSettings = () => {
 
                                 {/* Avatar Section */}
                                 <div className="flex items-center space-x-6 mb-6">
-                                    <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100">
-                                        <img
-                                            src={profileData.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}
-                                            alt="Profile"
-                                            className="h-full w-full object-cover"
-                                        />
+                                    <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                        {profileData.avatar ? (
+                                            <img
+                                                src={profileData.avatar}
+                                                alt="Profile"
+                                                className="h-full w-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div
+                                            className={`h-full w-full bg-blue-500 flex items-center justify-center text-white text-2xl font-medium ${profileData.avatar ? 'hidden' : 'flex'}`}
+                                            style={{ display: profileData.avatar ? 'none' : 'flex' }}
+                                        >
+                                            {user?.firstName?.[0] || user?.email?.[0] || 'T'}
+                                        </div>
                                     </div>
                                     <div>
-                                        <button className="btn-primary text-sm">Change Photo</button>
+                                        <input
+                                            type="file"
+                                            id="tutor-photo-upload"
+                                            accept="image/*"
+                                            onChange={handlePhotoUpload}
+                                            className="hidden"
+                                        />
+                                        <label
+                                            htmlFor="tutor-photo-upload"
+                                            className="btn-primary text-sm cursor-pointer"
+                                        >
+                                            Change Photo
+                                        </label>
                                         <p className="text-xs text-gray-500 mt-1">JPG, GIF or PNG. 1MB max.</p>
                                     </div>
                                 </div>
