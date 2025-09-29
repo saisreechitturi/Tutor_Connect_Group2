@@ -17,8 +17,8 @@ const TaskManager = () => {
         description: '',
         category: 'General Studies',
         priority: 'medium',
-        due_date: '',
-        estimated_hours: 1
+        dueDate: '',
+        estimatedDuration: 60 // in minutes
     });
 
     useEffect(() => {
@@ -26,7 +26,7 @@ const TaskManager = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const tasksData = await taskService.getUserTasks(user.id);
+                const tasksData = await taskService.getTasks();
                 setUserTasks(tasksData);
             } catch (err) {
                 console.error('Error fetching tasks:', err);
@@ -74,7 +74,7 @@ const TaskManager = () => {
         if (filter === 'completed') return task.status === 'completed';
         return true;
     }).sort((a, b) => {
-        if (sortBy === 'due_date') return new Date(a.due_date) - new Date(b.due_date);
+        if (sortBy === 'dueDate') return new Date(a.dueDate) - new Date(b.dueDate);
         if (sortBy === 'priority') {
             const priorityOrder = { high: 3, medium: 2, low: 1 };
             return priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -83,51 +83,57 @@ const TaskManager = () => {
         return 0;
     });
 
-    const toggleTaskStatus = (taskId) => {
-        setUserTasks(prev => prev.map(task => {
-            if (task.id === taskId) {
-                let newStatus;
-                if (task.status === 'pending') newStatus = 'in-progress';
-                else if (task.status === 'in-progress') newStatus = 'completed';
-                else newStatus = 'pending';
+    const toggleTaskStatus = async (taskId) => {
+        try {
+            const task = userTasks.find(t => t.id === taskId);
+            if (!task) return;
 
-                return {
-                    ...task,
-                    status: newStatus,
-                    progress: newStatus === 'completed' ? 100 : task.progress,
-                    updatedAt: new Date().toISOString().split('T')[0]
-                };
+            let updateData = {};
+            if (task.status === 'pending') {
+                updateData.status = 'in-progress';
+            } else if (task.status === 'in-progress') {
+                updateData.status = 'completed';
+                updateData.progress = 100;
+            } else {
+                updateData.status = 'pending';
+                updateData.progress = 0;
             }
-            return task;
-        }));
+
+            await taskService.updateTask(taskId, updateData);
+
+            // Update local state
+            setUserTasks(prev => prev.map(t => {
+                if (t.id === taskId) {
+                    return { ...t, ...updateData };
+                }
+                return t;
+            }));
+        } catch (error) {
+            console.error('Failed to update task:', error);
+            setError('Failed to update task. Please try again.');
+        }
     };
 
-    const addTask = (e) => {
+    const addTask = async (e) => {
         e.preventDefault();
         if (!newTask.title.trim()) return;
 
-        const task = {
-            id: Math.max(...userTasks.map(t => t.id)) + 1,
-            userId: user.id,
-            ...newTask,
-            status: 'pending',
-            progress: 0,
-            createdAt: new Date().toISOString().split('T')[0],
-            updatedAt: new Date().toISOString().split('T')[0],
-            tags: [],
-            actualHours: 0
-        };
-
-        setUserTasks(prev => [...prev, task]);
-        setNewTask({
-            title: '',
-            description: '',
-            category: 'General Studies',
-            priority: 'medium',
-            dueDate: '',
-            estimatedHours: 1
-        });
-        setShowAddForm(false);
+        try {
+            const createdTask = await taskService.createTask(newTask);
+            setUserTasks(prev => [...prev, createdTask]);
+            setNewTask({
+                title: '',
+                description: '',
+                category: 'General Studies',
+                priority: 'medium',
+                dueDate: '',
+                estimatedDuration: 60
+            });
+            setShowAddForm(false);
+        } catch (error) {
+            console.error('Failed to create task:', error);
+            setError('Failed to create task. Please try again.');
+        }
     };
 
     const getPriorityColor = (priority) => {

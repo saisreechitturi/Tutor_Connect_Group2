@@ -17,13 +17,8 @@ const MySessions = () => {
                 setLoading(true);
                 setError(null);
 
-                let sessionsData = [];
-                if (user.role === 'student') {
-                    sessionsData = await sessionService.getUserSessions(user.id);
-                } else {
-                    sessionsData = await sessionService.getTutorSessions(user.id);
-                }
-
+                // Use the general getSessions method which handles both students and tutors
+                const sessionsData = await sessionService.getSessions();
                 setSessions(sessionsData);
             } catch (err) {
                 console.error('Error fetching sessions:', err);
@@ -85,10 +80,10 @@ const MySessions = () => {
 
     const getStatusCounts = () => {
         return {
-            all: userSessions.length,
-            scheduled: userSessions.filter(s => s.status === 'scheduled').length,
-            completed: userSessions.filter(s => s.status === 'completed').length,
-            cancelled: userSessions.filter(s => s.status === 'cancelled').length
+            all: sessions.length,
+            scheduled: sessions.filter(s => s.status === 'scheduled').length,
+            completed: sessions.filter(s => s.status === 'completed').length,
+            cancelled: sessions.filter(s => s.status === 'cancelled').length
         };
     };
 

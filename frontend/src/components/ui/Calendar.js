@@ -1,17 +1,114 @@
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { sessionService, taskService } from '../../services';
 
 const Calendar = () => {
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [sessions, setSessions] = useState([]);
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // TODO: Replace with API call to fetch calendar events
-    const calendarEvents = [];
+    useEffect(() => {
+        const fetchCalendarData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-    // Get user events
-    const userEvents = calendarEvents.filter(event => event.userId === user.id);
+                const [sessionsData, tasksData] = await Promise.all([
+                    sessionService.getSessions(),
+                    taskService.getTasks()
+                ]);
+
+                setSessions(sessionsData);
+                setTasks(tasksData);
+            } catch (err) {
+                console.error('Error fetching calendar data:', err);
+                setError('Failed to load calendar data. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user?.id) {
+            fetchCalendarData();
+        }
+    }, [user?.id]);
+
+    // Convert sessions and tasks to calendar events
+    const getCalendarEvents = () => {
+        const events = [];
+
+        // Add sessions as events
+        sessions.forEach(session => {
+            if (session.scheduledStart) {
+                const eventDate = new Date(session.scheduledStart);
+                events.push({
+                    id: `session-${session.id}`,
+                    title: session.subject || 'Tutoring Session',
+                    date: eventDate.toISOString().split('T')[0],
+                    time: eventDate.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }),
+                    type: 'session',
+                    status: session.status,
+                    location: session.sessionType === 'online' ? 'Online' : session.locationAddress || 'In-person',
+                    data: session
+                });
+            }
+        });
+
+        // Add tasks with due dates as events
+        tasks.forEach(task => {
+            if (task.dueDate) {
+                const eventDate = new Date(task.dueDate);
+                events.push({
+                    id: `task-${task.id}`,
+                    title: task.title,
+                    date: eventDate.toISOString().split('T')[0],
+                    time: 'Due',
+                    type: 'task',
+                    status: task.status,
+                    priority: task.priority,
+                    data: task
+                });
+            }
+        });
+
+        return events;
+    };
+
+    const calendarEvents = getCalendarEvents();
+
+    // Get user events (all events are already filtered by the user context in API calls)
+    const userEvents = calendarEvents;
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="h-64 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="text-red-600">
+                    <h3 className="font-medium">Error loading calendar</h3>
+                    <p className="text-sm mt-1">{error}</p>
+                </div>
+            </div>
+        );
+    }
 
     // Calendar logic
     const today = new Date();
@@ -155,12 +252,31 @@ const Calendar = () => {
                                                         {event.location}
                                                     </div>
                                                 )}
-                                                <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-2 ${event.type === 'session' ? 'bg-blue-100 text-blue-800' :
-                                                    event.type === 'assignment' ? 'bg-red-100 text-red-800' :
-                                                        'bg-green-100 text-green-800'
-                                                    }`}>
-                                                    {event.type}
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${event.type === 'session' ? 'bg-blue-100 text-blue-800' :
+                                                            event.type === 'task' ? 'bg-green-100 text-green-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                        {event.type === 'session' ? 'Session' : 'Task'}
+                                                    </div>
+                                                    {event.status && (
+                                                        <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${event.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                                event.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                                                    event.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                                        'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                            {event.status}
+                                                        </div>
+                                                    )}
                                                 </div>
+                                                {event.priority && (
+                                                    <div className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${event.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                                            event.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                                'bg-green-100 text-green-800'
+                                                        }`}>
+                                                        {event.priority} priority
+                                                    </div>
+                                                )}
                                             </div>
                                         ))
                                     ) : (
@@ -171,10 +287,22 @@ const Calendar = () => {
 
                             {/* Quick Add Event */}
                             <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                <h3 className="font-medium text-gray-900 mb-3">Quick Add Event</h3>
-                                <button className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-primary-700 transition-colors">
-                                    Add New Event
-                                </button>
+                                <h3 className="font-medium text-gray-900 mb-3">Quick Actions</h3>
+                                <div className="space-y-2">
+                                    <button className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-primary-700 transition-colors flex items-center justify-center">
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Add Task
+                                    </button>
+                                    <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center">
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Book Session
+                                    </button>
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500 text-center">
+                                        Events shown: {userEvents.length} total
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -89,11 +89,11 @@ const DashboardLayout = ({ userRole, children }) => {
                 <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                            {user?.profile?.avatar ? (
+                            {user?.profileImageUrl ? (
                                 <img
                                     className="h-10 w-10 rounded-full object-cover"
-                                    src={user?.profile?.avatar}
-                                    alt={user?.profile?.firstName}
+                                    src={user?.profileImageUrl}
+                                    alt={user?.firstName}
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
@@ -102,14 +102,14 @@ const DashboardLayout = ({ userRole, children }) => {
                             ) : null}
                             <div
                                 className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium"
-                                style={{ display: user?.profile?.avatar ? 'none' : 'flex' }}
+                                style={{ display: user?.profileImageUrl ? 'none' : 'flex' }}
                             >
-                                {user?.profile?.firstName?.[0]}{user?.profile?.lastName?.[0]}
+                                {user?.firstName?.[0]}{user?.lastName?.[0]}
                             </div>
                         </div>
                         <div className="ml-3">
                             <p className="text-sm font-medium text-gray-900">
-                                {user?.profile?.firstName} {user?.profile?.lastName}
+                                {user?.firstName} {user?.lastName}
                             </p>
                             <p className="text-sm text-gray-500 capitalize">{user?.role}</p>
                         </div>

@@ -170,7 +170,7 @@ const BrowseTutors = () => {
 
                     {/* Results Count */}
                     <div className="mt-4 text-sm text-gray-600">
-                        Showing {sortedTutors.length} of {tutorsWithProfiles.length} tutors
+                        Showing {sortedTutors.length} of {tutors.length} tutors
                     </div>
                 </div>
 
@@ -180,14 +180,20 @@ const BrowseTutors = () => {
                         <div key={tutor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                             {/* Tutor Header */}
                             <div className="flex items-start space-x-4 mb-4">
-                                <img
-                                    src={tutor.user.profile.avatar}
-                                    alt={`${tutor.user.profile.firstName} ${tutor.user.profile.lastName}`}
-                                    className="w-16 h-16 rounded-full object-cover"
-                                />
+                                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                                    {tutor.profileImageUrl ? (
+                                        <img
+                                            src={tutor.profileImageUrl}
+                                            alt={`${tutor.firstName} ${tutor.lastName}`}
+                                            className="w-16 h-16 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <span>{tutor.firstName?.[0]}{tutor.lastName?.[0]}</span>
+                                    )}
+                                </div>
                                 <div className="flex-1">
                                     <h3 className="text-lg font-semibold text-gray-900">
-                                        {tutor.user.profile.firstName} {tutor.user.profile.lastName}
+                                        {tutor.firstName} {tutor.lastName}
                                     </h3>
                                     <div className="flex items-center mt-1">
                                         <div className="flex items-center">
@@ -202,7 +208,7 @@ const BrowseTutors = () => {
                                             ))}
                                         </div>
                                         <span className="ml-2 text-sm text-gray-600">
-                                            {tutor.rating} ({tutor.totalReviews} reviews)
+                                            {tutor.rating} ({tutor.totalSessions} sessions)
                                         </span>
                                     </div>
                                 </div>
@@ -213,10 +219,10 @@ const BrowseTutors = () => {
                                 <div className="flex flex-wrap gap-2">
                                     {tutor.subjects.slice(0, 3).map((subject) => (
                                         <span
-                                            key={subject}
+                                            key={subject.id}
                                             className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
                                         >
-                                            {subject}
+                                            {subject.name}
                                         </span>
                                     ))}
                                     {tutor.subjects.length > 3 && (
@@ -228,7 +234,7 @@ const BrowseTutors = () => {
                             </div>
 
                             {/* Bio */}
-                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.user.profile.bio}</p>
+                            <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
 
                             {/* Stats */}
                             <div className="grid grid-cols-3 gap-4 mb-4 text-center">
@@ -250,7 +256,7 @@ const BrowseTutors = () => {
                                     <div className="flex items-center justify-center mb-1">
                                         <Clock className="h-4 w-4 text-purple-600" />
                                     </div>
-                                    <p className="text-lg font-semibold text-gray-900">{tutor.experience}</p>
+                                    <p className="text-lg font-semibold text-gray-900">{tutor.experienceYears}y</p>
                                     <p className="text-xs text-gray-500">experience</p>
                                 </div>
                             </div>
@@ -259,7 +265,7 @@ const BrowseTutors = () => {
                             <div className="mb-4">
                                 <div className="flex items-center text-sm text-gray-600">
                                     <Clock className="h-4 w-4 mr-1" />
-                                    <span>Available most days</span>
+                                    <span>{tutor.isAvailable ? 'Available now' : 'Busy'}</span>
                                 </div>
                             </div>
 

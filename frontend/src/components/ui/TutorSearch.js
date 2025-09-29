@@ -20,7 +20,7 @@ const TutorSearch = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const tutorsData = await tutorService.getAllTutors();
+                const tutorsData = await tutorService.getTutors();
                 setTutors(tutorsData || []);
             } catch (err) {
                 console.error('Error fetching tutors:', err);
@@ -61,14 +61,18 @@ const TutorSearch = () => {
 
     const filteredTutors = tutors.filter(tutor => {
         const matchesSearch = !searchTerm ||
-            (tutor.subjects && tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-            (tutor.first_name && tutor.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (tutor.last_name && tutor.last_name.toLowerCase().includes(searchTerm.toLowerCase()));
+            (tutor.subjects && tutor.subjects.some(subject =>
+                typeof subject === 'object' ? subject.name.toLowerCase().includes(searchTerm.toLowerCase()) : subject.toLowerCase().includes(searchTerm.toLowerCase())
+            )) ||
+            (tutor.firstName && tutor.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (tutor.lastName && tutor.lastName.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesSubject = !filters.subject ||
-            (tutor.subjects && tutor.subjects.some(subject => subject.toLowerCase().includes(filters.subject.toLowerCase())));
+            (tutor.subjects && tutor.subjects.some(subject =>
+                typeof subject === 'object' ? subject.name.toLowerCase().includes(filters.subject.toLowerCase()) : subject.toLowerCase().includes(filters.subject.toLowerCase())
+            ));
 
-        const matchesRate = !filters.maxRate || tutor.hourly_rate <= parseInt(filters.maxRate);
+        const matchesRate = !filters.maxRate || tutor.hourlyRate <= parseInt(filters.maxRate);
 
         const matchesRating = !filters.rating || tutor.rating >= parseFloat(filters.rating);
 
@@ -76,8 +80,8 @@ const TutorSearch = () => {
     }).sort((a, b) => {
         switch (sortBy) {
             case 'rating': return (b.rating || 0) - (a.rating || 0);
-            case 'price': return (a.hourly_rate || 0) - (b.hourly_rate || 0);
-            case 'experience': return (b.total_sessions || 0) - (a.total_sessions || 0);
+            case 'price': return (a.hourlyRate || 0) - (b.hourlyRate || 0);
+            case 'experience': return (b.totalSessions || 0) - (a.totalSessions || 0);
             default: return 0;
         }
     });
@@ -195,21 +199,27 @@ const TutorSearch = () => {
                     <div key={tutor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                         {/* Tutor Header */}
                         <div className="flex items-center space-x-4 mb-4">
-                            <img
-                                src={tutor.user.profile.avatar}
-                                alt={`${tutor.user.profile.firstName} ${tutor.user.profile.lastName}`}
-                                className="w-16 h-16 rounded-full object-cover"
-                            />
+                            <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                                {tutor.profileImageUrl ? (
+                                    <img
+                                        src={tutor.profileImageUrl}
+                                        alt={`${tutor.firstName} ${tutor.lastName}`}
+                                        className="w-16 h-16 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <span>{tutor.firstName?.[0]}{tutor.lastName?.[0]}</span>
+                                )}
+                            </div>
                             <div className="flex-1">
                                 <h3 className="font-semibold text-gray-900">
-                                    {tutor.user.profile.firstName} {tutor.user.profile.lastName}
+                                    {tutor.firstName} {tutor.lastName}
                                 </h3>
                                 <div className="flex items-center space-x-2 mt-1">
                                     <div className="flex items-center">
-                                        {renderStars(tutor.rating)}
+                                        {renderStars(tutor.rating || 0)}
                                     </div>
                                     <span className="text-sm text-gray-600">
-                                        {tutor.rating} ({tutor.totalReviews} reviews)
+                                        {tutor.rating || 0} ({tutor.totalSessions || 0} sessions)
                                     </span>
                                 </div>
                                 {tutor.verified && (
@@ -222,22 +232,22 @@ const TutorSearch = () => {
 
                         {/* Bio */}
                         <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                            {tutor.user.profile.bio}
+                            {tutor.bio || 'No bio available.'}
                         </p>
 
                         {/* Subjects */}
                         <div className="mb-4">
                             <h4 className="text-sm font-medium text-gray-900 mb-2">Subjects</h4>
                             <div className="flex flex-wrap gap-1">
-                                {tutor.subjects.slice(0, 3).map((subject, index) => (
+                                {(tutor.subjects || []).slice(0, 3).map((subject, index) => (
                                     <span
                                         key={index}
                                         className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
                                     >
-                                        {subject}
+                                        {typeof subject === 'object' ? subject.name : subject}
                                     </span>
                                 ))}
-                                {tutor.subjects.length > 3 && (
+                                {(tutor.subjects || []).length > 3 && (
                                     <span className="text-xs text-gray-500">
                                         +{tutor.subjects.length - 3} more
                                     </span>
@@ -249,19 +259,19 @@ const TutorSearch = () => {
                         <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                             <div className="flex items-center text-gray-600">
                                 <DollarSign className="h-4 w-4 mr-1" />
-                                <span className="font-medium">${tutor.hourlyRate}/hour</span>
+                                <span className="font-medium">${tutor.hourlyRate || 0}/hour</span>
                             </div>
                             <div className="flex items-center text-gray-600">
                                 <Clock className="h-4 w-4 mr-1" />
-                                <span>{tutor.responseTime}</span>
+                                <span>{tutor.responseTime || 'N/A'}</span>
                             </div>
                             <div className="flex items-center text-gray-600">
                                 <BookOpen className="h-4 w-4 mr-1" />
-                                <span>{tutor.totalSessions} sessions</span>
+                                <span>{tutor.totalSessions || 0} sessions</span>
                             </div>
                             <div className="flex items-center text-gray-600">
                                 <MapPin className="h-4 w-4 mr-1" />
-                                <span>{tutor.user.profile.location}</span>
+                                <span>{tutor.location || 'Not specified'}</span>
                             </div>
                         </div>
 

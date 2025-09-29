@@ -22,6 +22,12 @@ const LandingPage = () => {
                             Get Started Free
                         </Link>
                         <Link
+                            to="/browse-tutors"
+                            className="btn-secondary px-8 py-3 text-lg font-semibold rounded-lg"
+                        >
+                            Browse Tutors
+                        </Link>
+                        <Link
                             to="/login"
                             className="btn-secondary px-8 py-3 text-lg font-semibold rounded-lg"
                         >
@@ -45,6 +51,14 @@ const LandingPage = () => {
                             Connect with verified tutors across various subjects. Browse profiles,
                             read reviews, and book sessions that fit your schedule.
                         </p>
+                        <div className="mt-4">
+                            <Link
+                                to="/browse-tutors"
+                                className="text-primary-600 hover:text-primary-700 font-medium"
+                            >
+                                Browse All Tutors →
+                            </Link>
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-lg p-6 shadow-md">
