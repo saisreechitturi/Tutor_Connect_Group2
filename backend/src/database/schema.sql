@@ -244,3 +244,23 @@ LEFT JOIN tutor_subjects ts ON tp.user_id = ts.tutor_id
 LEFT JOIN subjects s ON ts.subject_id = s.id
 WHERE u.role = 'tutor' AND u.is_active = true
 GROUP BY u.id, tp.user_id, tp.hourly_rate, tp.experience_years, tp.education, tp.rating, tp.total_reviews, tp.total_sessions, tp.is_available, tp.languages, tp.preferred_session_type;
+
+-- Settings table for platform configuration
+CREATE TABLE settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key VARCHAR(100) UNIQUE NOT NULL,
+    value TEXT NOT NULL,
+    description TEXT,
+    category VARCHAR(50) NOT NULL DEFAULT 'general',
+    data_type VARCHAR(20) NOT NULL DEFAULT 'string' CHECK (data_type IN ('string', 'number', 'boolean', 'json')),
+    is_public BOOLEAN DEFAULT false, -- Whether setting can be read by non-admin users
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for settings
+CREATE INDEX idx_settings_key ON settings(key);
+CREATE INDEX idx_settings_category ON settings(category);
+
+-- Create trigger for settings updated_at
+CREATE TRIGGER update_settings_updated_at BEFORE UPDATE ON settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

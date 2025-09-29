@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { adminService } from '../services';
 import {
     TrendingUp,
     TrendingDown,
@@ -29,16 +30,106 @@ const AdminPlatformAnalytics = () => {
     const { user } = useAuth();
     const [selectedTimeframe, setSelectedTimeframe] = useState('30d');
     const [selectedMetric, setSelectedMetric] = useState('overview');
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock analytics data
-    const overviewStats = {
-        totalUsers: { current: 1247, previous: 1134, change: 9.97 },
-        activeUsers: { current: 892, previous: 823, change: 8.38 },
-        totalSessions: { current: 3456, previous: 3102, change: 11.41 },
-        revenue: { current: 45678.50, previous: 41234.25, change: 10.78 },
-        avgSessionRating: { current: 4.7, previous: 4.6, change: 2.17 },
-        completionRate: { current: 94.2, previous: 91.8, change: 2.61 }
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await adminService.getStats();
+            setStats(response);
+        } catch (err) {
+            console.error('Error fetching stats:', err);
+            setError('Failed to load analytics data. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    // Process stats data into the format expected by the UI
+    const processStatsData = () => {
+        if (!stats) return null;
+
+        // Calculate user totals and changes (using mock change data for now)
+        const activeStudents = stats.userStats.find(s => s.role === 'student' && s.is_active)?.count || 0;
+        const activeTutors = stats.userStats.find(s => s.role === 'tutor' && s.is_active)?.count || 0;
+        const activeAdmins = stats.userStats.find(s => s.role === 'admin' && s.is_active)?.count || 0;
+        const totalActiveUsers = activeStudents + activeTutors + activeAdmins;
+
+        // Calculate session totals
+        const totalSessions = stats.sessionStats.reduce((sum, s) => sum + parseInt(s.count), 0);
+        const completedSessions = stats.sessionStats.find(s => s.status === 'completed')?.count || 0;
+        const totalRevenue = stats.sessionStats.find(s => s.status === 'completed')?.total_revenue || 0;
+        const avgRate = stats.sessionStats.find(s => s.status === 'completed')?.avg_rate || 0;
+        const completionRate = totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0;
+
+        return {
+            totalUsers: { current: totalActiveUsers, previous: Math.floor(totalActiveUsers * 0.9), change: 10 },
+            activeUsers: { current: totalActiveUsers, previous: Math.floor(totalActiveUsers * 0.92), change: 8 },
+            totalSessions: { current: totalSessions, previous: Math.floor(totalSessions * 0.88), change: 12 },
+            revenue: { current: parseFloat(totalRevenue) || 0, previous: Math.floor(parseFloat(totalRevenue) * 0.85) || 0, change: 15 },
+            avgSessionRating: { current: 4.7, previous: 4.6, change: 2.17 }, // This would need session_reviews table
+            completionRate: { current: completionRate, previous: completionRate * 0.95, change: 5 }
+        };
+    };
+
+    const overviewStats = processStatsData();
+
+    // If still loading or error, show appropriate state
+    if (loading) {
+        return (
+            <div className="p-6">
+                <div className="flex items-center justify-center h-64">
+                    <RefreshCw className="animate-spin h-8 w-8 text-indigo-600" />
+                    <span className="ml-2 text-gray-600">Loading analytics...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <Shield className="h-5 w-5 text-red-400" />
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-red-800">Error Loading Analytics</h3>
+                            <div className="mt-2 text-sm text-red-700">
+                                <p>{error}</p>
+                            </div>
+                            <div className="mt-4">
+                                <button
+                                    onClick={fetchStats}
+                                    className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!overviewStats) {
+        return (
+            <div className="p-6">
+                <div className="text-center text-gray-500">No analytics data available</div>
+            </div>
+        );
+    }
+
+    // Mock analytics data (keeping the existing structure for remaining mock data - userGrowthData etc.)
 
     const userGrowthData = [
         { month: 'Jan', students: 145, tutors: 23, total: 168 },
@@ -69,19 +160,18 @@ const AdminPlatformAnalytics = () => {
     ];
 
     const topPerformers = {
-        tutors: [
-            { name: 'Dr. Sarah Johnson', sessions: 127, rating: 4.9, earnings: 5678.50, subjects: ['Math', 'Physics'] },
-            { name: 'Prof. David Kim', sessions: 118, rating: 4.8, earnings: 5234.75, subjects: ['Chemistry', 'Biology'] },
-            { name: 'Michael Rodriguez', sessions: 109, rating: 4.7, earnings: 4892.25, subjects: ['Physics', 'Math'] },
-            { name: 'Lisa Anderson', sessions: 98, rating: 4.9, earnings: 4321.00, subjects: ['English', 'Literature'] },
-            { name: 'Emily Chen', sessions: 89, rating: 4.6, earnings: 3987.50, subjects: ['Languages', 'ESL'] }
-        ],
+        tutors: stats?.topTutors?.map(tutor => ({
+            name: tutor.name,
+            sessions: tutor.totalSessions || 0,
+            rating: tutor.rating || 0,
+            earnings: tutor.totalSessions * 50 || 0, // Estimate earnings
+            subjects: ['Various'] // Could be enhanced with real subjects data
+        })) || [
+                { name: 'No tutors available', sessions: 0, rating: 0, earnings: 0, subjects: [] }
+            ],
         students: [
-            { name: 'Alex Chen', sessions: 45, subjects: 6, avgRating: 4.8, totalSpent: 2034.50 },
-            { name: 'Emma Wilson', sessions: 42, subjects: 4, avgRating: 4.7, totalSpent: 1876.25 },
-            { name: 'Ryan Thompson', sessions: 38, subjects: 5, avgRating: 4.9, totalSpent: 1654.75 },
-            { name: 'Sophie Davis', sessions: 35, subjects: 3, avgRating: 4.6, totalSpent: 1543.00 },
-            { name: 'James Miller', sessions: 33, subjects: 4, avgRating: 4.8, totalSpent: 1432.50 }
+            // Mock data for students since we don't have this in backend yet
+            { name: 'Demo Student', sessions: 2, subjects: 1, avgRating: 4.8, totalSpent: 125.00 }
         ]
     };
 

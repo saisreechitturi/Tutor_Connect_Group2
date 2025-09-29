@@ -154,6 +154,17 @@ class TutorService {
             throw error;
         }
     }
+
+    // Get tutor's students
+    async getTutorStudents(tutorId) {
+        try {
+            const response = await apiClient.get(`/tutors/${tutorId}/students`);
+            return response.students || response;
+        } catch (error) {
+            console.error('[TutorService] Get tutor students failed:', error);
+            throw error;
+        }
+    }
 }
 
 // Create and export singleton instance

@@ -42,166 +42,132 @@ const AdminMessagesSystem = () => {
     const [showComposeModal, setShowComposeModal] = useState(false);
     const [messageType, setMessageType] = useState('announcement');
 
-    // Mock messages data
-    const messages = {
-        announcements: [
-            {
-                id: 'ANN001',
-                title: 'Platform Maintenance Scheduled',
-                content: 'We will be performing scheduled maintenance on Sunday, January 21st from 2:00 AM to 4:00 AM EST. During this time, the platform may be temporarily unavailable.',
-                type: 'announcement',
-                priority: 'high',
-                status: 'published',
-                targetAudience: 'all',
-                author: 'System Admin',
-                createdAt: '2024-01-15T10:30:00Z',
-                publishedAt: '2024-01-15T10:35:00Z',
-                views: 1247,
-                recipients: 1247,
-                tags: ['maintenance', 'system'],
-                attachments: []
-            },
-            {
-                id: 'ANN002',
-                title: 'New Feature: Video Recording',
-                content: 'We\'re excited to announce a new feature that allows tutors to record sessions for student review. This feature is now available in your session dashboard.',
-                type: 'announcement',
-                priority: 'medium',
-                status: 'published',
-                targetAudience: 'tutors',
-                author: 'Product Team',
-                createdAt: '2024-01-14T14:20:00Z',
-                publishedAt: '2024-01-14T15:00:00Z',
-                views: 156,
-                recipients: 156,
-                tags: ['feature', 'tutors', 'video'],
-                attachments: ['feature_guide.pdf']
-            },
-            {
-                id: 'ANN003',
-                title: 'Winter Break Schedule Update',
-                content: 'Please note updated availability requirements during the winter break period. All tutors should update their calendars by January 20th.',
-                type: 'announcement',
-                priority: 'medium',
-                status: 'draft',
-                targetAudience: 'tutors',
-                author: 'Admin Team',
-                createdAt: '2024-01-15T09:15:00Z',
-                publishedAt: null,
-                views: 0,
-                recipients: 0,
-                tags: ['schedule', 'winter', 'availability'],
-                attachments: []
-            }
-        ],
-        support: [
-            {
-                id: 'SUP001',
-                title: 'Payment Issue - Student ID: STU123',
-                content: 'Student reported payment failure during session booking. Credit card was charged but session was not confirmed.',
-                type: 'support',
-                priority: 'high',
-                status: 'open',
-                targetAudience: 'internal',
-                author: 'Emma Wilson',
-                assignee: 'Support Team',
-                createdAt: '2024-01-15T11:45:00Z',
-                updatedAt: '2024-01-15T12:30:00Z',
-                responses: 3,
-                tags: ['payment', 'urgent', 'student'],
-                attachments: ['payment_screenshot.png']
-            },
-            {
-                id: 'SUP002',
-                title: 'Tutor Verification Request',
-                content: 'New tutor application requires document verification. All credentials have been submitted and are ready for review.',
-                type: 'support',
-                priority: 'medium',
-                status: 'in-progress',
-                targetAudience: 'internal',
-                author: 'System',
-                assignee: 'Verification Team',
-                createdAt: '2024-01-15T08:20:00Z',
-                updatedAt: '2024-01-15T10:15:00Z',
-                responses: 1,
-                tags: ['verification', 'tutor', 'documents'],
-                attachments: ['diploma.pdf', 'certification.pdf']
-            },
-            {
-                id: 'SUP003',
-                title: 'Session Quality Complaint',
-                content: 'Student reported poor audio quality during yesterday\'s physics session. Requesting refund and session rescheduling.',
-                type: 'support',
-                priority: 'medium',
-                status: 'resolved',
-                targetAudience: 'internal',
-                author: 'Alex Chen',
-                assignee: 'Quality Team',
-                createdAt: '2024-01-14T16:30:00Z',
-                updatedAt: '2024-01-15T09:45:00Z',
-                responses: 5,
-                tags: ['quality', 'refund', 'technical'],
-                attachments: []
-            }
-        ],
-        internal: [
-            {
-                id: 'INT001',
-                title: 'Weekly Team Standup Notes',
-                content: 'Summary of this week\'s development progress, upcoming releases, and team announcements.',
-                type: 'internal',
-                priority: 'low',
-                status: 'published',
-                targetAudience: 'staff',
-                author: 'Development Team',
-                createdAt: '2024-01-15T17:00:00Z',
-                publishedAt: '2024-01-15T17:05:00Z',
-                views: 23,
-                recipients: 25,
-                tags: ['standup', 'development', 'weekly'],
-                attachments: ['standup_notes.md']
-            },
-            {
-                id: 'INT002',
-                title: 'Security Protocol Update',
-                content: 'New security measures have been implemented. All staff members must review and acknowledge the updated protocols.',
-                type: 'internal',
-                priority: 'high',
-                status: 'published',
-                targetAudience: 'staff',
-                author: 'Security Team',
-                createdAt: '2024-01-14T10:00:00Z',
-                publishedAt: '2024-01-14T10:30:00Z',
-                views: 25,
-                recipients: 25,
-                tags: ['security', 'protocols', 'mandatory'],
-                attachments: ['security_guidelines.pdf']
-            }
-        ]
+    // New state for API integration
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [sending, setSending] = useState(false);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        title: '',
+        message: '',
+        type: 'announcement',
+        targetRole: 'all',
+        priority: 'medium'
+    });
+
+    // Load notifications on component mount
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await adminService.getNotifications({
+                type: selectedTab === 'announcements' ? 'announcement' : undefined
+            });
+            setNotifications(response.notifications || []);
+        } catch (err) {
+            console.error('Error fetching notifications:', err);
+            setError('Failed to load notifications. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Statistics
-    const stats = {
-        totalMessages: Object.values(messages).flat().length,
-        announcements: messages.announcements.length,
-        supportTickets: messages.support.length,
-        internalMessages: messages.internal.length,
-        pendingReview: Object.values(messages).flat().filter(m => m.status === 'draft').length,
-        highPriority: Object.values(messages).flat().filter(m => m.priority === 'high').length
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
+
+    const handleSubmit = async (e, isDraft = false) => {
+        e.preventDefault();
+        if (!formData.title || !formData.message) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
+        try {
+            setSending(true);
+            setError(null);
+
+            await adminService.sendNotification({
+                title: formData.title,
+                message: formData.message,
+                type: formData.type,
+                targetRole: formData.targetRole === 'all' ? 'all' : formData.targetRole
+            });
+
+            // Reset form and close modal
+            setFormData({
+                title: '',
+                message: '',
+                type: 'announcement',
+                targetRole: 'all',
+                priority: 'medium'
+            });
+            setShowComposeModal(false);
+
+            // Refresh notifications
+            await fetchNotifications();
+
+        } catch (err) {
+            console.error('Error sending notification:', err);
+            setError('Failed to send notification. Please try again.');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    // Transform API notification data to match component expectations
+    const transformNotificationData = (notification) => ({
+        id: notification.id,
+        title: notification.title,
+        content: notification.message, // API uses 'message' field
+        type: notification.type,
+        priority: 'medium', // Default since API doesn't have priority
+        status: 'published', // Default since API doesn't have status
+        targetAudience: 'all', // Could be enhanced based on recipient count
+        author: 'Admin', // Default since API doesn't track author
+        createdAt: notification.createdAt,
+        publishedAt: notification.createdAt,
+        views: notification.readCount || 0,
+        recipients: notification.recipientCount || 0,
+        tags: [], // Could be enhanced
+        attachments: []
+    });
 
     // Get messages for current tab
-    const currentMessages = messages[selectedTab] || [];
+    const currentMessages = notifications.map(transformNotificationData).filter(notification => {
+        if (selectedTab === 'announcements') return notification.type === 'announcement';
+        if (selectedTab === 'support') return notification.type === 'support';
+        if (selectedTab === 'internal') return notification.type === 'internal';
+        return true;
+    });
 
     // Filter messages
     const filteredMessages = currentMessages.filter(message => {
         const matchesSearch = searchTerm === '' ||
             message.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            message.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-
+            message.content.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesSearch;
     });
+
+    // Statistics
+    const stats = {
+        totalMessages: notifications.length,
+        announcements: notifications.filter(n => n.type === 'announcement').length,
+        supportTickets: notifications.filter(n => n.type === 'support').length,
+        internalMessages: notifications.filter(n => n.type === 'internal').length,
+        pendingReview: 0, // Could be enhanced
+        highPriority: 0 // Could be enhanced
+    };
 
     const getPriorityColor = (priority) => {
         switch (priority) {
@@ -253,11 +219,22 @@ const AdminMessagesSystem = () => {
         setShowModal(false);
         setShowComposeModal(false);
         setSelectedMessage(null);
+        setError(null);
+        // Reset form data
+        setFormData({
+            title: '',
+            message: '',
+            type: 'announcement',
+            targetRole: 'all',
+            priority: 'medium'
+        });
     };
 
     const openComposeModal = (type) => {
         setMessageType(type);
+        setFormData(prev => ({ ...prev, type }));
         setShowComposeModal(true);
+        setError(null);
     };
 
     const MessageCard = ({ message }) => {
@@ -478,12 +455,35 @@ const AdminMessagesSystem = () => {
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center">
+                            <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+                            <span className="text-red-800">{error}</span>
+                            <button
+                                onClick={() => setError(null)}
+                                className="ml-auto text-red-400 hover:text-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Messages Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredMessages.map((message) => (
-                        <MessageCard key={message.id} message={message} />
-                    ))}
-                </div>
+                {loading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2 text-gray-600">Loading messages...</span>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {filteredMessages.map((message) => (
+                            <MessageCard key={message.id} message={message} />
+                        ))}
+                    </div>
+                )}
 
                 {filteredMessages.length === 0 && (
                     <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -659,20 +659,29 @@ const AdminMessagesSystem = () => {
                                 </button>
                             </div>
 
-                            <form className="space-y-6">
+                            <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                                         <input
                                             type="text"
+                                            name="title"
+                                            value={formData.title}
+                                            onChange={handleInputChange}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             placeholder="Enter message title..."
+                                            required
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                        <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <select
+                                            name="priority"
+                                            value={formData.priority}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
                                             <option value="low">Low</option>
                                             <option value="medium">Medium</option>
                                             <option value="high">High</option>
@@ -683,62 +692,66 @@ const AdminMessagesSystem = () => {
                                 {messageType === 'announcement' && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
-                                        <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <select
+                                            name="targetRole"
+                                            value={formData.targetRole}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
                                             <option value="all">All Users</option>
-                                            <option value="students">Students Only</option>
-                                            <option value="tutors">Tutors Only</option>
-                                            <option value="staff">Staff Only</option>
+                                            <option value="student">Students Only</option>
+                                            <option value="tutor">Tutors Only</option>
                                         </select>
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Message Content</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Message Content *</label>
                                     <textarea
+                                        name="message"
+                                        value={formData.message}
+                                        onChange={handleInputChange}
                                         rows={8}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         placeholder="Enter your message content..."
+                                        required
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                                    <input
-                                        type="text"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Enter tags separated by commas..."
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Attachments</label>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                        <Paperclip className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                        <p className="text-gray-500">Drag and drop files here, or click to browse</p>
-                                        <input type="file" multiple className="hidden" />
+                                {error && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div className="flex items-center">
+                                            <AlertCircle className="w-4 h-4 text-red-400 mr-2" />
+                                            <span className="text-red-800 text-sm">{error}</span>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="flex justify-end space-x-3 pt-4">
                                     <button
                                         type="button"
                                         onClick={closeModal}
-                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                                        disabled={sending}
+                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        type="button"
-                                        className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-                                    >
-                                        Save as Draft
-                                    </button>
-                                    <button
                                         type="submit"
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        disabled={sending}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
                                     >
-                                        <Send className="w-4 h-4 inline mr-2" />
-                                        Publish Now
+                                        {sending ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                                Sending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="w-4 h-4 mr-2" />
+                                                Send Notification
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </form>

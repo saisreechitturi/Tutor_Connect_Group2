@@ -275,15 +275,33 @@ class AdminService {
     async sendNotification(notificationData) {
         try {
             const response = await apiClient.post('/admin/notifications', {
-                userIds: notificationData.userIds, // array of user IDs, or 'all'
-                type: notificationData.type,
                 title: notificationData.title,
                 message: notificationData.message,
-                data: notificationData.data
+                type: notificationData.type,
+                targetRole: notificationData.targetRole
             });
             return response;
         } catch (error) {
             console.error('[AdminService] Send notification failed:', error);
+            throw error;
+        }
+    }
+
+    // Get all notifications/announcements (admin only)
+    async getNotifications(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (filters.type) queryParams.append('type', filters.type);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+            if (filters.offset) queryParams.append('offset', filters.offset);
+
+            const endpoint = `/admin/notifications${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get notifications failed:', error);
             throw error;
         }
     }
@@ -305,6 +323,78 @@ class AdminService {
             return response.logs || response;
         } catch (error) {
             console.error('[AdminService] Get system logs failed:', error);
+            throw error;
+        }
+    }
+
+    // Get platform statistics (admin only)
+    async getStats() {
+        try {
+            const response = await apiClient.get('/admin/stats');
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get stats failed:', error);
+            throw error;
+        }
+    }
+
+    // Get all settings (admin only)
+    async getSettings(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (filters.category) queryParams.append('category', filters.category);
+            if (filters.key) queryParams.append('key', filters.key);
+
+            const endpoint = `/admin/settings${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response.settings || response;
+        } catch (error) {
+            console.error('[AdminService] Get settings failed:', error);
+            throw error;
+        }
+    }
+
+    // Update setting (admin only)
+    async updateSetting(key, settingData) {
+        try {
+            const response = await apiClient.put(`/admin/settings/${key}`, {
+                value: settingData.value,
+                description: settingData.description
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Update setting failed:', error);
+            throw error;
+        }
+    }
+
+    // Create setting (admin only)
+    async createSetting(settingData) {
+        try {
+            const response = await apiClient.post('/admin/settings', {
+                key: settingData.key,
+                value: settingData.value,
+                category: settingData.category,
+                description: settingData.description,
+                dataType: settingData.dataType,
+                isPublic: settingData.isPublic
+            });
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Create setting failed:', error);
+            throw error;
+        }
+    }
+
+    // Delete setting (admin only)
+    async deleteSetting(key) {
+        try {
+            const response = await apiClient.delete(`/admin/settings/${key}`);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Delete setting failed:', error);
             throw error;
         }
     }

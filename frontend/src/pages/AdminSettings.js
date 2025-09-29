@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { adminService } from '../services';
 import {
     Settings,
     Shield,
@@ -12,68 +13,101 @@ import {
     Database,
     Key,
     Bell,
-    Clock
+    Clock,
+    CheckCircle,
+    X
 } from 'lucide-react';
 
 const AdminSettings = () => {
     const [activeTab, setActiveTab] = useState('general');
-    const [settings, setSettings] = useState({
-        // General Settings
-        siteName: 'TutorConnect',
-        siteDescription: 'Connect with expert tutors for personalized learning',
-        contactEmail: 'admin@tutorconnect.com',
-        supportEmail: 'support@tutorconnect.com',
-        timezone: 'America/New_York',
-        language: 'en',
-
-        // Security Settings
-        requireEmailVerification: true,
-        enableTwoFactor: false,
-        sessionTimeout: 24, // hours
-        maxLoginAttempts: 5,
-        passwordMinLength: 8,
-        requireStrongPasswords: true,
-
-        // Payment Settings
-        paypalEnabled: true,
-        paypalSandbox: true,
-        commissionRate: 15, // percentage
-        minimumPayout: 50,
-        payoutSchedule: 'weekly',
-
-        // User Management
-        autoApprovalTutors: false,
-        requireTutorVerification: true,
-        maxStudentsPerTutor: 50,
-        allowPublicProfiles: true,
-
-        // Notifications
-        emailNotifications: true,
-        systemAlerts: true,
-        maintenanceMode: false,
-        welcomeEmailEnabled: true,
-
-        // Platform Settings
-        maxSessionDuration: 180, // minutes
-        bookingAdvanceTime: 24, // hours
-        cancellationPeriod: 2, // hours
-        allowRecordingSessions: true
-    });
-
+    const [settings, setSettings] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
     const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    const fetchSettings = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await adminService.getSettings();
+
+            // Transform the grouped settings into a flat object for easier handling
+            const flatSettings = {};
+            Object.values(response).flat().forEach(setting => {
+                flatSettings[setting.key] = {
+                    value: setting.value,
+                    description: setting.description,
+                    dataType: setting.dataType,
+                    category: setting.key.split('_')[0] // Extract category from key
+                };
+            });
+
+            setSettings(flatSettings);
+        } catch (err) {
+            console.error('Error fetching settings:', err);
+            setError('Failed to load settings. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSettingChange = (key, value) => {
         setSettings(prev => ({
             ...prev,
-            [key]: value
+            [key]: {
+                ...prev[key],
+                value: value
+            }
         }));
     };
 
-    const handleSave = () => {
-        // In a real app, this would save to backend
-        console.log('Saving settings:', settings);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            setError(null);
+
+            // Update each changed setting
+            const updatePromises = Object.entries(settings).map(([key, setting]) => {
+                return adminService.updateSetting(key, {
+                    value: setting.value,
+                    description: setting.description
+                });
+            });
+
+            await Promise.all(updatePromises);
+
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (err) {
+            console.error('Error saving settings:', err);
+            setError('Failed to save settings. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Helper function to get setting value with fallback
+    const getSettingValue = (key, fallback = '') => {
+        return settings[key]?.value || fallback;
+    };
+
+    // Helper function to get boolean setting value
+    const getBooleanSetting = (key, fallback = false) => {
+        const value = settings[key]?.value;
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return fallback;
+    };
+
+    // Helper function to get number setting value
+    const getNumberSetting = (key, fallback = 0) => {
+        const value = settings[key]?.value;
+        return value ? parseInt(value) : fallback;
     };
 
     const tabs = [
@@ -96,8 +130,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="text"
-                            value={settings.siteName}
-                            onChange={(e) => handleSettingChange('siteName', e.target.value)}
+                            value={getSettingValue('site_name', 'TutorConnect')}
+                            onChange={(e) => handleSettingChange('site_name', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                     </div>
@@ -107,8 +141,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="email"
-                            value={settings.contactEmail}
-                            onChange={(e) => handleSettingChange('contactEmail', e.target.value)}
+                            value={getSettingValue('contact_email', 'admin@tutorconnect.com')}
+                            onChange={(e) => handleSettingChange('contact_email', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                     </div>
@@ -117,8 +151,8 @@ const AdminSettings = () => {
                             Site Description
                         </label>
                         <textarea
-                            value={settings.siteDescription}
-                            onChange={(e) => handleSettingChange('siteDescription', e.target.value)}
+                            value={getSettingValue('site_description', 'Connect with expert tutors for personalized learning')}
+                            onChange={(e) => handleSettingChange('site_description', e.target.value)}
                             rows="3"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
@@ -129,8 +163,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="email"
-                            value={settings.supportEmail}
-                            onChange={(e) => handleSettingChange('supportEmail', e.target.value)}
+                            value={getSettingValue('support_email', 'support@tutorconnect.com')}
+                            onChange={(e) => handleSettingChange('support_email', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                     </div>
@@ -139,7 +173,7 @@ const AdminSettings = () => {
                             Timezone
                         </label>
                         <select
-                            value={settings.timezone}
+                            value={getSettingValue('timezone', 'America/New_York')}
                             onChange={(e) => handleSettingChange('timezone', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
@@ -169,8 +203,8 @@ const AdminSettings = () => {
                         </div>
                         <input
                             type="checkbox"
-                            checked={settings.requireEmailVerification}
-                            onChange={(e) => handleSettingChange('requireEmailVerification', e.target.checked)}
+                            checked={getBooleanSetting('require_email_verification', true)}
+                            onChange={(e) => handleSettingChange('require_email_verification', e.target.checked.toString())}
                             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
                     </div>
@@ -184,8 +218,8 @@ const AdminSettings = () => {
                         </div>
                         <input
                             type="checkbox"
-                            checked={settings.enableTwoFactor}
-                            onChange={(e) => handleSettingChange('enableTwoFactor', e.target.checked)}
+                            checked={getBooleanSetting('enable_two_factor', false)}
+                            onChange={(e) => handleSettingChange('enable_two_factor', e.target.checked.toString())}
                             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
                     </div>
@@ -199,8 +233,8 @@ const AdminSettings = () => {
                         </div>
                         <input
                             type="checkbox"
-                            checked={settings.requireStrongPasswords}
-                            onChange={(e) => handleSettingChange('requireStrongPasswords', e.target.checked)}
+                            checked={getBooleanSetting('require_strong_passwords', true)}
+                            onChange={(e) => handleSettingChange('require_strong_passwords', e.target.checked.toString())}
                             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
                     </div>
@@ -213,8 +247,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="number"
-                            value={settings.sessionTimeout}
-                            onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
+                            value={getNumberSetting('session_timeout', 24)}
+                            onChange={(e) => handleSettingChange('session_timeout', e.target.value)}
                             min="1"
                             max="168"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -226,8 +260,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="number"
-                            value={settings.maxLoginAttempts}
-                            onChange={(e) => handleSettingChange('maxLoginAttempts', parseInt(e.target.value))}
+                            value={getNumberSetting('max_login_attempts', 5)}
+                            onChange={(e) => handleSettingChange('max_login_attempts', e.target.value)}
                             min="3"
                             max="10"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -239,8 +273,8 @@ const AdminSettings = () => {
                         </label>
                         <input
                             type="number"
-                            value={settings.passwordMinLength}
-                            onChange={(e) => handleSettingChange('passwordMinLength', parseInt(e.target.value))}
+                            value={getNumberSetting('password_min_length', 8)}
+                            onChange={(e) => handleSettingChange('password_min_length', e.target.value)}
                             min="6"
                             max="20"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -566,59 +600,97 @@ const AdminSettings = () => {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold flex items-center">
-                            <Settings className="h-8 w-8 mr-3" />
-                            Admin Settings
-                        </h1>
-                        <p className="mt-2 text-purple-100">
-                            Configure platform settings, security, and user management options.
-                        </p>
+            {/* Loading State */}
+            {loading && (
+                <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    <span className="ml-2 text-gray-600">Loading settings...</span>
+                </div>
+            )}
+
+            {/* Error State */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                        <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
+                        <span className="text-red-800">{error}</span>
+                        <button
+                            onClick={() => setError(null)}
+                            className="ml-auto text-red-400 hover:text-red-600"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
-                    <button
-                        onClick={handleSave}
-                        className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center ${saved
-                                ? 'bg-green-500 text-white'
-                                : 'bg-white text-purple-600 hover:bg-gray-100'
-                            }`}
-                    >
-                        <Save className="h-5 w-5 mr-2" />
-                        {saved ? 'Saved!' : 'Save Changes'}
-                    </button>
                 </div>
-            </div>
+            )}
 
-            {/* Navigation Tabs */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8 px-6">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center transition-colors ${activeTab === tab.id
-                                            ? 'border-purple-500 text-purple-600'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <Icon className="h-5 w-5 mr-2" />
-                                    {tab.name}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </div>
+            {!loading && (
+                <>
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-2xl font-bold flex items-center">
+                                    <Settings className="h-8 w-8 mr-3" />
+                                    Admin Settings
+                                </h1>
+                                <p className="mt-2 text-purple-100">
+                                    Configure platform settings, security, and user management options.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center ${saved
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-white text-purple-600 hover:bg-gray-100'
+                                    } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {saving ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 mr-2"></div>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        {saved ? <CheckCircle className="h-5 w-5 mr-2" /> : <Save className="h-5 w-5 mr-2" />}
+                                        {saved ? 'Saved!' : 'Save Changes'}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
 
-                {/* Tab Content */}
-                <div className="p-6">
-                    {renderTabContent()}
-                </div>
-            </div>
+                    {/* Navigation Tabs */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className="border-b border-gray-200">
+                            <nav className="-mb-px flex space-x-8 px-6">
+                                {tabs.map((tab) => {
+                                    const Icon = tab.icon;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center transition-colors ${activeTab === tab.id
+                                                ? 'border-purple-500 text-purple-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <Icon className="h-5 w-5 mr-2" />
+                                            {tab.name}
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+
+                        {/* Tab Content */}
+                        <div className="p-6">
+                            {renderTabContent()}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

@@ -164,10 +164,11 @@ router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => 
     SELECT DISTINCT u.id, u.first_name, u.last_name, u.avatar_url, u.email,
            COUNT(s.id) as total_sessions,
            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions,
-           AVG(s.tutor_rating) as avg_rating,
-           MAX(s.scheduled_at) as last_session
+           AVG(sr.tutor_rating) as avg_rating,
+           MAX(s.scheduled_start) as last_session
     FROM users u
-    JOIN sessions s ON u.id = s.student_id
+    JOIN tutoring_sessions s ON u.id = s.student_id
+    LEFT JOIN session_reviews sr ON s.id = sr.session_id
     WHERE s.tutor_id = $1
     GROUP BY u.id, u.first_name, u.last_name, u.avatar_url, u.email
     ORDER BY last_session DESC
