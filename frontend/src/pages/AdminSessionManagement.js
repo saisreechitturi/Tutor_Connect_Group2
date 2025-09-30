@@ -23,6 +23,160 @@ import {
     Activity
 } from 'lucide-react';
 
+// Mock data for sessions
+const mockSessions = [
+    {
+        id: 1,
+        tutor_name: 'Emily Johnson',
+        student_name: 'Alex Thompson',
+        subject: 'Mathematics',
+        status: 'completed',
+        session_type: 'video',
+        scheduled_at: '2025-09-28T14:00:00Z',
+        started_at: '2025-09-28T14:05:00Z',
+        ended_at: '2025-09-28T15:15:00Z',
+        duration: 75,
+        actual_duration: 70,
+        total_earnings: 50,
+        tutor_earnings: 40,
+        rating: 5,
+        notes: 'Great session on calculus derivatives. Student showed excellent progress.',
+        location: null,
+        tutor_id: 2,
+        student_id: 4,
+        tutor: {
+            id: 2,
+            name: 'Emily Johnson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        },
+        student: {
+            id: 4,
+            name: 'Alex Thompson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        }
+    },
+    {
+        id: 2,
+        tutor_name: 'Michael Davis',
+        student_name: 'Taylor Brown',
+        subject: 'Chemistry',
+        status: 'scheduled',
+        session_type: 'video',
+        scheduled_at: '2025-10-02T16:00:00Z',
+        started_at: null,
+        ended_at: null,
+        duration: 60,
+        actual_duration: null,
+        total_earnings: 40,
+        tutor_earnings: 32,
+        rating: null,
+        notes: 'Session on molecular bonding and ionic compounds.',
+        location: null,
+        tutor_id: 3,
+        student_id: 5,
+        tutor: {
+            id: 3,
+            name: 'Michael Davis',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+        },
+        student: {
+            id: 5,
+            name: 'Taylor Brown',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+        }
+    },
+    {
+        id: 3,
+        tutor_name: 'Emily Johnson',
+        student_name: 'Jamie Wilson',
+        subject: 'Computer Science',
+        status: 'in-progress',
+        session_type: 'video',
+        scheduled_at: '2025-09-30T10:00:00Z',
+        started_at: '2025-09-30T10:02:00Z',
+        ended_at: null,
+        duration: 90,
+        actual_duration: null,
+        total_earnings: 60,
+        tutor_earnings: 48,
+        rating: null,
+        notes: 'Advanced programming concepts - object-oriented design patterns.',
+        location: null,
+        tutor_id: 2,
+        student_id: 6,
+        tutor: {
+            id: 2,
+            name: 'Emily Johnson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        },
+        student: {
+            id: 6,
+            name: 'Jamie Wilson',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
+        }
+    },
+    {
+        id: 4,
+        tutor_name: 'Emily Johnson',
+        student_name: 'Alex Thompson',
+        subject: 'Physics',
+        status: 'cancelled',
+        session_type: 'in-person',
+        scheduled_at: '2025-09-29T13:00:00Z',
+        started_at: null,
+        ended_at: null,
+        duration: 60,
+        actual_duration: null,
+        total_earnings: 0,
+        tutor_earnings: 0,
+        rating: null,
+        notes: 'Cancelled due to student emergency. Will reschedule for next week.',
+        location: 'Central Library, Room 204',
+        tutor_id: 2,
+        student_id: 4,
+        tutor: {
+            id: 2,
+            name: 'Emily Johnson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        },
+        student: {
+            id: 4,
+            name: 'Alex Thompson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        }
+    },
+    {
+        id: 5,
+        tutor_name: 'Michael Davis',
+        student_name: 'Jamie Wilson',
+        subject: 'Web Development',
+        status: 'completed',
+        session_type: 'video',
+        scheduled_at: '2025-09-27T15:30:00Z',
+        started_at: '2025-09-27T15:35:00Z',
+        ended_at: '2025-09-27T16:45:00Z',
+        duration: 75,
+        actual_duration: 70,
+        total_earnings: 55,
+        tutor_earnings: 44,
+        rating: 4,
+        notes: 'React components and state management. Student needs more practice with hooks.',
+        location: null,
+        tutor_id: 3,
+        student_id: 6,
+        tutor: {
+            id: 3,
+            name: 'Michael Davis',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+        },
+        student: {
+            id: 6,
+            name: 'Jamie Wilson',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
+        }
+    }
+];
+
 const AdminSessionManagement = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('all');
@@ -43,8 +197,15 @@ const AdminSessionManagement = () => {
         try {
             setLoading(true);
             setError(null);
-            const sessionsData = await adminService.getAllSessions();
-            setSessions(sessionsData?.sessions || []);
+
+            // Use mock data for now instead of API call
+            // TODO: Replace with actual API call when backend is ready
+            // const sessionsData = await adminService.getAllSessions();
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            setSessions(mockSessions);
         } catch (err) {
             console.error('Error fetching sessions:', err);
             setError('Failed to load sessions. Please try again.');
@@ -318,24 +479,26 @@ const AdminSessionManagement = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 mr-3">
-                                                    {getTypeIcon(session.type)}
+                                                    {getTypeIcon(session.session_type || session.type)}
                                                 </div>
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-900">{session.id}</div>
-                                                    <div className="text-sm text-gray-500">{session.subject}</div>
-                                                    <div className="text-sm text-gray-500">{session.location}</div>
+                                                    <div className="text-sm font-medium text-gray-900">#{session.id}</div>
+                                                    <div className="text-sm text-gray-500">{session.subject || 'No Subject'}</div>
+                                                    {session.location && (
+                                                        <div className="text-sm text-gray-500">{session.location}</div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div>
                                                 <div className="text-sm font-medium text-gray-900">
-                                                    Tutor: {session.tutor.name}
+                                                    Tutor: {session.tutor?.name || session.tutor_name || 'Unknown'}
                                                 </div>
                                                 <div className="text-sm text-gray-500">
-                                                    Student: {session.student.name} ({session.student.grade})
+                                                    Student: {session.student?.name || session.student_name || 'Unknown'}
                                                 </div>
-                                                {session.tutor.rating && (
+                                                {session.tutor?.rating && (
                                                     <div className="flex items-center mt-1">
                                                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                                         <span className="text-sm text-gray-500 ml-1">{session.tutor.rating}</span>
@@ -344,9 +507,9 @@ const AdminSessionManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">{formatDate(session.scheduledTime)}</div>
+                                            <div className="text-sm text-gray-900">{formatDate(session.scheduled_at || session.scheduledTime)}</div>
                                             <div className="text-sm text-gray-500">
-                                                {session.actualDuration ? `${session.actualDuration} min` : `${session.duration} min (scheduled)`}
+                                                {session.actual_duration || session.actualDuration ? `${session.actual_duration || session.actualDuration} min` : `${session.duration} min (scheduled)`}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -356,14 +519,14 @@ const AdminSessionManagement = () => {
                                                     <span className="ml-1 capitalize">{session.status}</span>
                                                 </span>
                                             </div>
-                                            <div className="text-sm text-gray-900 font-medium">${session.totalEarnings.toFixed(2)}</div>
+                                            <div className="text-sm text-gray-900 font-medium">${(session.total_earnings || session.totalEarnings || 0).toFixed(2)}</div>
                                             {session.rating && (
                                                 <div className="flex items-center">
                                                     <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                                     <span className="text-sm text-gray-500 ml-1">{session.rating}/5</span>
                                                 </div>
                                             )}
-                                            {session.issues.length > 0 && (
+                                            {session.issues && session.issues.length > 0 && (
                                                 <div className="flex items-center mt-1">
                                                     <AlertCircle className="w-4 h-4 text-red-500" />
                                                     <span className="text-xs text-red-600 ml-1">{session.issues.length} issue(s)</span>
@@ -409,8 +572,8 @@ const AdminSessionManagement = () => {
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Type:</span>
                                                 <div className="flex items-center">
-                                                    {getTypeIcon(selectedSession.type)}
-                                                    <span className="ml-2 capitalize">{selectedSession.type}</span>
+                                                    {getTypeIcon(selectedSession.session_type || selectedSession.type)}
+                                                    <span className="ml-2 capitalize">{selectedSession.session_type || selectedSession.type || 'Unknown'}</span>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between">
@@ -422,7 +585,7 @@ const AdminSessionManagement = () => {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Location:</span>
-                                                <span className="font-medium">{selectedSession.location}</span>
+                                                <span className="font-medium">{selectedSession.location || 'Online'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -431,12 +594,14 @@ const AdminSessionManagement = () => {
                                         <h4 className="font-semibold text-gray-900 mb-3">Participants</h4>
                                         <div className="space-y-3">
                                             <div>
-                                                <div className="font-medium text-gray-900">Tutor: {selectedSession.tutor.name}</div>
-                                                <div className="text-sm text-gray-500">ID: {selectedSession.tutor.id}</div>
-                                                <div className="flex items-center mt-1">
-                                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                                    <span className="text-sm text-gray-500 ml-1">{selectedSession.tutor.rating} rating</span>
-                                                </div>
+                                                <div className="font-medium text-gray-900">Tutor: {selectedSession.tutor?.name || selectedSession.tutor_name || 'Unknown'}</div>
+                                                <div className="text-sm text-gray-500">ID: {selectedSession.tutor?.id || selectedSession.tutor_id || 'N/A'}</div>
+                                                {selectedSession.tutor?.rating && (
+                                                    <div className="flex items-center mt-1">
+                                                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                                        <span className="text-sm text-gray-500 ml-1">{selectedSession.tutor.rating} rating</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="font-medium text-gray-900">Student: {selectedSession.student.name}</div>
@@ -456,18 +621,18 @@ const AdminSessionManagement = () => {
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Duration:</span>
                                                 <span className="font-medium">
-                                                    {selectedSession.actualDuration
-                                                        ? `${selectedSession.actualDuration} min (actual)`
+                                                    {selectedSession.actual_duration || selectedSession.actualDuration
+                                                        ? `${selectedSession.actual_duration || selectedSession.actualDuration} min (actual)`
                                                         : `${selectedSession.duration} min (scheduled)`}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Rate:</span>
-                                                <span className="font-medium">${selectedSession.rate}/hour</span>
+                                                <span className="font-medium">${selectedSession.rate || 'N/A'}/hour</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Total Earnings:</span>
-                                                <span className="font-medium text-green-600">${selectedSession.totalEarnings.toFixed(2)}</span>
+                                                <span className="font-medium text-green-600">${(selectedSession.total_earnings || selectedSession.totalEarnings || 0).toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>

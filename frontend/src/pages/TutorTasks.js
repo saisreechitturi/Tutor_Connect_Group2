@@ -3,6 +3,86 @@ import { Plus, Search, Filter, Calendar, Clock, CheckCircle, AlertCircle, User, 
 import { useAuth } from '../context/AuthContext';
 import { taskService } from '../services';
 
+// Mock data for tasks
+const mockTasks = [
+    {
+        id: 1,
+        title: 'Prepare Calculus Lesson Plan',
+        description: 'Create a comprehensive lesson plan for derivatives including practice problems and examples.',
+        student: {
+            id: 1,
+            name: 'Alex Thompson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        },
+        subject: 'Mathematics',
+        type: 'preparation',
+        priority: 'high',
+        status: 'pending',
+        dueDate: '2025-10-05',
+        estimatedTime: 2,
+        notes: 'Focus on real-world applications of derivatives.',
+        createdAt: '2025-09-28',
+        tutorId: 1
+    },
+    {
+        id: 2,
+        title: 'Review Taylor\'s Chemistry Assignment',
+        description: 'Review and provide feedback on the molecular bonding assignment submitted by Taylor.',
+        student: {
+            id: 2,
+            name: 'Taylor Brown',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+        },
+        subject: 'Chemistry',
+        type: 'grading',
+        priority: 'medium',
+        status: 'in-progress',
+        dueDate: '2025-10-02',
+        estimatedTime: 1.5,
+        notes: 'Pay attention to ionic vs covalent bond explanations.',
+        createdAt: '2025-09-27',
+        tutorId: 1
+    },
+    {
+        id: 3,
+        title: 'Follow-up on Programming Concepts',
+        description: 'Check Jamie\'s understanding of object-oriented programming concepts after last session.',
+        student: {
+            id: 3,
+            name: 'Jamie Wilson',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
+        },
+        subject: 'Computer Science',
+        type: 'follow-up',
+        priority: 'low',
+        status: 'completed',
+        dueDate: '2025-09-30',
+        estimatedTime: 0.5,
+        notes: 'Student showed good understanding of inheritance and polymorphism.',
+        createdAt: '2025-09-25',
+        tutorId: 1
+    },
+    {
+        id: 4,
+        title: 'Grade Physics Lab Report',
+        description: 'Evaluate the motion dynamics lab report and provide detailed feedback.',
+        student: {
+            id: 1,
+            name: 'Alex Thompson',
+            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+        },
+        subject: 'Physics',
+        type: 'grading',
+        priority: 'high',
+        status: 'pending',
+        dueDate: '2025-10-03',
+        estimatedTime: 2.5,
+        notes: 'Focus on experimental methodology and data analysis.',
+        createdAt: '2025-09-29',
+        tutorId: 1
+    }
+];
+
 const TutorTasks = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('all');
@@ -23,8 +103,15 @@ const TutorTasks = () => {
         try {
             setLoading(true);
             setError(null);
-            const tasksData = await taskService.getUserTasks(user.id);
-            setTasks(tasksData || []);
+
+            // Use mock data for now instead of API call
+            // TODO: Replace with actual API call when backend is ready
+            // const tasksData = await taskService.getUserTasks(user.id);
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            setTasks(mockTasks);
         } catch (err) {
             console.error('Error fetching tasks:', err);
             setError('Failed to load tasks. Please try again.');
@@ -74,10 +161,10 @@ const TutorTasks = () => {
 
     const filteredTasks = tasks.filter(task => {
         const matchesTab = activeTab === 'all' || task.status === activeTab;
-        const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            task.subject.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (task.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (task.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (task.student?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (task.subject || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchesTab && matchesSearch;
     });
 
@@ -110,13 +197,15 @@ const TutorTasks = () => {
     };
 
     const updateTaskStatus = (taskId, newStatus) => {
-        setTaskList(prev => prev.map(task =>
+        setTasks(prev => prev.map(task =>
             task.id === taskId ? { ...task, status: newStatus } : task
         ));
     };
 
     const deleteTask = (taskId) => {
-        setTaskList(prev => prev.filter(task => task.id !== taskId));
+        if (window.confirm('Are you sure you want to delete this task?')) {
+            setTasks(prev => prev.filter(task => task.id !== taskId));
+        }
     };
 
     const TaskCard = ({ task }) => (
@@ -132,16 +221,16 @@ const TutorTasks = () => {
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                             <div className="flex items-center space-x-1">
                                 <img
-                                    src={task.student.avatar}
-                                    alt={task.student.name}
+                                    src={task.student?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
+                                    alt={task.student?.name || 'Student'}
                                     className="h-4 w-4 rounded-full"
                                 />
-                                <span>{task.student.name}</span>
+                                <span>{task.student?.name || 'Unknown Student'}</span>
                             </div>
-                            <span>{task.subject}</span>
+                            <span>{task.subject || 'No Subject'}</span>
                             <div className="flex items-center space-x-1">
                                 <Clock className="h-3 w-3" />
-                                <span>{task.estimatedTime}h</span>
+                                <span>{task.estimatedTime || 0}h</span>
                             </div>
                         </div>
                     </div>
@@ -159,7 +248,7 @@ const TutorTasks = () => {
                         {task.status}
                     </span>
                     <span className="text-xs text-gray-500">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                        Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
                     </span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -182,12 +271,14 @@ const TutorTasks = () => {
                     <button
                         onClick={() => setSelectedTask(task)}
                         className="text-gray-400 hover:text-gray-600"
+                        title="Edit task"
                     >
                         <Edit className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => deleteTask(task.id)}
                         className="text-red-400 hover:text-red-600"
+                        title="Delete task"
                     >
                         <Trash2 className="h-4 w-4" />
                     </button>
@@ -202,86 +293,331 @@ const TutorTasks = () => {
         </div>
     );
 
-    const CreateTaskModal = () => (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold text-gray-900">Create New Task</h2>
-                </div>
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
-                        <input type="text" className="input-field" placeholder="Enter task title..." />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                        <textarea rows={3} className="input-field" placeholder="Describe the task..."></textarea>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
-                            <select className="input-field">
-                                <option>Select a student...</option>
-                                <option>Sai Prathyusha Celoth</option>
-                                <option>Chandan Cheni</option>
-                                <option>Maatheswaran Kannan Chellapandian</option>
-                            </select>
+    const CreateTaskModal = () => {
+        const [formData, setFormData] = useState({
+            title: '',
+            description: '',
+            studentId: '',
+            subject: '',
+            priority: 'medium',
+            type: 'preparation',
+            estimatedTime: 1,
+            dueDate: '',
+            notes: ''
+        });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now(), // Simple ID generation for demo
+                ...formData,
+                student: mockTasks.find(t => t.student.id.toString() === formData.studentId)?.student || {
+                    id: 1,
+                    name: 'Selected Student',
+                    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+                },
+                status: 'pending',
+                createdAt: new Date().toISOString().split('T')[0],
+                tutorId: user?.id || 1
+            };
+            setTasks(prev => [...prev, newTask]);
+            setShowCreateModal(false);
+            setFormData({
+                title: '',
+                description: '',
+                studentId: '',
+                subject: '',
+                priority: 'medium',
+                type: 'preparation',
+                estimatedTime: 1,
+                dueDate: '',
+                notes: ''
+            });
+        };
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit}>
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-900">Create New Task</h2>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                            <input type="text" className="input-field" placeholder="e.g. JavaScript, React..." />
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
+                                <input
+                                    type="text"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter task title..."
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Describe the task..."
+                                    required
+                                ></textarea>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
+                                    <select
+                                        value={formData.studentId}
+                                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                        required
+                                    >
+                                        <option value="">Select a student...</option>
+                                        <option value="1">Alex Thompson</option>
+                                        <option value="2">Taylor Brown</option>
+                                        <option value="3">Jamie Wilson</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                                    <input
+                                        type="text"
+                                        value={formData.subject}
+                                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="e.g. JavaScript, React..."
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                                    <select
+                                        value={formData.priority}
+                                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                                    <select
+                                        value={formData.type}
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    >
+                                        <option value="preparation">Preparation</option>
+                                        <option value="review">Review</option>
+                                        <option value="grading">Grading</option>
+                                        <option value="follow-up">Follow-up</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Time (hours)</label>
+                                    <input
+                                        type="number"
+                                        step="0.5"
+                                        value={formData.estimatedTime}
+                                        onChange={(e) => setFormData({ ...formData, estimatedTime: parseFloat(e.target.value) })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="1.5"
+                                        min="0.5"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                                <input
+                                    type="date"
+                                    value={formData.dueDate}
+                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                <textarea
+                                    rows={2}
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Additional notes..."
+                                ></textarea>
+                            </div>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                            <select className="input-field">
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                            </select>
+                        <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowCreateModal(false)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                            >
+                                Create Task
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                            <select className="input-field">
-                                <option value="preparation">Preparation</option>
-                                <option value="review">Review</option>
-                                <option value="grading">Grading</option>
-                                <option value="follow-up">Follow-up</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Time (hours)</label>
-                            <input type="number" step="0.5" className="input-field" placeholder="1.5" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                        <input type="date" className="input-field" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                        <textarea rows={2} className="input-field" placeholder="Additional notes..."></textarea>
-                    </div>
-                </div>
-                <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
-                    <button
-                        onClick={() => setShowCreateModal(false)}
-                        className="btn-secondary"
-                    >
-                        Cancel
-                    </button>
-                    <button className="btn-primary">Create Task</button>
+                    </form>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    // Edit Task Modal
+    const EditTaskModal = ({ task, onClose }) => {
+        const [formData, setFormData] = useState({
+            title: task.title || '',
+            description: task.description || '',
+            subject: task.subject || '',
+            priority: task.priority || 'medium',
+            type: task.type || 'preparation',
+            estimatedTime: task.estimatedTime || 1,
+            dueDate: task.dueDate || '',
+            notes: task.notes || ''
+        });
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            setTasks(prev => prev.map(t =>
+                t.id === task.id ? { ...t, ...formData } : t
+            ));
+            onClose();
+        };
+
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <form onSubmit={handleSubmit}>
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-900">Edit Task</h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
+                                <input
+                                    type="text"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                                <input
+                                    type="text"
+                                    value={formData.subject}
+                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                                    <select
+                                        value={formData.priority}
+                                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                                    <select
+                                        value={formData.type}
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    >
+                                        <option value="preparation">Preparation</option>
+                                        <option value="review">Review</option>
+                                        <option value="grading">Grading</option>
+                                        <option value="follow-up">Follow-up</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Time (hours)</label>
+                                    <input
+                                        type="number"
+                                        step="0.5"
+                                        value={formData.estimatedTime}
+                                        onChange={(e) => setFormData({ ...formData, estimatedTime: parseFloat(e.target.value) })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                        min="0.5"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                                <input
+                                    type="date"
+                                    value={formData.dueDate}
+                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                <textarea
+                                    rows={2}
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                                ></textarea>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
+    };
 
     const taskCounts = {
-        all: taskList.length,
-        pending: taskList.filter(t => t.status === 'pending').length,
-        'in-progress': taskList.filter(t => t.status === 'in-progress').length,
-        completed: taskList.filter(t => t.status === 'completed').length
+        all: tasks.length,
+        pending: tasks.filter(t => t.status === 'pending').length,
+        'in-progress': tasks.filter(t => t.status === 'in-progress').length,
+        completed: tasks.filter(t => t.status === 'completed').length
     };
 
     return (
@@ -393,6 +729,14 @@ const TutorTasks = () => {
 
             {/* Create Task Modal */}
             {showCreateModal && <CreateTaskModal />}
+
+            {/* Edit Task Modal */}
+            {selectedTask && (
+                <EditTaskModal
+                    task={selectedTask}
+                    onClose={() => setSelectedTask(null)}
+                />
+            )}
         </div>
     );
 };

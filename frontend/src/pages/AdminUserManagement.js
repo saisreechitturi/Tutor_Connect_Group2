@@ -2,6 +2,118 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, User, Mail, Phone, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { adminService } from '../services';
 
+// Mock data for users
+const mockUsers = [
+    {
+        id: 1,
+        first_name: 'John',
+        last_name: 'Admin',
+        email: 'john.admin@tutorconnect.com',
+        role: 'admin',
+        status: 'active',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+        phone: '+1-555-0101',
+        joinedDate: '2025-01-15',
+        lastLogin: '2025-09-30',
+        verified: true,
+        totalSessions: 0,
+        totalSpent: 0,
+        totalEarned: 0,
+        rating: 0,
+        subjects: []
+    },
+    {
+        id: 2,
+        first_name: 'Emily',
+        last_name: 'Johnson',
+        email: 'emily.tutor@tutorconnect.com',
+        role: 'tutor',
+        status: 'active',
+        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        phone: '+1-555-0102',
+        joinedDate: '2025-02-10',
+        lastLogin: '2025-09-29',
+        verified: true,
+        totalSessions: 45,
+        totalSpent: 0,
+        totalEarned: 2250,
+        rating: 4.8,
+        subjects: ['Mathematics', 'Physics', 'Chemistry']
+    },
+    {
+        id: 3,
+        first_name: 'Michael',
+        last_name: 'Davis',
+        email: 'michael.tutor@tutorconnect.com',
+        role: 'tutor',
+        status: 'pending',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        phone: '+1-555-0103',
+        joinedDate: '2025-09-28',
+        lastLogin: '2025-09-28',
+        verified: false,
+        totalSessions: 0,
+        totalSpent: 0,
+        totalEarned: 0,
+        rating: 0,
+        subjects: ['Computer Science', 'Web Development']
+    },
+    {
+        id: 4,
+        first_name: 'Alex',
+        last_name: 'Thompson',
+        email: 'alex.student@tutorconnect.com',
+        role: 'student',
+        status: 'active',
+        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        phone: '+1-555-0104',
+        joinedDate: '2025-08-15',
+        lastLogin: '2025-09-30',
+        verified: true,
+        totalSessions: 15,
+        totalSpent: 750,
+        totalEarned: 0,
+        rating: 0,
+        subjects: []
+    },
+    {
+        id: 5,
+        first_name: 'Taylor',
+        last_name: 'Brown',
+        email: 'taylor.study@tutorconnect.com',
+        role: 'student',
+        status: 'active',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        phone: '+1-555-0105',
+        joinedDate: '2025-09-01',
+        lastLogin: '2025-09-29',
+        verified: true,
+        totalSessions: 8,
+        totalSpent: 400,
+        totalEarned: 0,
+        rating: 0,
+        subjects: []
+    },
+    {
+        id: 6,
+        first_name: 'Jamie',
+        last_name: 'Wilson',
+        email: 'jamie.learner@tutorconnect.com',
+        role: 'student',
+        status: 'suspended',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+        phone: '+1-555-0106',
+        joinedDate: '2025-07-10',
+        lastLogin: '2025-09-25',
+        verified: true,
+        totalSessions: 22,
+        totalSpent: 1100,
+        totalEarned: 0,
+        rating: 0,
+        subjects: []
+    }
+];
+
 const AdminUserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -20,8 +132,15 @@ const AdminUserManagement = () => {
         try {
             setLoading(true);
             setError(null);
-            const usersData = await adminService.getAllUsers();
-            setUsers(usersData || []);
+
+            // Use mock data for now instead of API call
+            // TODO: Replace with actual API call when backend is ready
+            // const usersData = await adminService.getAllUsers();
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            setUsers(mockUsers);
         } catch (err) {
             console.error('Error fetching users:', err);
             setError('Failed to load users. Please try again.');
@@ -110,10 +229,14 @@ const AdminUserManagement = () => {
 
     const updateUserStatus = async (userId, newStatus) => {
         try {
-            await adminService.updateUserStatus(userId, newStatus);
+            // TODO: Replace with actual API call when backend is ready
+            // await adminService.updateUserStatus(userId, newStatus);
+
             setUserList(prev => prev.map(user =>
                 user.id === userId ? { ...user, status: newStatus } : user
             ));
+
+            console.log(`Updated user ${userId} status to ${newStatus}`);
         } catch (err) {
             console.error('Error updating user status:', err);
             alert('Failed to update user status. Please try again.');
@@ -123,8 +246,12 @@ const AdminUserManagement = () => {
     const deleteUser = async (userId) => {
         if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
             try {
-                await adminService.deleteUser(userId);
+                // TODO: Replace with actual API call when backend is ready
+                // await adminService.deleteUser(userId);
+
                 setUserList(prev => prev.filter(user => user.id !== userId));
+
+                console.log(`Deleted user ${userId}`);
             } catch (err) {
                 console.error('Error deleting user:', err);
                 alert('Failed to delete user. Please try again.');
@@ -137,16 +264,16 @@ const AdminUserManagement = () => {
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-4">
                     <img
-                        src={user.avatar}
-                        alt={`${user.firstName} ${user.lastName}`}
+                        src={user.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
+                        alt={`${user.first_name || 'User'} ${user.last_name || ''}`}
                         className="h-12 w-12 rounded-full object-cover"
                     />
                     <div>
-                        <h3 className="font-medium text-gray-900">{user.firstName} {user.lastName}</h3>
-                        <p className="text-sm text-gray-600">{user.email}</p>
+                        <h3 className="font-medium text-gray-900">{user.first_name || 'Unknown'} {user.last_name || 'User'}</h3>
+                        <p className="text-sm text-gray-600">{user.email || 'No email'}</p>
                         <div className="flex items-center space-x-2 mt-1">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                                {user.role}
+                                {user.role || 'No role'}
                             </span>
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
                                 {user.status}
@@ -176,21 +303,21 @@ const AdminUserManagement = () => {
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                     <p className="text-gray-500">Joined</p>
-                    <p className="font-medium">{new Date(user.joinedDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{user.joinedDate ? new Date(user.joinedDate).toLocaleDateString() : 'Unknown'}</p>
                 </div>
                 <div>
                     <p className="text-gray-500">Last Login</p>
-                    <p className="font-medium">{new Date(user.lastLogin).toLocaleDateString()}</p>
+                    <p className="font-medium">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
                 </div>
                 {user.role === 'student' && (
                     <>
                         <div>
                             <p className="text-gray-500">Sessions</p>
-                            <p className="font-medium">{user.totalSessions}</p>
+                            <p className="font-medium">{user.totalSessions || 0}</p>
                         </div>
                         <div>
                             <p className="text-gray-500">Total Spent</p>
-                            <p className="font-medium">${user.totalSpent}</p>
+                            <p className="font-medium">${user.totalSpent || 0}</p>
                         </div>
                     </>
                 )}
@@ -198,15 +325,15 @@ const AdminUserManagement = () => {
                     <>
                         <div>
                             <p className="text-gray-500">Sessions</p>
-                            <p className="font-medium">{user.totalSessions}</p>
+                            <p className="font-medium">{user.totalSessions || 0}</p>
                         </div>
                         <div>
                             <p className="text-gray-500">Total Earned</p>
-                            <p className="font-medium">${user.totalEarned}</p>
+                            <p className="font-medium">${user.totalEarned || 0}</p>
                         </div>
                         <div>
                             <p className="text-gray-500">Rating</p>
-                            <p className="font-medium">{user.rating} ⭐</p>
+                            <p className="font-medium">{user.rating || 0} ⭐</p>
                         </div>
                         <div>
                             <p className="text-gray-500">Subjects</p>
@@ -221,13 +348,13 @@ const AdminUserManagement = () => {
                     <>
                         <button
                             onClick={() => updateUserStatus(user.id, 'active')}
-                            className="btn-primary text-xs"
+                            className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                         >
                             Approve
                         </button>
                         <button
                             onClick={() => updateUserStatus(user.id, 'suspended')}
-                            className="btn-danger text-xs"
+                            className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
                         >
                             Reject
                         </button>
@@ -236,7 +363,7 @@ const AdminUserManagement = () => {
                 {user.status === 'active' && (
                     <button
                         onClick={() => updateUserStatus(user.id, 'suspended')}
-                        className="btn-danger text-xs"
+                        className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
                     >
                         Suspend
                     </button>
@@ -244,7 +371,7 @@ const AdminUserManagement = () => {
                 {user.status === 'suspended' && (
                     <button
                         onClick={() => updateUserStatus(user.id, 'active')}
-                        className="btn-primary text-xs"
+                        className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                     >
                         Reactivate
                     </button>
@@ -265,13 +392,13 @@ const AdminUserManagement = () => {
                 <div className="p-6 space-y-6">
                     <div className="flex items-center space-x-4">
                         <img
-                            src={user.avatar}
-                            alt={`${user.firstName} ${user.lastName}`}
+                            src={user.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
+                            alt={`${user.first_name || 'User'} ${user.last_name || ''}`}
                             className="h-16 w-16 rounded-full object-cover"
                         />
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
-                            <p className="text-gray-600">{user.email}</p>
+                            <h3 className="text-xl font-bold text-gray-900">{user.first_name || 'Unknown'} {user.last_name || 'User'}</h3>
+                            <p className="text-gray-600">{user.email || 'No email'}</p>
                             <div className="flex items-center space-x-2 mt-2">
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
                                     {user.role}
@@ -289,15 +416,15 @@ const AdminUserManagement = () => {
                             <div className="space-y-2 text-sm">
                                 <div className="flex items-center space-x-2">
                                     <Mail className="h-4 w-4 text-gray-400" />
-                                    <span>{user.email}</span>
+                                    <span>{user.email || 'No email'}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Phone className="h-4 w-4 text-gray-400" />
-                                    <span>{user.phone}</span>
+                                    <span>{user.phone || 'No phone'}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <User className="h-4 w-4 text-gray-400" />
-                                    <span>{user.location}</span>
+                                    <span>{user.location || 'No location'}</span>
                                 </div>
                             </div>
                         </div>
@@ -307,11 +434,11 @@ const AdminUserManagement = () => {
                             <div className="space-y-2 text-sm">
                                 <div className="flex items-center space-x-2">
                                     <Calendar className="h-4 w-4 text-gray-400" />
-                                    <span>Joined: {new Date(user.joinedDate).toLocaleDateString()}</span>
+                                    <span>Joined: {user.joinedDate ? new Date(user.joinedDate).toLocaleDateString() : 'Unknown'}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Calendar className="h-4 w-4 text-gray-400" />
-                                    <span>Last Login: {new Date(user.lastLogin).toLocaleDateString()}</span>
+                                    <span>Last Login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</span>
                                 </div>
                             </div>
                         </div>
@@ -323,15 +450,15 @@ const AdminUserManagement = () => {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="bg-blue-50 p-3 rounded-lg">
                                     <p className="text-sm text-blue-600">Sessions</p>
-                                    <p className="text-xl font-bold text-blue-600">{user.totalSessions}</p>
+                                    <p className="text-xl font-bold text-blue-600">{user.totalSessions || 0}</p>
                                 </div>
                                 <div className="bg-green-50 p-3 rounded-lg">
                                     <p className="text-sm text-green-600">Earned</p>
-                                    <p className="text-xl font-bold text-green-600">${user.totalEarned}</p>
+                                    <p className="text-xl font-bold text-green-600">${user.totalEarned || 0}</p>
                                 </div>
                                 <div className="bg-yellow-50 p-3 rounded-lg">
                                     <p className="text-sm text-yellow-600">Rating</p>
-                                    <p className="text-xl font-bold text-yellow-600">{user.rating}</p>
+                                    <p className="text-xl font-bold text-yellow-600">{user.rating || 0}</p>
                                 </div>
                                 <div className="bg-purple-50 p-3 rounded-lg">
                                     <p className="text-sm text-purple-600">Subjects</p>
@@ -354,9 +481,33 @@ const AdminUserManagement = () => {
                     )}
 
                     <div className="flex space-x-3 pt-4 border-t border-gray-200">
-                        <button className="btn-primary">Edit User</button>
-                        <button className="btn-secondary">Send Message</button>
-                        <button className="btn-outline">View Activity</button>
+                        <button
+                            onClick={() => {
+                                console.log('Edit user:', user.first_name, user.last_name);
+                                alert('Edit user functionality will be implemented soon.');
+                            }}
+                            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                        >
+                            Edit User
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('Send message to:', user.first_name, user.last_name);
+                                alert('Send message functionality will be implemented soon.');
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                            Send Message
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('View activity for:', user.first_name, user.last_name);
+                                alert('View activity functionality will be implemented soon.');
+                            }}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                        >
+                            View Activity
+                        </button>
                     </div>
                 </div>
             </div>
@@ -381,8 +532,11 @@ const AdminUserManagement = () => {
                     <p className="text-gray-600 mt-1">Manage all platform users, roles, and permissions</p>
                 </div>
                 <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="btn-primary flex items-center space-x-2"
+                    onClick={() => {
+                        console.log('Create new user');
+                        alert('Create user functionality will be implemented soon.');
+                    }}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors flex items-center space-x-2"
                 >
                     <Plus className="h-4 w-4" />
                     <span>Add User</span>
@@ -431,14 +585,14 @@ const AdminUserManagement = () => {
                             placeholder="Search users by name, email, or subject..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 input-field"
+                            className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         />
                     </div>
                     <div className="flex space-x-2">
                         <select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
-                            className="input-field min-w-[120px]"
+                            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 min-w-[120px]"
                         >
                             <option value="all">All Roles</option>
                             <option value="student">Students</option>
@@ -448,7 +602,7 @@ const AdminUserManagement = () => {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="input-field min-w-[120px]"
+                            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 min-w-[120px]"
                         >
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
