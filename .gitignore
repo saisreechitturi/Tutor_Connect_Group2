@@ -50,7 +50,6 @@ jspm_packages/
 
 # Database backups
 backups/
-*.sql
 *.backup
 *.dump
 

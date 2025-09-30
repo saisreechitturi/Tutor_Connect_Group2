@@ -12,8 +12,6 @@
         "setup": "npm run setup:backend && npm run setup:frontend",
         "setup:backend": "cd backend && npm install",
         "setup:frontend": "cd frontend && npm install",
-        "migrate": "cd backend && npm run db:migrate",
-        "seed": "cd backend && npm run db:seed",
         "deploy": "cd frontend && npm run build && npm run deploy"
     },
     "repository": {

@@ -27,7 +27,7 @@ This project has been **restructured for Render deployment** with:
 
    ```bash
    # In Render backend shell
-   npm run db:migrate
+   # Follow DATABASE_SETUP_GUIDE.md for complete setup
    ```
 
 📖 **Detailed deployment guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
@@ -67,6 +67,16 @@ tutor-connect/
 ├── render.yaml            # Deployment config
 └── DEPLOYMENT.md          # Deployment guide
 ```
+
+## 🗄️ Database Setup
+
+For complete database setup instructions, see [DATABASE_SETUP_GUIDE.md](DATABASE_SETUP_GUIDE.md).
+
+**Quick Options:**
+
+- **With Sample Data**: Restore `backend/src/database/TutorConnect_DB.sql` for full demo data
+- **Empty Schema**: Use `backend/src/database/database_structure_only.sql` for clean start
+- **PostgreSQL**: Default database (username: `postgres`, password: `Admin`)
 
 - **Primary**: Blue (#3b82f6, #2563eb, #1d4ed8)
 - **Secondary**: Gray shades for neutral elements
@@ -142,22 +152,27 @@ The application is fully responsive with breakpoints:
 
 ### Demo Accounts
 
-Try the application with these demo accounts:
+You can use these demo accounts to test the application (all passwords are `demo123`):
 
-**Student Account:**
+**Admin Accounts:**
 
-- Email: `alice@example.com`
-- Password: `demo`
+- Email: `admin@demo.com` | Password: `demo123` | Full platform management
+- Email: `admin@tutorconnect.com` | Password: `demo123` | System administrator
 
-**Tutor Account:**
+**Student Accounts:**
 
-- Email: `bob@example.com`
-- Password: `demo`
+- Email: `student@demo.com` | Password: `demo123` | Basic student access
+- Email: `alex.student@tutorconnect.com` | Password: `demo123` | High school senior
+- Email: `taylor.study@tutorconnect.com` | Password: `demo123` | Middle school student
+- Email: `jamie.learner@tutorconnect.com` | Password: `demo123` | College sophomore
 
-**Admin Account:**
+**Tutor Accounts:**
 
-- Email: `carol@example.com`
-- Password: `demo`
+- Email: `tutor@demo.com` | Password: `demo123` | Basic tutor access
+- Email: `sarah.math@tutorconnect.com` | Password: `demo123` | Math tutor (5+ years)
+- Email: `mike.science@tutorconnect.com` | Password: `demo123` | Physics tutor (PhD)
+- Email: `david.cs@tutorconnect.com` | Password: `demo123` | Computer Science tutor
+- Email: `emma.language@tutorconnect.com` | Password: `demo123` | Bilingual educator
 
 ## � Deployment
 

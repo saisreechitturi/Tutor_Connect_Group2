@@ -12,7 +12,22 @@
 - [API Endpoints](#api-endpoints)
 - [Sample Data](#sample-data)
 - [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+- [1. **Verify database setup:**
+
+   ```bash
+   # Check if database exists and has tables
+   psql -U postgres -d TutorConnect -c "\dt"
+   ```
+
+2. **Check table structure:**
+
+   ```bash
+   # Verify table structure and data count
+   psql -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM users;"
+   psql -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM subjects;"
+   ```
+
+3. **Reset database using PostgreSQL commands:**ng](#troubleshooting)
 
 ## 🔧 Prerequisites
 
@@ -41,13 +56,10 @@ git --version         # Should show Git version
 TutorConnect/
 ├── backend/                    # Node.js/Express API server
 │   ├── src/
-│   │   ├── database/          # Database configuration and scripts
+│   │   ├── database/          # Database configuration and setup
 │   │   │   ├── connection.js  # Database connection
-│   │   │   ├── schema.sql     # Database schema
-│   │   │   ├── setup.js       # Schema setup script
-│   │   │   ├── seed.js        # Sample data insertion
-│   │   │   ├── migrate.js     # Migration utilities
-│   │   │   └── check-data.js  # Data verification
+│   │   │   ├── database_structure_only.sql  # Empty database schema
+│   │   │   └── TutorConnect_DB.sql          # Complete backup with sample data
 │   │   ├── middleware/        # Express middleware
 │   │   │   ├── auth.js        # Authentication middleware
 │   │   │   └── errorHandler.js # Error handling
@@ -77,10 +89,7 @@ TutorConnect/
 │   │   └── data/           # Mock data (for development)
 │   └── package.json         # Frontend dependencies
 ├── build/                     # Production build files
-├── docs/                      # Database documentation
-│   ├── database-diagram.dbml # Database schema diagram
-│   ├── database-schema.sql   # SQL schema
-│   └── firestore-schema.md   # Schema documentation
+├── DATABASE_SETUP_GUIDE.md   # Comprehensive database setup guide
 └── README.md                 # Main project documentation
 ```
 
@@ -147,7 +156,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=TutorConnect
 DB_USER=postgres
-DB_PASSWORD=your_postgres_password_here
+DB_PASSWORD=Admin
 
 # Server Configuration
 PORT=5000
@@ -168,7 +177,7 @@ SESSION_SECRET=another-secret-key-for-sessions
 
 **⚠️ Important Security Notes:**
 
-- Replace `your_postgres_password_here` with your actual PostgreSQL password
+- Default PostgreSQL password is set to `Admin` (change if needed)
 - Use a strong, unique JWT secret (at least 64 characters)
 - Never commit `.env.local` to version control
 - Use different secrets for production
@@ -199,44 +208,80 @@ CREATE DATABASE TutorConnect;
 3. Enter "TutorConnect" as database name
 4. Click "Save"
 
-### Step 2: Run Database Setup Scripts
-
-From the `backend` directory, run the following commands:
+**Using Command Line (Windows):**
 
 ```bash
-# Create all database tables and schema
-npm run db:setup
-
-# Insert sample data (users, subjects, tutors, students)
-npm run db:seed
-
-# Or run both commands in sequence
-npm run db:full-setup
+# Create database using createdb utility
+& "C:\Program Files\PostgreSQL\17\bin\createdb.exe" -U postgres TutorConnect
 ```
+
+### Step 2: Set Up Database
+
+You have **two options** for setting up the database:
+
+#### **Option A: Use Complete Database Backup (Recommended)**
+
+This option restores a complete database with schema and sample data:
+
+```bash
+# Create empty database first
+createdb -U postgres TutorConnect
+
+# Restore from complete backup with sample data
+psql -U postgres -d TutorConnect -f backend/src/database/TutorConnect_DB.sql
+
+# Or using full path to psql if not in PATH
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d TutorConnect -f backend/src/database/TutorConnect_DB.sql
+```
+
+#### **Option B: Use Structure-Only Setup (Clean Start)**
+
+This option creates empty tables without any sample data:
+
+```bash
+# Create empty database first
+createdb -U postgres TutorConnect
+
+# Create tables only (no data)
+psql -U postgres -d TutorConnect -f backend/src/database/database_structure_only.sql
+
+# Or using full path to psql if not in PATH
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d TutorConnect -f backend/src/database/database_structure_only.sql
+```
+
+📖 **For detailed setup instructions, see [DATABASE_SETUP_GUIDE.md](DATABASE_SETUP_GUIDE.md)**
 
 ### Step 3: Verify Database Setup
 
-```bash
-# Check database contents and verify data
-node src/database/check-data.js
-```
-
-You should see output showing:
-
-- 6 users (1 admin, 3 tutors, 2 students)
-- 10 subjects (Math, Physics, Chemistry, etc.)
-- 4 tutor-subject relationships
-- All table counts
-
-### Available Database Commands
+Check if your database was set up correctly:
 
 ```bash
-npm run db:setup      # Create database schema (tables, indexes, triggers)
-npm run db:seed       # Insert sample data
-npm run db:full-setup # Complete setup (schema + data)
-npm run db:reset      # Reset database (drop all tables and recreate)
-npm run db:migrate    # Run database migrations
+# Check if tables exist
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d TutorConnect -c "\dt"
+
+# If you used Option A (complete backup), check user count
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM users;"
+
+# If you used Option B (structure only), tables should exist but be empty
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';"
 ```
+
+#### **Expected Results:**
+
+- **Option A (Complete Backup)**: 14 users, full sample data across all tables
+- **Option B (Structure Only)**: Empty tables ready for your data
+
+#### **Understanding the Database Options:**
+
+- **Complete Backup (`TutorConnect_DB.sql`)** - Contains both structure AND sample data with 14 demo accounts
+- **Structure Only (`database_structure_only.sql`)** - Contains only table definitions, no data
+- **Database Connection** - Configured in `connection.js` for your application
+
+#### **When to Use Each Option:**
+
+- **Use complete backup** for quick setup with demo data to explore features
+- **Use structure-only** for production deployment or when you want to add your own data
+- **Refer to DATABASE_SETUP_GUIDE.md** for comprehensive setup instructions and troubleshooting
 
 ### Database Schema Overview
 
@@ -373,84 +418,54 @@ Once both servers are running, you should see:
 
 ## 📊 Sample Data
 
-After running `npm run db:seed`, your database will be populated with:
+When using the complete database backup (`TutorConnect_DB.sql`), your database includes **14 demo accounts** with the password `demo`:
 
-### 👤 Users (6 total)
+### 👤 Demo Accounts (14 total)
 
-**Admin Account:**
+**Admin Accounts (3):**
 
-- **Email**: `admin@tutorconnect.com`
-- **Password**: `password123`
-- **Role**: Admin
-- **Access**: Full platform administration
+- `admin@demo.com` | Password: `demo` | Full platform management
+- `admin@tutorconnect.com` | Password: `demo` | System administrator  
+- `ef910e0b-1654-489e-b3f4-d647a22bff84` | Admin User | Full access
 
-**Tutors (3):**
+**Student Accounts (7):**
 
-1. **Sarah Johnson** - Mathematics Specialist
-   - **Email**: `sarah.math@tutorconnect.com`
-   - **Password**: `password123`
-   - **Subjects**: Mathematics (Advanced level)
-   - **Rate**: $35/hour
-   - **Experience**: 5 years
-   - **Education**: Masters in Mathematics
+- `student@demo.com` | Password: `demo` | Basic student access
+- `alex.student@tutorconnect.com` | Password: `demo` | Alex Thompson (High school senior)
+- `taylor.study@tutorconnect.com` | Password: `demo` | Taylor Brown (Middle school)
+- `jamie.learner@tutorconnect.com` | Password: `demo` | Jamie Wilson (College sophomore)
+- `john.student@example.com` | Password: `demo` | John Smith (High school)
+- `emma.student@example.com` | Password: `demo` | Emma Wilson (College freshman)
 
-2. **David Chen** - STEM Expert
-   - **Email**: `david.physics@tutorconnect.com`
-   - **Password**: `password123`
-   - **Subjects**: Mathematics (Advanced), Physics (Advanced)
-   - **Rate**: $40/hour
-   - **Experience**: 8 years
-   - **Education**: PhD in Physics
+**Tutor Accounts (4):**
 
-3. **Maria Rodriguez** - Language Tutor
-   - **Email**: `maria.spanish@tutorconnect.com`
-   - **Password**: `password123`
-   - **Subjects**: Spanish (Advanced level)
-   - **Rate**: $30/hour
-   - **Experience**: 6 years
-   - **Education**: Masters in Spanish Literature
+- `tutor@demo.com` | Password: `demo` | Basic tutor access
+- `sarah.math@tutorconnect.com` | Password: `demo` | Sarah Johnson (Math, 5+ years)
+- `mike.science@tutorconnect.com` | Password: `demo` | Michael Chen (Physics PhD)
+- `david.cs@tutorconnect.com` | Password: `demo` | David Kim (Computer Science)
+- `emma.language@tutorconnect.com` | Password: `demo` | Emma Rodriguez (Bilingual educator)
+- `maria.spanish@tutorconnect.com` | Password: `demo` | Maria Rodriguez (Spanish)
+- `david.physics@tutorconnect.com` | Password: `demo` | David Chen (Physics PhD)
 
-**Students (2):**
+### 📚 Complete Data Includes
 
-1. **John Smith** - High School Student
-   - **Email**: `john.student@example.com`
-   - **Password**: `password123`
-   - **Grade**: 11th Grade
-   - **School**: Central High School
+**Database Contents:**
 
-2. **Emma Wilson** - College Student
-   - **Email**: `emma.student@example.com`
-   - **Password**: `password123`
-   - **Grade**: College Freshman
-   - **School**: State University
+- **14 Users** with profiles, contact info, and role-based access
+- **Subjects** covering STEM, languages, and liberal arts
+- **Tutor Profiles** with rates, experience, and specializations
+- **Student Profiles** with grade levels and learning goals
+- **Session Data** including scheduled and completed sessions
+- **Task Management** data for assignment tracking
+- **Settings** and system configuration
 
-### 📚 Subjects (10 total)
+**Ready-to-Use Features:**
 
-**STEM Subjects:**
-
-- Mathematics
-- Physics  
-- Chemistry
-- Biology
-- Computer Science
-
-**Language Arts:**
-
-- Spanish
-- French
-- English Literature
-
-**Social Studies:**
-
-- History
-- Economics
-
-### 🎯 Tutor Specializations (4 relationships)
-
-- Sarah Johnson → Mathematics (Advanced)
-- David Chen → Mathematics (Advanced)
-- David Chen → Physics (Advanced)
-- Maria Rodriguez → Spanish (Advanced)
+- User authentication and role-based dashboards
+- Tutor-student matching and session booking
+- Task and assignment management
+- Administrative controls and analytics
+- Real-time messaging system data
 
 ## 🚀 Deployment Options
 
@@ -546,11 +561,15 @@ volumes:
    - Ensure database name is exactly `TutorConnect`
    - Test connection: `psql -U postgres -d TutorConnect`
 
-3. **Reset database:**
+3. **Reset database using PostgreSQL commands:**
 
    ```bash
-   npm run db:reset
-   npm run db:full-setup
+   # Drop and recreate database
+   psql -U postgres -c "DROP DATABASE IF EXISTS TutorConnect;"
+   psql -U postgres -c "CREATE DATABASE TutorConnect;"
+   
+   # Restore from backup
+   psql -U postgres -d TutorConnect -f backend/src/database/TutorConnect_DB.sql
    ```
 
 #### ❌ Port Already in Use
@@ -706,7 +725,8 @@ If you encounter issues not covered above:
 3. **Database connection test:**
 
    ```bash
-   node src/database/check-data.js
+   # Test PostgreSQL connection and check data
+   psql -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM users;"
    ```
 
 4. **API endpoint test:**
@@ -727,10 +747,11 @@ If you encounter issues not covered above:
 1. **Database Schema Changes:**
 
    ```bash
-   # 1. Modify src/database/schema.sql
-   # 2. Reset and recreate database
-   npm run db:reset
-   npm run db:full-setup
+   # 1. Modify backend/src/database/database_structure_only.sql or TutorConnect_DB.sql
+   # 2. Drop and recreate database with new schema
+   psql -U postgres -c "DROP DATABASE IF EXISTS TutorConnect;"
+   psql -U postgres -c "CREATE DATABASE TutorConnect;"
+   psql -U postgres -d TutorConnect -f backend/src/database/TutorConnect_DB.sql
    ```
 
 2. **API Changes:**
@@ -803,20 +824,24 @@ If you encounter issues not covered above:
 
 ### Database Management
 
-- **`schema.sql`** - Database table definitions
-- **`setup.js`** - Schema creation script
-- **`seed.js`** - Sample data insertion
-- **`migrate.js`** - Database migration utilities
-- **`check-data.js`** - Data verification tool
+- **`connection.js`** - Database connection configuration
+- **`database_structure_only.sql`** - Empty database schema
+- **`TutorConnect_DB.sql`** - Complete backup with sample data
 
 ## 🎯 Quick Reference Commands
 
 ### Database Operations
 
 ```bash
-npm run db:full-setup  # Complete database setup
-npm run db:reset       # Reset database
-node src/database/check-data.js  # Verify data
+# Set up database with sample data
+psql -U postgres -d TutorConnect -f backend/src/database/TutorConnect_DB.sql
+
+# Set up empty database structure
+psql -U postgres -d TutorConnect -f backend/src/database/database_structure_only.sql
+
+# Check database status
+psql -U postgres -d TutorConnect -c "\dt"  # List tables
+psql -U postgres -d TutorConnect -c "SELECT COUNT(*) FROM users;"  # Check data
 ```
 
 ### Development Servers
@@ -840,10 +865,10 @@ cd backend && npm start       # Production server
 
 If you've followed this guide, you now have:
 
-- ✅ PostgreSQL database with 12 tables and sample data
+- ✅ PostgreSQL database with complete schema and demo data (14 accounts)
 - ✅ Node.js/Express backend API running on port 5000
 - ✅ React frontend running on port 3000
-- ✅ Full authentication system with sample users
+- ✅ Full authentication system with demo users (password: demo)
 - ✅ Complete tutoring platform ready for development
 
 **Next Steps:**
