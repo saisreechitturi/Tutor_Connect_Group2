@@ -121,12 +121,17 @@ const AdminUserManagement = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [users, setUsers] = useState([]);
+    const [userList, setUserList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchUsers();
     }, []);
+
+    useEffect(() => {
+        setUserList(users);
+    }, [users]);
 
     const fetchUsers = async () => {
         try {
@@ -186,12 +191,6 @@ const AdminUserManagement = () => {
             </div>
         );
     }
-
-    const [userList, setUserList] = useState([]);
-
-    useEffect(() => {
-        setUserList(users);
-    }, [users]);
 
     const filteredUsers = userList.filter(user => {
         const matchesSearch =
