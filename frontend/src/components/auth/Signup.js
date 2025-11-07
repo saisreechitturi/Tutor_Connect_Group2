@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
+import PasswordStrengthIndicator from '../ui/PasswordStrengthIndicator';
+import Alert from '../ui/Alert';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
@@ -31,8 +33,30 @@ const Signup = () => {
     };
 
     const validateForm = () => {
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+        // Check required fields
+        if (!formData.firstName.trim()) {
+            setError('First name is required');
+            return false;
+        }
+        if (!formData.lastName.trim()) {
+            setError('Last name is required');
+            return false;
+        }
+        if (!formData.email.trim()) {
+            setError('Email address is required');
+            return false;
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError('Please enter a valid email address');
+            return false;
+        }
+
+        // Validate password
+        if (!formData.password) {
+            setError('Password is required');
             return false;
         }
         if (formData.password.length < 8) {
@@ -43,6 +67,23 @@ const Signup = () => {
             setError('Password must contain at least one lowercase letter, one uppercase letter, and one number');
             return false;
         }
+
+        // Validate password confirmation
+        if (!formData.confirmPassword) {
+            setError('Please confirm your password');
+            return false;
+        }
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match');
+            return false;
+        }
+
+        // Validate phone number if provided
+        if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+            setError('Please enter a valid phone number');
+            return false;
+        }
+
         return true;
     };
 
@@ -57,7 +98,18 @@ const Signup = () => {
         const result = await signup(formData);
 
         if (!result.success) {
-            setError(result.error);
+            // Provide more specific error messages
+            let errorMessage = result.error;
+            if (errorMessage.includes('User already exists')) {
+                errorMessage = 'An account with this email address already exists. Please try signing in instead.';
+            } else if (errorMessage.includes('Validation failed')) {
+                errorMessage = 'Please check your information and try again.';
+            } else if (errorMessage.includes('email')) {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (errorMessage.includes('password')) {
+                errorMessage = 'Password does not meet the requirements. Please ensure it has at least 8 characters with uppercase, lowercase, and numbers.';
+            }
+            setError(errorMessage);
         }
 
         setLoading(false);
@@ -85,9 +137,11 @@ const Signup = () => {
 
                     <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md" role="alert">
-                                {error}
-                            </div>
+                            <Alert
+                                type="error"
+                                message={error}
+                                onClose={() => setError('')}
+                            />
                         )}
 
                         <div className="space-y-4">
@@ -207,9 +261,7 @@ const Signup = () => {
                                         )}
                                     </button>
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
-                                    At least 8 characters with uppercase, lowercase, and number
-                                </p>
+                                <PasswordStrengthIndicator password={formData.password} />
                             </div>
 
                             <div>

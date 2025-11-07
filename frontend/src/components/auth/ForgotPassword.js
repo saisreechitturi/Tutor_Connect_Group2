@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
 import { authService } from '../../services';
+import Alert from '../ui/Alert';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -11,11 +12,21 @@ const ForgotPassword = () => {
     const [loading, setLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!email) {
-            setError('Email is required');
+        if (!email.trim()) {
+            setError('Email address is required');
+            return;
+        }
+
+        if (!validateEmail(email)) {
+            setError('Please enter a valid email address');
             return;
         }
 
@@ -25,10 +36,21 @@ const ForgotPassword = () => {
 
         try {
             const response = await authService.requestPasswordReset(email);
-            setMessage(response.message || 'If an account with that email exists, we have sent a password reset link.');
+            setMessage(response.message || 'If an account with that email exists, we have sent a password reset link to your inbox. Please check your email and follow the instructions to reset your password.');
             setIsSuccess(true);
         } catch (error) {
-            setError(error.response?.data?.message || 'Failed to send password reset email. Please try again.');
+            let errorMessage = error.response?.data?.message || error.message;
+
+            // Provide more user-friendly error messages
+            if (errorMessage.includes('Validation failed')) {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (errorMessage.includes('Failed to process')) {
+                errorMessage = 'We encountered an issue processing your request. Please try again in a few minutes.';
+            } else if (!errorMessage) {
+                errorMessage = 'Failed to send password reset email. Please try again.';
+            }
+
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -85,9 +107,11 @@ const ForgotPassword = () => {
                             </div>
 
                             {error && (
-                                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative">
-                                    <span className="block sm:inline">{error}</span>
-                                </div>
+                                <Alert
+                                    type="error"
+                                    message={error}
+                                    onClose={() => setError('')}
+                                />
                             )}
 
                             <div>
@@ -110,9 +134,10 @@ const ForgotPassword = () => {
                     ) : (
                         <div className="mt-8 space-y-6">
                             {message && (
-                                <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded relative text-center">
-                                    <span className="block sm:inline">{message}</span>
-                                </div>
+                                <Alert
+                                    type="success"
+                                    message={message}
+                                />
                             )}
 
                             <div className="text-center">

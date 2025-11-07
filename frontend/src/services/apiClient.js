@@ -48,18 +48,25 @@ class ApiClient {
 
             const response = await fetch(url, config);
 
-            // Handle authentication errors
-            if (response.status === 401) {
-                this.setAuthToken(null);
-                // Redirect to login or dispatch logout event
-                window.dispatchEvent(new CustomEvent('auth-error'));
-                throw new Error('Authentication failed');
-            }
-
-            // Handle other HTTP errors
+            // Handle HTTP errors
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+                const errorMessage = errorData.message || `HTTP Error: ${response.status}`;
+
+                // Handle authentication errors (401) specifically
+                if (response.status === 401) {
+                    // For login/auth endpoints, preserve the original error message
+                    if (endpoint.includes('/auth/login') || endpoint.includes('/auth/register')) {
+                        throw new Error(errorMessage);
+                    } else {
+                        // For other endpoints, clear token and trigger auth error
+                        this.setAuthToken(null);
+                        window.dispatchEvent(new CustomEvent('auth-error'));
+                        throw new Error('Authentication failed');
+                    }
+                }
+
+                throw new Error(errorMessage);
             }
 
             // Return JSON response
@@ -69,6 +76,12 @@ class ApiClient {
 
         } catch (error) {
             console.error(`[API] Error ${options.method || 'GET'} ${url}:`, error);
+
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Unable to connect to server. Please check your internet connection.');
+            }
+
             throw error;
         }
     }

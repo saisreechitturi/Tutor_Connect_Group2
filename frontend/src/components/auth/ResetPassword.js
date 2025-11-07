@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
 import { authService } from '../../services';
+import PasswordStrengthIndicator from '../ui/PasswordStrengthIndicator';
+import Alert from '../ui/Alert';
 
 const ResetPassword = () => {
     const [formData, setFormData] = useState({
@@ -37,8 +39,13 @@ const ResetPassword = () => {
     const validateForm = () => {
         const { password, confirmPassword } = formData;
 
-        if (!password || !confirmPassword) {
-            setError('All fields are required');
+        if (!password) {
+            setError('New password is required');
+            return false;
+        }
+
+        if (!confirmPassword) {
+            setError('Please confirm your new password');
             return false;
         }
 
@@ -55,6 +62,12 @@ const ResetPassword = () => {
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return false;
+        }
+
+        // Check if password is strong enough
+        if (password.length < 12 && !/(?=.*[!@#$%^&*])/.test(password)) {
+            // This is just a warning, not blocking
+            console.warn('Consider using a longer password or including special characters for better security');
         }
 
         return true;
@@ -79,10 +92,14 @@ const ResetPassword = () => {
                 });
             }, 3000);
         } catch (error) {
-            const message = error.response?.data?.message || 'Failed to reset password. Please try again.';
+            const message = error.response?.data?.message || error.message || 'Failed to reset password. Please try again.';
 
             if (message.includes('Invalid or expired')) {
-                setTokenError('This password reset link has expired or is invalid. Please request a new one.');
+                setTokenError('This password reset link has expired or is invalid. Please request a new password reset.');
+            } else if (message.includes('Validation failed')) {
+                setError('Please check that your password meets all requirements and try again.');
+            } else if (message.includes('Failed to reset password')) {
+                setError('We encountered an issue resetting your password. Please try again or request a new reset link.');
             } else {
                 setError(message);
             }
@@ -219,9 +236,7 @@ const ResetPassword = () => {
                                         )}
                                     </button>
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
-                                    At least 8 characters with uppercase, lowercase, and number
-                                </p>
+                                <PasswordStrengthIndicator password={formData.password} />
                             </div>
 
                             <div>
@@ -257,9 +272,11 @@ const ResetPassword = () => {
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative">
-                                <span className="block sm:inline">{error}</span>
-                            </div>
+                            <Alert
+                                type="error"
+                                message={error}
+                                onClose={() => setError('')}
+                            />
                         )}
 
                         <div>
