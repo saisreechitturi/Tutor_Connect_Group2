@@ -9,6 +9,8 @@
         "client": "cd frontend && npm start",
         "build": "cd backend && npm install && cd ../frontend && npm install && npm run build",
         "start": "cd backend && npm start",
+        "startfe": "cd frontend && npm start",
+        "startbe": "cd backend && npm start",
         "setup": "npm run setup:backend && npm run setup:frontend",
         "setup:backend": "cd backend && npm install",
         "setup:frontend": "cd frontend && npm install",
@@ -33,5 +35,9 @@
     },
     "engines": {
         "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "dotenv": "^17.2.3",
+        "nodemailer": "^7.0.10"
     }
 }

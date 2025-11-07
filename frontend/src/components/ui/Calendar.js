@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { sessionService, taskService } from '../../services';
+import { calendarService } from '../../services';
 import AddTaskModal from '../modals/AddTaskModal';
 import BookSessionModal from '../modals/BookSessionModal';
 
@@ -9,8 +9,8 @@ const Calendar = () => {
     const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [sessions, setSessions] = useState([]);
-    const [tasks, setTasks] = useState([]);
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [eventsByDate, setEventsByDate] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -22,13 +22,19 @@ const Calendar = () => {
                 setLoading(true);
                 setError(null);
 
-                const [sessionsData, tasksData] = await Promise.all([
-                    sessionService.getSessions(),
-                    taskService.getTasks()
-                ]);
+                // Get the current month's date range
+                const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-                setSessions(sessionsData);
-                setTasks(tasksData);
+                const calendarData = await calendarService.getCalendarEvents({
+                    startDate: startOfMonth.toISOString(),
+                    endDate: endOfMonth.toISOString(),
+                    type: 'all',
+                    view: 'month'
+                });
+
+                setCalendarEvents(calendarData.events);
+                setEventsByDate(calendarData.eventsByDate);
             } catch (err) {
                 console.error('Error fetching calendar data:', err);
                 setError('Failed to load calendar data. Please try again.');
@@ -40,62 +46,55 @@ const Calendar = () => {
         if (user?.id) {
             fetchCalendarData();
         }
-    }, [user?.id]);
+    }, [user?.id, currentDate]);
 
     const handleTaskAdded = (newTask) => {
-        setTasks(prev => [...prev, newTask]);
+        // Refresh calendar data after task is added
+        const refreshCalendar = async () => {
+            try {
+                const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+                const calendarData = await calendarService.getCalendarEvents({
+                    startDate: startOfMonth.toISOString(),
+                    endDate: endOfMonth.toISOString(),
+                    type: 'all',
+                    view: 'month'
+                });
+
+                setCalendarEvents(calendarData.events);
+                setEventsByDate(calendarData.eventsByDate);
+            } catch (err) {
+                console.error('Error refreshing calendar after task added:', err);
+            }
+        };
+
+        refreshCalendar();
     };
 
     const handleSessionBooked = (newSession) => {
-        setSessions(prev => [...prev, newSession]);
-    };
+        // Refresh calendar data after session is booked
+        const refreshCalendar = async () => {
+            try {
+                const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-    // Convert sessions and tasks to calendar events
-    const getCalendarEvents = () => {
-        const events = [];
-
-        // Add sessions as events
-        sessions.forEach(session => {
-            if (session.scheduledStart) {
-                const eventDate = new Date(session.scheduledStart);
-                events.push({
-                    id: `session-${session.id}`,
-                    title: session.subject || 'Tutoring Session',
-                    date: eventDate.toISOString().split('T')[0],
-                    time: eventDate.toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    }),
-                    type: 'session',
-                    status: session.status,
-                    location: session.sessionType === 'online' ? 'Online' : session.locationAddress || 'In-person',
-                    data: session
+                const calendarData = await calendarService.getCalendarEvents({
+                    startDate: startOfMonth.toISOString(),
+                    endDate: endOfMonth.toISOString(),
+                    type: 'all',
+                    view: 'month'
                 });
-            }
-        });
 
-        // Add tasks with due dates as events
-        tasks.forEach(task => {
-            if (task.dueDate) {
-                const eventDate = new Date(task.dueDate);
-                events.push({
-                    id: `task-${task.id}`,
-                    title: task.title,
-                    date: eventDate.toISOString().split('T')[0],
-                    time: 'Due',
-                    type: 'task',
-                    status: task.status,
-                    priority: task.priority,
-                    data: task
-                });
+                setCalendarEvents(calendarData.events);
+                setEventsByDate(calendarData.eventsByDate);
+            } catch (err) {
+                console.error('Error refreshing calendar after session booked:', err);
             }
-        });
+        };
 
-        return events;
+        refreshCalendar();
     };
-
-    const calendarEvents = getCalendarEvents();
 
     // Get user events (all events are already filtered by the user context in API calls)
     const userEvents = calendarEvents;

@@ -12,6 +12,7 @@ const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 const tutorRoutes = require('./routes/tutors');
 const adminRoutes = require('./routes/admin');
+const calendarRoutes = require('./routes/calendar');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { connectDatabase } = require('./database/connection');
@@ -68,6 +69,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/tutors', tutorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

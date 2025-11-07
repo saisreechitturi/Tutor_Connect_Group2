@@ -3,8 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../database/connection');
-const { asyncHandler } = require('../middleware/errorHandler');
+const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 
@@ -269,6 +270,172 @@ router.put('/password', [
     logger.info(`Password updated for user: ${req.user.email}`);
 
     res.json({ message: 'Password updated successfully' });
+}));
+
+// Token verification endpoint
+router.get('/verify', require('../middleware/auth').authenticateToken, asyncHandler(async (req, res) => {
+    // If middleware passes, token is valid
+    const result = await query(
+        'SELECT id, email, role, first_name, last_name, is_active FROM users WHERE id = $1',
+        [req.user.userId]
+    );
+
+    if (result.rows.length === 0 || !result.rows[0].is_active) {
+        return res.status(401).json({ message: 'Invalid or inactive user' });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+        valid: true,
+        user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role
+        }
+    });
+}));
+
+// Request password reset
+router.post('/forgot-password', [
+    body('email').isEmail().normalizeEmail()
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { email } = req.body;
+
+    // Check if user exists
+    const userResult = await query(
+        'SELECT id, email, first_name FROM users WHERE email = $1 AND is_active = true',
+        [email]
+    );
+
+    // Always return success to prevent email enumeration
+    if (userResult.rows.length === 0) {
+        return res.json({
+            message: 'If an account with that email exists, we have sent a password reset link.'
+        });
+    }
+
+    const user = userResult.rows[0];
+
+    // Generate reset token
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+    // Store reset token in database (we'll create this table next)
+    try {
+        await query(`
+            INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id) DO UPDATE SET
+                token_hash = EXCLUDED.token_hash,
+                expires_at = EXCLUDED.expires_at,
+                used_at = NULL,
+                created_at = NOW()
+        `, [user.id, resetTokenHash, expiresAt]);
+
+        // Send password reset email
+        try {
+            await emailService.sendPasswordResetEmail(email, resetToken, user.first_name);
+            logger.info(`Password reset email sent to: ${email}`);
+        } catch (emailError) {
+            logger.error('Failed to send password reset email:', emailError);
+            // Don't fail the entire request if email fails in development
+            if (process.env.NODE_ENV === 'production') {
+                throw emailError;
+            } else {
+                logger.warn(`Email sending failed in development. Reset token: ${resetToken}`);
+            }
+        }
+
+        res.json({
+            message: 'If an account with that email exists, we have sent a password reset link.'
+        });
+    } catch (error) {
+        logger.error('Failed to create password reset token:', error);
+        res.status(500).json({ message: 'Failed to process password reset request' });
+    }
+}));
+
+// Reset password with token
+router.post('/reset-password', [
+    body('token').isLength({ min: 64, max: 64 }).matches(/^[a-f0-9]+$/),
+    body('password').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { token, password } = req.body;
+
+    // Hash the provided token to compare with stored hash
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find valid reset token
+    const tokenResult = await query(`
+        SELECT prt.user_id, prt.expires_at, u.email
+        FROM password_reset_tokens prt
+        JOIN users u ON prt.user_id = u.id
+        WHERE prt.token_hash = $1 
+        AND prt.expires_at > NOW()
+        AND prt.used_at IS NULL
+        AND u.is_active = true
+    `, [tokenHash]);
+
+    if (tokenResult.rows.length === 0) {
+        return res.status(400).json({
+            message: 'Invalid or expired password reset token'
+        });
+    }
+
+    const { user_id, email } = tokenResult.rows[0];
+
+    try {
+        // Hash new password
+        const saltRounds = 12;
+        const newPasswordHash = await bcrypt.hash(password, saltRounds);
+
+        // Update password and mark token as used
+        await query('BEGIN');
+
+        await query(
+            'UPDATE users SET password_hash = $1 WHERE id = $2',
+            [newPasswordHash, user_id]
+        );
+
+        await query(
+            'UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND token_hash = $2',
+            [user_id, tokenHash]
+        );
+
+        await query('COMMIT');
+
+        logger.info(`Password reset completed for user: ${email}`);
+
+        res.json({
+            message: 'Password has been reset successfully'
+        });
+    } catch (error) {
+        await query('ROLLBACK');
+        logger.error('Failed to reset password:', error);
+        res.status(500).json({ message: 'Failed to reset password' });
+    }
 }));
 
 // Logout (optional - mainly for clearing client-side token)

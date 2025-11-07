@@ -9,9 +9,10 @@ import messageService from './messageService';
 import taskService from './taskService';
 import adminService from './adminService';
 import userService from './userService';
+import calendarService from './calendarService';
 
 // Export individual services
-export { apiClient, authService, tutorService, sessionService, messageService, taskService, adminService, userService };
+export { apiClient, authService, tutorService, sessionService, messageService, taskService, adminService, userService, calendarService };
 
 // Re-export for convenience
 export {
@@ -22,5 +23,6 @@ export {
     messageService as messages,
     taskService as tasks,
     adminService as admin,
-    userService as users
+    userService as users,
+    calendarService as calendar
 };

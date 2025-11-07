@@ -8,6 +8,8 @@ import AboutUs from './pages/AboutUs';
 import BrowseTutors from './pages/BrowseTutors';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import StudentRoutes from './routes/StudentRoutes';
 import TutorRoutes from './routes/TutorRoutes';
 import AdminRoutes from './routes/AdminRoutes';
@@ -45,6 +47,22 @@ function App() {
                             element={
                                 <ProtectedRoute requireAuth={false}>
                                     <Signup />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/forgot-password"
+                            element={
+                                <ProtectedRoute requireAuth={false}>
+                                    <ForgotPassword />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/reset-password/:token"
+                            element={
+                                <ProtectedRoute requireAuth={false}>
+                                    <ResetPassword />
                                 </ProtectedRoute>
                             }
                         />
