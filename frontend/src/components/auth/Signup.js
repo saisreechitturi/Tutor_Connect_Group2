@@ -9,7 +9,6 @@ const Signup = () => {
         firstName: '',
         lastName: '',
         email: '',
-        username: '',
         password: '',
         confirmPassword: '',
         role: 'student',
@@ -36,8 +35,12 @@ const Signup = () => {
             setError('Passwords do not match');
             return false;
         }
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters long');
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters long');
+            return false;
+        }
+        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+            setError('Password must contain at least one lowercase letter, one uppercase letter, and one number');
             return false;
         }
         return true;
@@ -143,23 +146,6 @@ const Signup = () => {
                             </div>
 
                             <div>
-                                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                                    Username
-                                </label>
-                                <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    required
-                                    className="input-field mt-1"
-                                    placeholder="Choose a username"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    disabled={loading}
-                                />
-                            </div>
-
-                            <div>
                                 <label htmlFor="role" className="block text-sm font-medium text-gray-700">
                                     I want to join as a
                                 </label>
@@ -221,6 +207,9 @@ const Signup = () => {
                                         )}
                                     </button>
                                 </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    At least 8 characters with uppercase, lowercase, and number
+                                </p>
                             </div>
 
                             <div>

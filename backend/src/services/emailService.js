@@ -22,10 +22,11 @@ class EmailService {
                     },
                 });
             } else {
-                // Development - use ethereal email (fake SMTP)
+                // Development - use nodemailer test account (creates temporary account automatically)
                 this.transporter = nodemailer.createTransport({
                     host: 'smtp.ethereal.email',
                     port: 587,
+                    secure: false,
                     auth: {
                         user: 'ethereal.user@ethereal.email',
                         pass: 'ethereal.pass'
@@ -41,8 +42,24 @@ class EmailService {
 
     async sendPasswordResetEmail(to, resetToken, firstName) {
         try {
-            const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+            const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/#/reset-password/${resetToken}`;
 
+            // In development, just log the reset URL instead of sending actual email
+            if (process.env.NODE_ENV !== 'production') {
+                logger.info('='.repeat(80));
+                logger.info('📧 PASSWORD RESET EMAIL (Development Mode)');
+                logger.info('='.repeat(80));
+                logger.info(`To: ${to}`);
+                logger.info(`Name: ${firstName}`);
+                logger.info(`Reset URL: ${resetUrl}`);
+                logger.info('='.repeat(80));
+                logger.info('💡 Copy the URL above and paste it in your browser to reset the password');
+                logger.info('='.repeat(80));
+
+                return { success: true, messageId: 'dev-mode-' + Date.now() };
+            }
+
+            // Production: send actual email
             const mailOptions = {
                 from: process.env.FROM_EMAIL || 'TutorConnect <noreply@tutorconnect.com>',
                 to,
@@ -52,20 +69,13 @@ class EmailService {
             };
 
             const info = await this.transporter.sendMail(mailOptions);
-
-            if (process.env.NODE_ENV !== 'production') {
-                logger.info(`Password reset email preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-            }
-
             logger.info(`Password reset email sent to: ${to}`);
             return { success: true, messageId: info.messageId };
         } catch (error) {
             logger.error('Failed to send password reset email:', error);
             throw new Error('Failed to send password reset email');
         }
-    }
-
-    getPasswordResetTemplate(firstName, resetUrl) {
+    } getPasswordResetTemplate(firstName, resetUrl) {
         return `
         <!DOCTYPE html>
         <html lang="en">

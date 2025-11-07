@@ -330,10 +330,9 @@ router.post('/forgot-password', [
     // Generate reset token
     const crypto = require('crypto');
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
 
-    // Store reset token in database (we'll create this table next)
+    // Store raw token in database for simplicity (not hashed)
     try {
         await query(`
             INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
@@ -343,21 +342,11 @@ router.post('/forgot-password', [
                 expires_at = EXCLUDED.expires_at,
                 used_at = NULL,
                 created_at = NOW()
-        `, [user.id, resetTokenHash, expiresAt]);
+        `, [user.id, resetToken, expiresAt]);
 
         // Send password reset email
-        try {
-            await emailService.sendPasswordResetEmail(email, resetToken, user.first_name);
-            logger.info(`Password reset email sent to: ${email}`);
-        } catch (emailError) {
-            logger.error('Failed to send password reset email:', emailError);
-            // Don't fail the entire request if email fails in development
-            if (process.env.NODE_ENV === 'production') {
-                throw emailError;
-            } else {
-                logger.warn(`Email sending failed in development. Reset token: ${resetToken}`);
-            }
-        }
+        await emailService.sendPasswordResetEmail(email, resetToken, user.first_name);
+        logger.info(`Password reset email processed for: ${email}`);
 
         res.json({
             message: 'If an account with that email exists, we have sent a password reset link.'
@@ -375,6 +364,12 @@ router.post('/reset-password', [
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        logger.error('Password reset validation failed:', {
+            token: req.body.token ? `${req.body.token.substring(0, 8)}...` : 'missing',
+            tokenLength: req.body.token ? req.body.token.length : 0,
+            passwordLength: req.body.password ? req.body.password.length : 0,
+            errors: errors.array()
+        });
         return res.status(400).json({
             message: 'Validation failed',
             errors: errors.array()
@@ -383,20 +378,20 @@ router.post('/reset-password', [
 
     const { token, password } = req.body;
 
-    // Hash the provided token to compare with stored hash
+    // Try to find token both as raw token and as hash (for backward compatibility)
     const crypto = require('crypto');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    // Find valid reset token
+    // Find valid reset token - check both raw token and hash
     const tokenResult = await query(`
         SELECT prt.user_id, prt.expires_at, u.email
         FROM password_reset_tokens prt
         JOIN users u ON prt.user_id = u.id
-        WHERE prt.token_hash = $1 
+        WHERE (prt.token_hash = $1 OR prt.token_hash = $2)
         AND prt.expires_at > NOW()
         AND prt.used_at IS NULL
         AND u.is_active = true
-    `, [tokenHash]);
+    `, [token, tokenHash]);
 
     if (tokenResult.rows.length === 0) {
         return res.status(400).json({
@@ -420,8 +415,8 @@ router.post('/reset-password', [
         );
 
         await query(
-            'UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND token_hash = $2',
-            [user_id, tokenHash]
+            'UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND (token_hash = $2 OR token_hash = $3)',
+            [user_id, token, tokenHash]
         );
 
         await query('COMMIT');
