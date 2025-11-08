@@ -297,13 +297,23 @@ const ResetPassword = () => {
                         </div>
                     </form>
 
-                    <div className="text-center">
-                        <Link
-                            to="/login"
-                            className="text-sm text-blue-600 hover:text-blue-500"
-                        >
-                            Back to login
-                        </Link>
+                    <div className="text-center space-y-2">
+                        <div>
+                            <Link
+                                to="/login"
+                                className="text-sm text-blue-600 hover:text-blue-500"
+                            >
+                                Back to login
+                            </Link>
+                        </div>
+                        <div>
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm text-gray-600 hover:text-gray-500"
+                            >
+                                Need a new reset link?
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

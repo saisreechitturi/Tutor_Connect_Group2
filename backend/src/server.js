@@ -14,6 +14,9 @@ const tutorRoutes = require('./routes/tutors');
 const subjectsRoutes = require('./routes/subjects');
 const reviewsRoutes = require('./routes/reviews');
 const profilesRoutes = require('./routes/profiles');
+const analyticsRoutes = require('./routes/analytics');
+const availabilityRoutes = require('./routes/availability');
+const paymentsRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
 const calendarRoutes = require('./routes/calendar');
 
@@ -74,6 +77,9 @@ app.use('/api/tutors', tutorRoutes);
 app.use('/api/subjects', subjectsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/profiles', profilesRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/availability', availabilityRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/calendar', calendarRoutes);
 
