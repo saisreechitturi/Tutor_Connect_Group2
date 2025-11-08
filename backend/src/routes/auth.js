@@ -348,6 +348,16 @@ router.post('/forgot-password', [
         await emailService.sendPasswordResetEmail(email, resetToken, user.first_name);
         logger.info(`Password reset email processed for: ${email}`);
 
+        // Log token to console for easy copying during development
+        console.log('\n🔑 PASSWORD RESET TOKEN GENERATED:');
+        console.log('='.repeat(50));
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔑 Token: ${resetToken}`);
+        console.log(`📋 Length: ${resetToken.length} characters`);
+        console.log(`⏰ Expires: ${expiresAt.toLocaleString()}`);
+        console.log(`🌐 Reset URL: http://localhost:3000/#/reset-password/${resetToken}`);
+        console.log('='.repeat(50));
+
         res.json({
             message: 'If an account with that email exists, we have sent a password reset link.'
         });
