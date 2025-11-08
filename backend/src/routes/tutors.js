@@ -3,6 +3,7 @@ const { body, query: expressQuery, validationResult } = require('express-validat
 const { query } = require('../database/connection');
 const { authenticateToken } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -202,6 +203,191 @@ router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => 
     }));
 
     res.json({ students });
+}));
+
+// Get tutor's subjects
+router.get('/:id/subjects', asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const result = await query(`
+        SELECT s.id, s.name, s.description, s.category,
+               ts.proficiency_level, ts.created_at as assigned_at
+        FROM tutor_subjects ts
+        JOIN subjects s ON ts.subject_id = s.id
+        WHERE ts.tutor_id = $1 AND s.is_active = true
+        ORDER BY s.name ASC
+    `, [id]);
+
+    const subjects = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        category: row.category,
+        proficiencyLevel: row.proficiency_level,
+        assignedAt: row.assigned_at
+    }));
+
+    res.json({ subjects });
+}));
+
+// Add subject to tutor (tutor themselves or admin)
+router.post('/:id/subjects', [
+    authenticateToken,
+    body('subjectId').isUUID().withMessage('Valid subject ID is required'),
+    body('proficiencyLevel').optional().isIn(['beginner', 'intermediate', 'advanced', 'expert'])
+        .withMessage('Proficiency level must be beginner, intermediate, advanced, or expert')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { id } = req.params;
+    const { subjectId, proficiencyLevel = 'intermediate' } = req.body;
+
+    // Check authorization
+    if (req.user.role !== 'admin' && req.user.id !== id) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Check if tutor exists
+    const tutorCheck = await query('SELECT id FROM users WHERE id = $1 AND role = $2', [id, 'tutor']);
+    if (tutorCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor not found' });
+    }
+
+    // Check if subject exists
+    const subjectCheck = await query('SELECT id, name FROM subjects WHERE id = $1 AND is_active = true', [subjectId]);
+    if (subjectCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Subject not found or inactive' });
+    }
+
+    // Check if relationship already exists
+    const existingRelation = await query('SELECT id FROM tutor_subjects WHERE tutor_id = $1 AND subject_id = $2', [id, subjectId]);
+    if (existingRelation.rows.length > 0) {
+        return res.status(409).json({ message: 'Tutor is already assigned to this subject' });
+    }
+
+    // Create the relationship
+    await query(`
+        INSERT INTO tutor_subjects (tutor_id, subject_id, proficiency_level)
+        VALUES ($1, $2, $3)
+    `, [id, subjectId, proficiencyLevel]);
+
+    const subjectName = subjectCheck.rows[0].name;
+    logger.info(`Subject ${subjectName} assigned to tutor ${id} with proficiency ${proficiencyLevel}`);
+
+    res.status(201).json({
+        message: 'Subject assigned successfully',
+        subject: {
+            id: subjectId,
+            name: subjectName,
+            proficiencyLevel
+        }
+    });
+}));
+
+// Update tutor's subject proficiency
+router.put('/:id/subjects/:subjectId', [
+    authenticateToken,
+    body('proficiencyLevel').isIn(['beginner', 'intermediate', 'advanced', 'expert'])
+        .withMessage('Proficiency level must be beginner, intermediate, advanced, or expert')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { id, subjectId } = req.params;
+    const { proficiencyLevel } = req.body;
+
+    // Check authorization
+    if (req.user.role !== 'admin' && req.user.id !== id) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Check if relationship exists
+    const relationCheck = await query(`
+        SELECT ts.id, s.name
+        FROM tutor_subjects ts
+        JOIN subjects s ON ts.subject_id = s.id
+        WHERE ts.tutor_id = $1 AND ts.subject_id = $2
+    `, [id, subjectId]);
+
+    if (relationCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor-subject relationship not found' });
+    }
+
+    // Update proficiency level
+    await query(`
+        UPDATE tutor_subjects
+        SET proficiency_level = $1
+        WHERE tutor_id = $2 AND subject_id = $3
+    `, [proficiencyLevel, id, subjectId]);
+
+    const subjectName = relationCheck.rows[0].name;
+    logger.info(`Updated proficiency for tutor ${id} in subject ${subjectName} to ${proficiencyLevel}`);
+
+    res.json({
+        message: 'Proficiency level updated successfully',
+        subject: {
+            id: subjectId,
+            name: subjectName,
+            proficiencyLevel
+        }
+    });
+}));
+
+// Remove subject from tutor
+router.delete('/:id/subjects/:subjectId', [
+    authenticateToken
+], asyncHandler(async (req, res) => {
+    const { id, subjectId } = req.params;
+
+    // Check authorization
+    if (req.user.role !== 'admin' && req.user.id !== id) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Check if relationship exists
+    const relationCheck = await query(`
+        SELECT ts.id, s.name
+        FROM tutor_subjects ts
+        JOIN subjects s ON ts.subject_id = s.id
+        WHERE ts.tutor_id = $1 AND ts.subject_id = $2
+    `, [id, subjectId]);
+
+    if (relationCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor-subject relationship not found' });
+    }
+
+    // Check if tutor has any active/upcoming sessions for this subject
+    const activeSessionsCheck = await query(`
+        SELECT COUNT(*) as count
+        FROM tutoring_sessions
+        WHERE tutor_id = $1 AND subject_id = $2
+        AND status IN ('scheduled', 'in_progress')
+    `, [id, subjectId]);
+
+    if (parseInt(activeSessionsCheck.rows[0].count) > 0) {
+        return res.status(409).json({
+            message: 'Cannot remove subject with active or upcoming sessions'
+        });
+    }
+
+    // Remove the relationship
+    await query('DELETE FROM tutor_subjects WHERE tutor_id = $1 AND subject_id = $2', [id, subjectId]);
+
+    const subjectName = relationCheck.rows[0].name;
+    logger.info(`Removed subject ${subjectName} from tutor ${id}`);
+
+    res.json({ message: 'Subject removed successfully' });
 }));
 
 module.exports = router;

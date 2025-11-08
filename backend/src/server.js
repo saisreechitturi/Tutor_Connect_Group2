@@ -11,6 +11,9 @@ const sessionRoutes = require('./routes/sessions');
 const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 const tutorRoutes = require('./routes/tutors');
+const subjectsRoutes = require('./routes/subjects');
+const reviewsRoutes = require('./routes/reviews');
+const profilesRoutes = require('./routes/profiles');
 const adminRoutes = require('./routes/admin');
 const calendarRoutes = require('./routes/calendar');
 
@@ -68,6 +71,9 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/tutors', tutorRoutes);
+app.use('/api/subjects', subjectsRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/profiles', profilesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/calendar', calendarRoutes);
 
