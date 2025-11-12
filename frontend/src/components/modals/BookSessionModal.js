@@ -271,6 +271,11 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    {!user && (
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                            Please sign in to book a session. You can still explore tutors and their availability.
+                        </div>
+                    )}
                     {/* Tutor Selection */}
                     {!selectedTutor && (
                         <div>
@@ -382,8 +387,8 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                                         type="button"
                                         onClick={() => handleInputChange('sessionType', type.value)}
                                         className={`p-3 border rounded-lg flex items-center justify-center transition-colors ${formData.sessionType === type.value
-                                                ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                                : 'border-gray-300 hover:border-gray-400'
+                                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                            : 'border-gray-300 hover:border-gray-400'
                                             }`}
                                         disabled={loading}
                                     >
@@ -522,7 +527,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                         <button
                             type="submit"
                             className="btn-primary flex items-center"
-                            disabled={loading || success}
+                            disabled={loading || success || !user}
                         >
                             {loading ? (
                                 <>
