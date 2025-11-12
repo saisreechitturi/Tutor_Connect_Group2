@@ -9,6 +9,7 @@ import TutorAnalytics from '../pages/TutorAnalytics';
 import TutorTasks from '../pages/TutorTasks';
 import TutorSettings from '../pages/TutorSettings';
 import TutorAvailability from '../pages/TutorAvailability';
+import Notifications from '../pages/Notifications';
 
 const TutorDashboard = () => (
     <div className="space-y-6">
@@ -39,6 +40,7 @@ const TutorRoutes = () => {
                 <Route path="tasks" element={<TutorTasks />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="messages" element={<Messages />} />
+                <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<TutorSettings />} />
             </Routes>
         </DashboardLayout>

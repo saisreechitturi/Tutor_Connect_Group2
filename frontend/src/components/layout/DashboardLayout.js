@@ -14,6 +14,7 @@ import {
     Menu,
     X
 } from 'lucide-react';
+import Toaster from '../ui/Toaster';
 
 const DashboardLayout = ({ userRole, children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -187,6 +188,8 @@ const DashboardLayout = ({ userRole, children }) => {
                         {children}
                     </div>
                 </main>
+                {/* Global Toasts */}
+                <Toaster />
             </div>
 
             {/* Sidebar overlay for mobile */}

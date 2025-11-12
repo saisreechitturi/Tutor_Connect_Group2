@@ -145,8 +145,9 @@ class SessionService {
         try {
             const date = new Date(startTime).toISOString().split('T')[0];
             const { availableSlots = [] } = await availabilityService.getAvailableTimeSlots(tutorId, { date, duration: Math.max(15, Math.round((new Date(endTime) - new Date(startTime)) / 60000)) });
-            const startHHMM = new Date(startTime).toTimeString().slice(0, 5);
-            const endHHMM = new Date(endTime).toTimeString().slice(0, 5);
+            // Use UTC to avoid timezone drift when matching against slot strings like 'HH:MM'
+            const startHHMM = new Date(startTime).toISOString().substr(11, 5);
+            const endHHMM = new Date(endTime).toISOString().substr(11, 5);
             return availableSlots.some(s => s.date === date && s.startTime === startHHMM && s.endTime === endHHMM);
         } catch (error) {
             console.error('[SessionService] Check availability failed:', error);

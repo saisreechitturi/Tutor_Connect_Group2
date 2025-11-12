@@ -115,22 +115,20 @@ const TutorAvailability = () => {
                 <nav className="-mb-px flex space-x-8">
                     <button
                         onClick={() => setActiveTab('weekly')}
-                        className={`${
-                            activeTab === 'weekly'
+                        className={`${activeTab === 'weekly'
                                 ? 'border-primary-600 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         <Clock className="h-5 w-5 inline-block mr-2" />
                         Weekly Schedule
                     </button>
                     <button
                         onClick={() => setActiveTab('specific')}
-                        className={`${
-                            activeTab === 'specific'
+                        className={`${activeTab === 'specific'
                                 ? 'border-primary-600 text-primary-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         <CalendarIcon className="h-5 w-5 inline-block mr-2" />
                         Specific Dates
@@ -186,7 +184,7 @@ const TutorAvailability = () => {
                                                                 {slot.startTime} - {slot.endTime}
                                                             </p>
                                                             <p className="text-sm text-gray-500">
-                                                                Max {slot.maxSessions} session{slot.maxSessions > 1 ? 's' : ''} • 
+                                                                Max {slot.maxSessions} session{slot.maxSessions > 1 ? 's' : ''} •
                                                                 {slot.bufferMinutes}min buffer
                                                             </p>
                                                         </div>
@@ -258,11 +256,12 @@ const TutorAvailability = () => {
                                         <CalendarIcon className="h-5 w-5 text-gray-400" />
                                         <div>
                                             <p className="font-medium text-gray-900">
-                                                {new Date(slot.date).toLocaleDateString('en-US', {
+                                                {new Date(`${slot.date}T00:00:00Z`).toLocaleDateString('en-US', {
                                                     weekday: 'short',
                                                     year: 'numeric',
                                                     month: 'short',
-                                                    day: 'numeric'
+                                                    day: 'numeric',
+                                                    timeZone: 'UTC'
                                                 })}
                                             </p>
                                             <p className="text-sm text-gray-600">

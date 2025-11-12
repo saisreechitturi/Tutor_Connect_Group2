@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Search, Plus, X, AlertCircle, Users } from 'lucide-react';
 import { messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ const Messages = () => {
     const [sendingError, setSendingError] = useState(null);
     const [sendingMessage, setSendingMessage] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const prevUnreadIdsRef = useRef(new Set());
 
     useEffect(() => {
         const fetchData = async () => {
@@ -106,6 +107,70 @@ const Messages = () => {
         if (user?.id) {
             fetchData();
         }
+    }, [user?.id]);
+
+    // Poll for new messages and unread count
+    useEffect(() => {
+        if (!user?.id) return;
+
+        let cancelled = false;
+
+        const poll = async () => {
+            try {
+                const [msgs, count] = await Promise.all([
+                    messageService.getMessages(),
+                    messageService.getUnreadCount(),
+                ]);
+
+                if (cancelled) return;
+
+                // Detect newly arrived unread messages for passive toast
+                try {
+                    const incomingUnread = new Set(
+                        (msgs || [])
+                            .filter(m => !m.isRead && m.recipient?.id === user.id)
+                            .map(m => m.id)
+                    );
+
+                    // If new unread messages appeared, optionally notify
+                    if (prevUnreadIdsRef.current && incomingUnread.size > prevUnreadIdsRef.current.size) {
+                        // Find a latest unread message not previously seen
+                        const latestUnread = (msgs || [])
+                            .filter(m => !m.isRead && m.recipient?.id === user.id && !prevUnreadIdsRef.current.has(m.id))
+                            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+                        if (latestUnread) {
+                            const senderName = latestUnread.sender?.firstName && latestUnread.sender?.lastName
+                                ? `${latestUnread.sender.firstName} ${latestUnread.sender.lastName}`
+                                : latestUnread.sender?.name || 'New message';
+                            // Fire a non-blocking toast; Toaster listens to this window event
+                            window.dispatchEvent(new CustomEvent('toast', {
+                                detail: { type: 'info', message: `New message from ${senderName}` }
+                            }));
+                        }
+                    }
+
+                    prevUnreadIdsRef.current = incomingUnread;
+                } catch (_) {
+                    // ignore toast detection errors
+                }
+
+                setMessages(msgs || []);
+                setUnreadCount(count || 0);
+            } catch (e) {
+                // swallow polling errors to avoid UI spam
+            }
+        };
+
+        const intervalId = setInterval(poll, 15000); // 15s
+        // Kick off an early poll shortly after mount to reduce staleness
+        const timeoutId = setTimeout(poll, 2000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+            clearTimeout(timeoutId);
+        };
     }, [user?.id]);
 
     if (loading) {

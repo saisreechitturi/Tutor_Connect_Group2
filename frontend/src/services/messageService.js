@@ -57,7 +57,7 @@ class MessageService {
     // Mark message as read
     async markAsRead(messageId) {
         try {
-            const response = await apiClient.request(`/messages/${messageId}/read`, { method: 'PATCH' });
+            const response = await apiClient.put(`/messages/${messageId}/read`);
             return response;
         } catch (error) {
             console.error('[MessageService] Mark as read failed:', error);
@@ -85,8 +85,19 @@ class MessageService {
     // Get unread message count
     async getUnreadCount() {
         try {
-            const { messages = [] } = await this.getMessages({ unread: true });
-            return messages.length;
+            // Prefer dedicated endpoint if available
+            if (typeof apiClient.get === 'function') {
+                try {
+                    const res = await apiClient.get('/messages/unread-count');
+                    if (res && typeof res.count === 'number') return res.count;
+                } catch (_) {
+                    // fall back to client-side filtering if endpoint not available
+                }
+            }
+
+            const list = await this.getMessages({ isRead: false, limit: 200 });
+            const arr = Array.isArray(list) ? list : list?.messages || [];
+            return arr.filter(m => m.isRead === false).length;
         } catch (error) {
             console.error('[MessageService] Get unread count failed:', error);
             return 0;

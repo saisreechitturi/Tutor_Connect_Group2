@@ -79,7 +79,7 @@ const Signup = () => {
         }
 
         // Validate phone number if provided
-        if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+        if (formData.phone && !/^[+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
             setError('Please enter a valid phone number');
             return false;
         }

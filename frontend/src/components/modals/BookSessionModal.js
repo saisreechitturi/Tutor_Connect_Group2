@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, DollarSign, User, MapPin, Video, AlertCircle, CheckCircle } from 'lucide-react';
-import { sessionService, tutorService, subjectsService } from '../../services';
+import { sessionService, tutorService, subjectsService, availabilityService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = null }) => {
@@ -39,6 +39,10 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
     ];
 
     const [subjects, setSubjects] = useState([]);
+    const [slotsLoading, setSlotsLoading] = useState(false);
+    const [slotsError, setSlotsError] = useState(null);
+    const [availableSlots, setAvailableSlots] = useState([]);
+    const [slotsChecked, setSlotsChecked] = useState(false);
 
     useEffect(() => {
         if (isOpen && !selectedTutor) {
@@ -79,6 +83,40 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             setError('Failed to load tutors. Please try again.');
         } finally {
             setTutorsLoading(false);
+        }
+    };
+
+    const handleCheckAvailability = async () => {
+        setSlotsError(null);
+        setSlotsChecked(false);
+        setAvailableSlots([]);
+
+        if (!formData.tutorId) {
+            setSlotsError('Please select a tutor first');
+            return;
+        }
+        if (!formData.scheduledDate) {
+            setSlotsError('Please select a date to check availability');
+            return;
+        }
+
+        try {
+            setSlotsLoading(true);
+            const res = await availabilityService.getAvailableTimeSlots(
+                formData.tutorId,
+                { date: formData.scheduledDate, duration: formData.durationMinutes }
+            );
+            const slots = res.availableSlots || [];
+            setAvailableSlots(slots);
+            setSlotsChecked(true);
+            if (slots.length === 0) {
+                setSlotsError('No available slots for the selected date and duration');
+            }
+        } catch (e) {
+            console.error('Failed to check availability', e);
+            setSlotsError(e.message || 'Failed to check availability');
+        } finally {
+            setSlotsLoading(false);
         }
     };
 
@@ -176,6 +214,17 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
             setSuccess(true);
 
+            // Global toast for success
+            try {
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: {
+                        type: 'success',
+                        title: 'Session booked',
+                        message: `Your session "${formData.title.trim()}" was booked successfully.`
+                    }
+                }));
+            } catch { }
+
             // Notify parent component
             if (onSessionBooked) {
                 onSessionBooked(newSession);
@@ -188,7 +237,12 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
         } catch (err) {
             console.error('Error booking session:', err);
-            setError(err.message || 'Failed to book session. Please try again.');
+            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+            if (msg.includes('conflict') || msg.includes('not available') || msg.includes('overlap')) {
+                setError('Tutor is not available at the requested time');
+            } else {
+                setError(err.message || 'Failed to book session. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -469,6 +523,51 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                                 disabled={loading}
                             />
                         </div>
+                    </div>
+
+                    {/* Availability Checker */}
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-medium text-gray-900">Check Availability</h3>
+                            <button
+                                type="button"
+                                onClick={handleCheckAvailability}
+                                className="btn-outline text-sm"
+                                disabled={slotsLoading || !formData.tutorId || !formData.scheduledDate}
+                            >
+                                {slotsLoading ? 'Checking…' : 'Check availability'}
+                            </button>
+                        </div>
+                        {slotsError && (
+                            <div className="text-sm text-red-600 mb-2">{slotsError}</div>
+                        )}
+                        {slotsChecked && !slotsError && availableSlots.length === 0 && (
+                            <div className="text-sm text-gray-600">No available slots found for this date.</div>
+                        )}
+                        {availableSlots.length > 0 && (
+                            <div>
+                                <p className="text-sm text-gray-600 mb-2">Select a suggested time slot:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableSlots.map((slot, idx) => (
+                                        <button
+                                            key={`${slot.date}-${slot.startTime}-${idx}`}
+                                            type="button"
+                                            onClick={() => {
+                                                // ensure date aligns with slot date
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    scheduledDate: slot.date,
+                                                    scheduledTime: slot.startTime
+                                                }));
+                                            }}
+                                            className="px-3 py-1.5 rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-50 text-sm"
+                                        >
+                                            {slot.startTime} - {slot.endTime}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Duration */}

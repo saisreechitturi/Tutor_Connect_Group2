@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, MapPin, Star, Filter, Plus } from 'lucide-react';
 import { sessionService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
+import ReviewSessionModal from '../modals/ReviewSessionModal';
 
 const MySessions = () => {
     const { user } = useAuth();
@@ -10,6 +11,8 @@ const MySessions = () => {
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [reviewSession, setReviewSession] = useState(null);
+    const [showReviewModal, setShowReviewModal] = useState(false);
 
     useEffect(() => {
         const fetchSessions = async () => {
@@ -224,7 +227,10 @@ const MySessions = () => {
                                                 </>
                                             )}
                                             {session.status === 'completed' && !session.rating && (
-                                                <button className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors">
+                                                <button
+                                                    className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors"
+                                                    onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
+                                                >
                                                     Rate Session
                                                 </button>
                                             )}
@@ -279,6 +285,19 @@ const MySessions = () => {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Review Modal */}
+            {showReviewModal && reviewSession && (
+                <ReviewSessionModal
+                    isOpen={showReviewModal}
+                    onClose={() => { setShowReviewModal(false); setReviewSession(null); }}
+                    session={reviewSession}
+                    onSubmitted={({ rating }) => {
+                        // Optimistically update the session rating so the Rate button disappears
+                        setSessions(prev => prev.map(s => s.id === reviewSession.id ? { ...s, rating } : s));
+                    }}
+                />
             )}
         </div>
     );
