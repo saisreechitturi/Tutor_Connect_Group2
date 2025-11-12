@@ -548,7 +548,7 @@ router.post('/', [
     }
 
     // Delete existing recurring availability for this tutor
-    await query('DELETE FROM tutor_availability_slots WHERE tutor_id = $1 AND is_recurring = true', [tutorId]);
+    await query('DELETE FROM tutor_availability_slots WHERE tutor_id = $1 AND recurring_pattern IS NOT NULL', [tutorId]);
 
     // Insert new availability slots
     const dayMap = {
@@ -568,9 +568,9 @@ router.post('/', [
             for (const slot of dayData.slots) {
                 await query(`
                     INSERT INTO tutor_availability_slots 
-                    (tutor_id, day_of_week, start_time, end_time, is_recurring, is_available)
-                    VALUES ($1, $2, $3, $4, true, true)
-                `, [tutorId, dayOfWeek, slot.startTime, slot.endTime]);
+                    (tutor_id, day_of_week, start_time, end_time, recurring_pattern, is_available)
+                    VALUES ($1, $2, $3, $4, $5, true)
+                `, [tutorId, dayOfWeek, slot.startTime, slot.endTime, 'weekly']);
             }
         }
     }

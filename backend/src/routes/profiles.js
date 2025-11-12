@@ -330,7 +330,18 @@ router.put('/tutor', [
         updates.push(`education_background = $${params.length}`);
     }
     if (certifications !== undefined) {
-        params.push(certifications);
+        // Handle certifications as PostgreSQL array - convert string/array to proper format
+        let certificationsValue;
+        if (typeof certifications === 'string') {
+            // If it's a single string, convert to array
+            certificationsValue = certifications.trim() ? [certifications] : [];
+        } else if (Array.isArray(certifications)) {
+            // If it's already an array, use it directly
+            certificationsValue = certifications.filter(cert => cert && cert.trim());
+        } else {
+            certificationsValue = [];
+        }
+        params.push(certificationsValue);
         updates.push(`certifications = $${params.length}`);
     }
     if (teachingPhilosophy !== undefined) {

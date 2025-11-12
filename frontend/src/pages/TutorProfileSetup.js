@@ -247,7 +247,7 @@ const TutorProfileSetup = () => {
     const validateStep = (step) => {
         switch (step) {
             case 1:
-                if (!profileData.yearsOfExperience || !profileData.hourlyRate) {
+                if (!profileData.yearsOfExperience || !profileData.hourlyRate || !profileData.preferredTeachingMethod) {
                     setError('Please fill in all required fields');
                     return false;
                 }
@@ -296,31 +296,49 @@ const TutorProfileSetup = () => {
         setError('');
 
         try {
-            // Update tutor profile
+            console.log('🚀 Starting profile setup submission...');
+
+            // Step 1: Update tutor profile
+            console.log('📝 Step 1: Updating tutor profile...');
+            const profileData_to_send = {
+                yearsOfExperience: parseInt(profileData.yearsOfExperience),
+                hourlyRate: parseFloat(profileData.hourlyRate),
+                educationBackground: profileData.educationBackground,
+                certifications: profileData.certifications,
+                languagesSpoken: profileData.languagesSpoken.filter(lang => lang.trim()),
+                teachingPhilosophy: profileData.teachingPhilosophy,
+                preferredTeachingMethod: profileData.preferredTeachingMethod
+            };
+            console.log('📝 Profile data to send:', profileData_to_send);
+
             const profileResponse = await fetch('/api/profiles/tutor', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({
-                    yearsOfExperience: parseInt(profileData.yearsOfExperience),
-                    hourlyRate: parseFloat(profileData.hourlyRate),
-                    educationBackground: profileData.educationBackground,
-                    certifications: profileData.certifications,
-                    languagesSpoken: profileData.languagesSpoken.filter(lang => lang.trim()),
-                    teachingPhilosophy: profileData.teachingPhilosophy,
-                    preferredTeachingMethod: profileData.preferredTeachingMethod
-                })
+                body: JSON.stringify(profileData_to_send)
             });
 
             if (!profileResponse.ok) {
-                throw new Error('Failed to update profile');
+                const errorText = await profileResponse.text();
+                console.error('❌ Profile update failed:', {
+                    status: profileResponse.status,
+                    statusText: profileResponse.statusText,
+                    error: errorText
+                });
+                throw new Error(`Failed to update profile: ${profileResponse.status} - ${errorText}`);
             }
 
-            // Save subjects
+            const profileResult = await profileResponse.json();
+            console.log('✅ Profile update successful:', profileResult);
+
+            // Step 2: Save subjects
+            console.log('📚 Step 2: Saving subjects...');
+            console.log('📚 Selected subjects:', selectedSubjects);
+
             if (selectedSubjects.length > 0) {
-                await fetch('/api/tutors/subjects', {
+                const subjectsResponse = await fetch('/api/tutors/subjects', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -328,10 +346,28 @@ const TutorProfileSetup = () => {
                     },
                     body: JSON.stringify({ subjects: selectedSubjects })
                 });
+
+                if (!subjectsResponse.ok) {
+                    const errorText = await subjectsResponse.text();
+                    console.error('❌ Subjects save failed:', {
+                        status: subjectsResponse.status,
+                        statusText: subjectsResponse.statusText,
+                        error: errorText
+                    });
+                    throw new Error(`Failed to save subjects: ${subjectsResponse.status} - ${errorText}`);
+                }
+
+                const subjectsResult = await subjectsResponse.json();
+                console.log('✅ Subjects save successful:', subjectsResult);
+            } else {
+                console.log('⚠️ No subjects selected, skipping subjects save');
             }
 
-            // Save availability
-            await fetch('/api/availability', {
+            // Step 3: Save availability
+            console.log('📅 Step 3: Saving availability...');
+            console.log('📅 Availability data:', profileData.availability);
+
+            const availabilityResponse = await fetch('/api/availability', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -340,14 +376,28 @@ const TutorProfileSetup = () => {
                 body: JSON.stringify({ availability: profileData.availability })
             });
 
+            if (!availabilityResponse.ok) {
+                const errorText = await availabilityResponse.text();
+                console.error('❌ Availability save failed:', {
+                    status: availabilityResponse.status,
+                    statusText: availabilityResponse.statusText,
+                    error: errorText
+                });
+                throw new Error(`Failed to save availability: ${availabilityResponse.status} - ${errorText}`);
+            }
+
+            const availabilityResult = await availabilityResponse.json();
+            console.log('✅ Availability save successful:', availabilityResult);
+
+            console.log('🎉 All steps completed successfully!');
             setSuccess('Profile setup completed successfully!');
             setTimeout(() => {
                 navigate('/tutor');
             }, 2000);
 
         } catch (error) {
-            console.error('Profile setup error:', error);
-            setError('Failed to complete profile setup. Please try again.');
+            console.error('❌ Profile setup error:', error);
+            setError(`Failed to complete profile setup: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -466,6 +516,23 @@ const TutorProfileSetup = () => {
                 >
                     + Add Language
                 </button>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preferred Teaching Method *
+                </label>
+                <select
+                    value={profileData.preferredTeachingMethod}
+                    onChange={(e) => handleInputChange('preferredTeachingMethod', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                >
+                    <option value="">Select teaching method</option>
+                    <option value="online">Online Sessions</option>
+                    <option value="in_person">In-Person Sessions</option>
+                    <option value="both">Both Online and In-Person</option>
+                </select>
             </div>
 
             <div>
