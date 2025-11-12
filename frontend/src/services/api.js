@@ -16,7 +16,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -25,12 +25,20 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle auth errors and auto-refresh tokens
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Check for auto-refreshed token in response headers
+        const newToken = response.headers['x-new-token'];
+        if (newToken) {
+            console.log('[API] Auto-refreshing token via Axios interceptor');
+            localStorage.setItem('token', newToken);
+        }
+        return response;
+    },
     (error) => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
         }

@@ -58,7 +58,7 @@ router.post('/register', [
     const token = jwt.sign(
         { userId: user.id, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
 
     logger.info(`New user registered: ${email} as ${role}`);
@@ -119,7 +119,7 @@ router.post('/login', [
     const token = jwt.sign(
         { userId: user.id, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
 
     logger.info(`User logged in: ${email}`);

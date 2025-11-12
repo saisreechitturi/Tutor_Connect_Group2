@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const router = express.Router();
 
 // Get user profile (public info for any user, full info for own profile)
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const { id } = req.params;
     const requesterId = req.user?.id;
     const isOwnProfile = requesterId === id;

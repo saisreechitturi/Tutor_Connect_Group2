@@ -9,6 +9,7 @@ import AboutUs from './pages/AboutUs';
 import BrowseTutors from './pages/BrowseTutors';
 import TutorProfile from './pages/TutorProfile';
 import TutorProfileSetup from './pages/TutorProfileSetup';
+import StudentProfileSetup from './pages/StudentProfileSetup';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -56,8 +57,16 @@ function App() {
                         <Route
                             path="/tutor-setup"
                             element={
-                                <ProtectedRoute requireAuth={true} allowedRoles={['tutor']}>
+                                <ProtectedRoute allowedRoles={['tutor']}>
                                     <TutorProfileSetup />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/student-setup"
+                            element={
+                                <ProtectedRoute allowedRoles={['student']}>
+                                    <StudentProfileSetup />
                                 </ProtectedRoute>
                             }
                         />

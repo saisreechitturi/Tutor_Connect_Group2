@@ -24,6 +24,26 @@ const authenticateToken = async (req, res, next) => {
         }
 
         req.user = result.rows[0];
+
+        // Check if token expires within 7 days and auto-refresh if needed
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = decoded.exp - currentTime;
+        const sevenDaysInSeconds = 7 * 24 * 60 * 60;
+
+        if (timeUntilExpiry < sevenDaysInSeconds) {
+            // Generate a new token with fresh 30-day expiration
+            const newToken = jwt.sign(
+                { userId: decoded.userId, role: decoded.role },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+            );
+
+            // Add new token to response headers for frontend to update
+            res.setHeader('X-New-Token', newToken);
+
+            logger.info(`Token auto-refreshed for user ${decoded.userId} (${result.rows[0].email})`);
+        }
+
         next();
     } catch (error) {
         logger.error('Token verification failed:', error);

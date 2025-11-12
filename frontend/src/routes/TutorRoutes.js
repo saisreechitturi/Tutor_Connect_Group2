@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import TutorProfileChecker from '../components/TutorProfileChecker';
+import ProfileChecker from '../components/ProfileChecker';
 import Calendar from '../components/ui/Calendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
@@ -31,7 +31,7 @@ const TutorDashboard = () => (
 
 const TutorRoutes = () => {
     return (
-        <TutorProfileChecker>
+        <ProfileChecker>
             <DashboardLayout userRole="tutor">
                 <Routes>
                     <Route index element={<TutorDashboard />} />
@@ -46,7 +46,7 @@ const TutorRoutes = () => {
                     <Route path="settings" element={<TutorSettings />} />
                 </Routes>
             </DashboardLayout>
-        </TutorProfileChecker>
+        </ProfileChecker>
     );
 };
 

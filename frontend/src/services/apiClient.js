@@ -8,15 +8,15 @@ class ApiClient {
 
     // Get auth token from localStorage
     getAuthToken() {
-        return localStorage.getItem('authToken');
+        return localStorage.getItem('token');
     }
 
     // Set auth token in localStorage
     setAuthToken(token) {
         if (token) {
-            localStorage.setItem('authToken', token);
+            localStorage.setItem('token', token);
         } else {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
         }
     }
 
@@ -47,6 +47,15 @@ class ApiClient {
             console.log(`[API] ${options.method || 'GET'} ${url}`);
 
             const response = await fetch(url, config);
+
+            // Check for auto-refreshed token in response headers
+            const newToken = response.headers.get('X-New-Token');
+            if (newToken) {
+                console.log('[API] Auto-refreshing token');
+                this.setAuthToken(newToken);
+                // Update the Authorization header for any subsequent requests in the same session
+                config.headers.Authorization = `Bearer ${newToken}`;
+            }
 
             // Handle HTTP errors
             if (!response.ok) {
