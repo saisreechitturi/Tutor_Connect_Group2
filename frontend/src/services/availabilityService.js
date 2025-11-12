@@ -102,10 +102,11 @@ class AvailabilityService {
      * @param {array} slots - Array of slot objects
      * @returns {Promise} Updated slots
      */
-    async bulkUpdateSlots(tutorId, slots) {
+    async bulkUpdateSlots(_tutorId, _slots) {
         try {
             // Not implemented on backend yet; intentionally left as a placeholder.
             // Consider removing or implementing server route if needed.
+            // Parameters prefixed with _ to indicate intentionally unused per ESLint config
             throw new Error('Not implemented: bulk update slots');
         } catch (error) {
             console.error('Error bulk updating availability slots:', error);

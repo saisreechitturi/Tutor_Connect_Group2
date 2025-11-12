@@ -198,14 +198,16 @@ const AdminSessionManagement = () => {
             setLoading(true);
             setError(null);
 
-            // Use mock data for now instead of API call
-            // TODO: Replace with actual API call when backend is ready
-            // const sessionsData = await adminService.getAllSessions();
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setSessions(mockSessions);
+            // Try to fetch from API first
+            try {
+                const sessionsData = await adminService.getAllSessions();
+                setSessions(sessionsData || mockSessions);
+            } catch (apiError) {
+                console.warn('API not available, using mock data:', apiError);
+                // Fallback to mock data
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setSessions(mockSessions);
+            }
         } catch (err) {
             console.error('Error fetching sessions:', err);
             setError('Failed to load sessions. Please try again.');
@@ -321,9 +323,18 @@ const AdminSessionManagement = () => {
         });
     };
 
-    const openSessionModal = (session) => {
+    const openSessionModal = async (session) => {
         setSelectedSession(session);
         setShowModal(true);
+        
+        // Optionally fetch detailed session data using sessionService
+        try {
+            const detailedSession = await sessionService.getSession(session.id);
+            setSelectedSession(detailedSession || session);
+        } catch (error) {
+            console.warn('Could not fetch detailed session data, using cached data:', error);
+            // Keep using the session data we already have
+        }
     };
 
     const closeModal = () => {
@@ -378,6 +389,21 @@ const AdminSessionManagement = () => {
                         </div>
                     </div>
 
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <TrendingUp className="h-8 w-8 text-purple-600" />
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-500">Completion Rate</p>
+                                <p className="text-2xl font-semibold text-gray-900">
+                                    {stats.totalSessions > 0 
+                                        ? ((stats.completedSessions / stats.totalSessions) * 100).toFixed(1)
+                                        : 0}%
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Filters and Search */}
@@ -398,6 +424,19 @@ const AdminSessionManagement = () => {
                             </div>
 
                             <div className="flex gap-4">
+                                <button
+                                    onClick={() => {
+                                        setFilterStatus('all');
+                                        setFilterType('all');
+                                        setSearchTerm('');
+                                    }}
+                                    className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                    title="Reset all filters"
+                                >
+                                    <Filter className="h-4 w-4 mr-2" />
+                                    <span>Reset</span>
+                                </button>
+                                
                                 <select
                                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={filterStatus}

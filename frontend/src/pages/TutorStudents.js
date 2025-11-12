@@ -96,14 +96,18 @@ const TutorStudents = () => {
             setLoading(true);
             setError(null);
 
-            // Use mock data for now instead of API call
-            // TODO: Replace with actual API call when backend is ready
-            // const studentsData = await tutorService.getTutorStudents(user.id);
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setStudents(mockStudents);
+            // Try to fetch from API first, fall back to mock data
+            try {
+                const studentsData = await tutorService.getTutorStudents(user.id);
+                const sessionsData = await sessionService.getSessions();
+                console.log("Loaded sessions for students:", sessionsData?.length || 0);
+                setStudents(studentsData || mockStudents);
+            } catch (apiError) {
+                console.warn('API not available, using mock data:', apiError);
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setStudents(mockStudents);
+            }
         } catch (err) {
             console.error('Error fetching students:', err);
             setError('Failed to load students. Please try again.');

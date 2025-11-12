@@ -101,13 +101,25 @@ const MySessions = () => {
                             <BookOpen className="h-6 w-6 mr-2 text-primary-600" />
                             My Sessions
                         </h1>
-                        <button
-                            onClick={() => setShowBookingModal(true)}
-                            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            {user.role === 'student' ? 'Book Session' : 'Add Availability'}
-                        </button>
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={() => setFilter('all')}
+                                className="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                title="Reset filters"
+                            >
+                                <Filter className="h-4 w-4 mr-2" />
+                                <span className="text-sm">
+                                    {filter === 'all' ? 'All Sessions' : `Filter: ${filter}`}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setShowBookingModal(true)}
+                                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                {user.role === 'student' ? 'Book Session' : 'Add Availability'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

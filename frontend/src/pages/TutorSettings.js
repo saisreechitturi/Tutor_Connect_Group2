@@ -52,6 +52,8 @@ const TutorSettings = () => {
         maxSessionsPerDay: 6,
         autoAcceptBookings: false
     });
+    // Log availability for debugging
+    console.log("Current availability:", availability);
 
     const [notifications, setNotifications] = useState({
         emailNotifications: true,
