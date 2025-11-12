@@ -8,6 +8,7 @@ import TutorStudents from '../pages/TutorStudents';
 import TutorAnalytics from '../pages/TutorAnalytics';
 import TutorTasks from '../pages/TutorTasks';
 import TutorSettings from '../pages/TutorSettings';
+import TutorAvailability from '../pages/TutorAvailability';
 
 const TutorDashboard = () => (
     <div className="space-y-6">
@@ -34,6 +35,7 @@ const TutorRoutes = () => {
                 <Route path="students" element={<TutorStudents />} />
                 <Route path="sessions" element={<MySessions />} />
                 <Route path="analytics" element={<TutorAnalytics />} />
+                <Route path="availability" element={<TutorAvailability />} />
                 <Route path="tasks" element={<TutorTasks />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="messages" element={<Messages />} />
