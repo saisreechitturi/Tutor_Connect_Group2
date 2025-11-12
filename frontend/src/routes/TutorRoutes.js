@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import TutorProfileChecker from '../components/TutorProfileChecker';
 import Calendar from '../components/ui/Calendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
@@ -30,20 +31,22 @@ const TutorDashboard = () => (
 
 const TutorRoutes = () => {
     return (
-        <DashboardLayout userRole="tutor">
-            <Routes>
-                <Route index element={<TutorDashboard />} />
-                <Route path="students" element={<TutorStudents />} />
-                <Route path="sessions" element={<MySessions />} />
-                <Route path="analytics" element={<TutorAnalytics />} />
-                <Route path="availability" element={<TutorAvailability />} />
-                <Route path="tasks" element={<TutorTasks />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="settings" element={<TutorSettings />} />
-            </Routes>
-        </DashboardLayout>
+        <TutorProfileChecker>
+            <DashboardLayout userRole="tutor">
+                <Routes>
+                    <Route index element={<TutorDashboard />} />
+                    <Route path="students" element={<TutorStudents />} />
+                    <Route path="sessions" element={<MySessions />} />
+                    <Route path="analytics" element={<TutorAnalytics />} />
+                    <Route path="availability" element={<TutorAvailability />} />
+                    <Route path="tasks" element={<TutorTasks />} />
+                    <Route path="calendar" element={<Calendar />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="notifications" element={<Notifications />} />
+                    <Route path="settings" element={<TutorSettings />} />
+                </Routes>
+            </DashboardLayout>
+        </TutorProfileChecker>
     );
 };
 

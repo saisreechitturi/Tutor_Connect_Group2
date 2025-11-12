@@ -525,4 +525,58 @@ router.get('/:tutorId/bookable', [
     });
 }));
 
+// Set tutor availability (simplified route for profile setup)
+router.post('/', [
+    authenticateToken,
+    body('availability').isObject().withMessage('Availability must be an object')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const tutorId = req.user.id;
+    const { availability } = req.body;
+
+    // Check if user is a tutor
+    const userResult = await query('SELECT role FROM users WHERE id = $1', [tutorId]);
+    if (userResult.rows.length === 0 || userResult.rows[0].role !== 'tutor') {
+        return res.status(403).json({ message: 'Access denied. Only tutors can set availability.' });
+    }
+
+    // Delete existing recurring availability for this tutor
+    await query('DELETE FROM tutor_availability_slots WHERE tutor_id = $1 AND is_recurring = true', [tutorId]);
+
+    // Insert new availability slots
+    const dayMap = {
+        'monday': 1,
+        'tuesday': 2,
+        'wednesday': 3,
+        'thursday': 4,
+        'friday': 5,
+        'saturday': 6,
+        'sunday': 0
+    };
+
+    for (const [dayName, dayData] of Object.entries(availability)) {
+        if (dayData.available && dayData.slots && dayData.slots.length > 0) {
+            const dayOfWeek = dayMap[dayName.toLowerCase()];
+
+            for (const slot of dayData.slots) {
+                await query(`
+                    INSERT INTO tutor_availability_slots 
+                    (tutor_id, day_of_week, start_time, end_time, is_recurring, is_available)
+                    VALUES ($1, $2, $3, $4, true, true)
+                `, [tutorId, dayOfWeek, slot.startTime, slot.endTime]);
+            }
+        }
+    }
+
+    logger.info(`Availability set for tutor ${tutorId}`);
+    res.json({ message: 'Availability updated successfully' });
+}));
+
 module.exports = router;

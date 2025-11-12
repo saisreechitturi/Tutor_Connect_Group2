@@ -46,12 +46,12 @@ router.post('/register', [
 
     const user = result.rows[0];
 
-    // If registering as tutor, create tutor profile
+    // If registering as tutor, create basic tutor profile with default values
     if (role === 'tutor') {
         await query(`
-      INSERT INTO tutor_profiles (user_id, hourly_rate, rating)
-      VALUES ($1, $2, $3)
-    `, [user.id, 0, 0]);
+      INSERT INTO tutor_profiles (user_id, hourly_rate, years_of_experience, rating)
+      VALUES ($1, $2, $3, $4)
+    `, [user.id, 0, 0, 0]); // Set default years_of_experience to 0
     }
 
     // Generate JWT token

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
@@ -7,6 +7,7 @@ import PasswordStrengthIndicator from '../ui/PasswordStrengthIndicator';
 import Alert from '../ui/Alert';
 
 const Signup = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -97,7 +98,16 @@ const Signup = () => {
 
         const result = await signup(formData);
 
-        if (!result.success) {
+        if (result.success) {
+            // Redirect based on user role
+            if (result.user && result.user.role === 'tutor') {
+                navigate('/tutor-setup');
+            } else if (result.user && result.user.role === 'admin') {
+                navigate('/admin');
+            } else {
+                navigate('/student');
+            }
+        } else {
             // Provide more specific error messages
             let errorMessage = result.error;
             if (errorMessage.includes('User already exists')) {

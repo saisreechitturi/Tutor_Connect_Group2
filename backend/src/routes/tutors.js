@@ -386,4 +386,58 @@ router.delete('/:id/subjects/:subjectId', [
     res.json({ message: 'Subject removed successfully' });
 }));
 
+// Set current tutor's subjects (simplified route)
+router.post('/subjects', [
+    authenticateToken,
+    body('subjects').isArray().withMessage('Subjects must be an array'),
+    body('subjects.*').isUUID().withMessage('Each subject must be a valid UUID')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const tutorId = req.user.id;
+    const { subjects } = req.body;
+
+    // Check if user is a tutor
+    const userResult = await query('SELECT role FROM users WHERE id = $1', [tutorId]);
+    if (userResult.rows.length === 0 || userResult.rows[0].role !== 'tutor') {
+        return res.status(403).json({ message: 'Access denied. Only tutors can set subjects.' });
+    }
+
+    // Verify all subjects exist
+    if (subjects.length > 0) {
+        const subjectCheck = await query(
+            'SELECT id FROM subjects WHERE id = ANY($1::uuid[])',
+            [subjects]
+        );
+
+        if (subjectCheck.rows.length !== subjects.length) {
+            return res.status(400).json({ message: 'One or more subjects do not exist' });
+        }
+    }
+
+    // Remove existing subjects
+    await query('DELETE FROM tutor_subjects WHERE tutor_id = $1', [tutorId]);
+
+    // Add new subjects
+    if (subjects.length > 0) {
+        const values = subjects.map((subjectId, index) =>
+            `($1, $${index + 2}, 'intermediate')`
+        ).join(',');
+
+        await query(
+            `INSERT INTO tutor_subjects (tutor_id, subject_id, proficiency_level) VALUES ${values}`,
+            [tutorId, ...subjects]
+        );
+    }
+
+    logger.info(`Updated subjects for tutor ${tutorId}: ${subjects.length} subjects`);
+    res.json({ message: 'Subjects updated successfully' });
+}));
+
 module.exports = router;

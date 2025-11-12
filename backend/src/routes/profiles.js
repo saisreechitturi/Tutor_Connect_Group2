@@ -277,6 +277,89 @@ router.put('/:id/tutor', [
     res.json({ message: 'Tutor profile updated successfully' });
 }));
 
+// Update current user's tutor profile (simplified route)
+router.put('/tutor', [
+    authenticateToken,
+    body('yearsOfExperience').optional().isInt({ min: 0, max: 50 }).withMessage('Years of experience must be between 0 and 50'),
+    body('hourlyRate').optional().isFloat({ min: 0, max: 1000 }).withMessage('Hourly rate must be between 0 and 1000'),
+    body('educationBackground').optional().isString().isLength({ max: 1000 }).withMessage('Education background must be max 1000 characters'),
+    body('certifications').optional().isString().isLength({ max: 1000 }).withMessage('Certifications must be max 1000 characters'),
+    body('teachingPhilosophy').optional().isString().isLength({ max: 1000 }).withMessage('Teaching philosophy must be max 1000 characters'),
+    body('preferredTeachingMethod').optional().isString().isLength({ max: 100 }).withMessage('Preferred teaching method must be max 100 characters'),
+    body('languagesSpoken').optional().isArray().withMessage('Languages spoken must be an array')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const userId = req.user.id;
+    const {
+        yearsOfExperience,
+        hourlyRate,
+        educationBackground,
+        certifications,
+        teachingPhilosophy,
+        preferredTeachingMethod,
+        languagesSpoken
+    } = req.body;
+
+    // Check if user is a tutor
+    const userResult = await query('SELECT role FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0 || userResult.rows[0].role !== 'tutor') {
+        return res.status(403).json({ message: 'Access denied. Only tutors can update tutor profiles.' });
+    }
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [userId];
+
+    if (yearsOfExperience !== undefined) {
+        params.push(yearsOfExperience);
+        updates.push(`years_of_experience = $${params.length}`);
+    }
+    if (hourlyRate !== undefined) {
+        params.push(hourlyRate);
+        updates.push(`hourly_rate = $${params.length}`);
+    }
+    if (educationBackground !== undefined) {
+        params.push(educationBackground);
+        updates.push(`education_background = $${params.length}`);
+    }
+    if (certifications !== undefined) {
+        params.push(certifications);
+        updates.push(`certifications = $${params.length}`);
+    }
+    if (teachingPhilosophy !== undefined) {
+        params.push(teachingPhilosophy);
+        updates.push(`teaching_philosophy = $${params.length}`);
+    }
+    if (preferredTeachingMethod !== undefined) {
+        params.push(preferredTeachingMethod);
+        updates.push(`preferred_teaching_method = $${params.length}`);
+    }
+    if (languagesSpoken !== undefined) {
+        params.push(JSON.stringify(languagesSpoken));
+        updates.push(`languages_spoken = $${params.length}`);
+    }
+
+    if (updates.length === 0) {
+        return res.status(400).json({ message: 'No valid fields to update' });
+    }
+
+    await query(`
+        UPDATE tutor_profiles
+        SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1
+    `, params);
+
+    logger.info(`Tutor profile updated for current user ${userId}`);
+    res.json({ message: 'Tutor profile updated successfully' });
+}));
+
 // Update student profile
 router.put('/:id/student', [
     authenticateToken,

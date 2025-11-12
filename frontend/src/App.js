@@ -2,11 +2,13 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import DashboardRedirect from './components/DashboardRedirect';
 import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import AboutUs from './pages/AboutUs';
 import BrowseTutors from './pages/BrowseTutors';
 import TutorProfile from './pages/TutorProfile';
+import TutorProfileSetup from './pages/TutorProfileSetup';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -48,6 +50,14 @@ function App() {
                             element={
                                 <ProtectedRoute requireAuth={false}>
                                     <Signup />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/tutor-setup"
+                            element={
+                                <ProtectedRoute requireAuth={true} allowedRoles={['tutor']}>
+                                    <TutorProfileSetup />
                                 </ProtectedRoute>
                             }
                         />
@@ -98,6 +108,16 @@ function App() {
                                         <Navbar />
                                         <TutorProfile />
                                     </>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Dashboard redirect - redirects to appropriate role-based dashboard */}
+                        <Route
+                            path="/dashboard"
+                            element={
+                                <ProtectedRoute requireAuth={true}>
+                                    <DashboardRedirect />
                                 </ProtectedRoute>
                             }
                         />
