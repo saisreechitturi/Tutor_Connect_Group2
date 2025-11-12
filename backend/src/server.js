@@ -129,6 +129,59 @@ async function startServer() {
             logger.info(`API endpoints: http://localhost:${PORT}/api/`);
         });
 
+        // Initialize Socket.io
+        try {
+            const { Server } = require('socket.io');
+            const jwt = require('jsonwebtoken');
+            const { setIO } = require('./utils/socket');
+
+            const io = new Server(server, {
+                cors: {
+                    origin: corsOptions.origin,
+                    credentials: true
+                }
+            });
+
+            // Authenticate socket connections
+            io.use(async (socket, next) => {
+                try {
+                    const authHeader = socket.handshake.headers?.authorization;
+                    const tokenFromHeader = authHeader && authHeader.startsWith('Bearer ')
+                        ? authHeader.split(' ')[1]
+                        : null;
+                    const token = socket.handshake.auth?.token || tokenFromHeader;
+                    if (!token) return next(new Error('Authentication error: token missing'));
+
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    socket.user = { id: decoded.userId, role: decoded.role };
+                    return next();
+                } catch (err) {
+                    return next(new Error('Authentication error'));
+                }
+            });
+
+            io.on('connection', (socket) => {
+                try {
+                    const userId = socket.user?.id;
+                    if (userId) {
+                        socket.join(`user:${userId}`);
+                        logger.info(`Socket connected and joined room user:${userId}`);
+                    }
+
+                    socket.on('disconnect', () => {
+                        logger.debug(`Socket disconnected for user:${userId}`);
+                    });
+                } catch (e) {
+                    logger.warn('Socket connection handler error', e);
+                }
+            });
+
+            setIO(io);
+            logger.info('Socket.io initialized');
+        } catch (e) {
+            logger.error('Failed to initialize Socket.io', e);
+        }
+
         // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {

@@ -43,7 +43,7 @@ class MessageService {
                 recipientId: messageData.recipientId,
                 sessionId: messageData.sessionId, // optional
                 messageText: messageData.messageText,
-                messageType: messageData.messageType || 'text',
+                messageType: messageData.messageType || 'direct',
                 attachmentUrl: messageData.attachmentUrl, // optional
             });
 

@@ -3,6 +3,7 @@ import { MessageSquare, Send, Search, Plus, X, AlertCircle, Users } from 'lucide
 import { messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import NewConversationModal from '../modals/NewConversationModal';
+import socketClient from '../../services/socket';
 
 const Messages = () => {
     const { user } = useAuth();
@@ -107,6 +108,40 @@ const Messages = () => {
         if (user?.id) {
             fetchData();
         }
+    }, [user?.id]);
+
+    // Socket: connect and listen for new messages
+    useEffect(() => {
+        if (!user?.id) return;
+        const token = localStorage.getItem('token');
+        const sock = socketClient.connectSocket(token);
+        const onNewMessage = (msg) => {
+            try {
+                // Only add if this message is to me or from me
+                if (msg?.recipient?.id === user.id || msg?.sender?.id === user.id) {
+                    setMessages(prev => [
+                        // place newest first since list is sorted desc in state mapping
+                        {
+                            id: msg.id,
+                            content: msg.content,
+                            createdAt: msg.createdAt || new Date().toISOString(),
+                            sender: { id: msg.sender?.id },
+                            recipient: { id: msg.recipient?.id },
+                            isRead: msg.recipient?.id === user.id ? false : true
+                        },
+                        ...prev
+                    ]);
+                    // Bump unread if I'm the recipient
+                    if (msg?.recipient?.id === user.id) {
+                        setUnreadCount(c => c + 1);
+                    }
+                }
+            } catch (_) { }
+        };
+        sock.on('message:new', onNewMessage);
+        return () => {
+            try { sock.off('message:new', onNewMessage); } catch (_) { }
+        };
     }, [user?.id]);
 
     // Poll for new messages and unread count

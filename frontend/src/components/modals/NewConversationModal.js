@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, User, MessageSquare, Send } from 'lucide-react';
-import { tutorService } from '../../services';
+import { tutorService, userService, messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
@@ -98,10 +98,24 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
         }
     };
 
-    const filteredUsers = availableUsers.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    // Live search when typing
+    useEffect(() => {
+        const run = async () => {
+            const q = searchTerm.trim();
+            if (!q) return;
+            try {
+                const results = await userService.search(q);
+                // Exclude self
+                setAvailableUsers(results.filter(u => u.id !== user.id));
+            } catch (e) {
+                // ignore
+            }
+        };
+        const id = setTimeout(run, 300);
+        return () => clearTimeout(id);
+    }, [searchTerm, user?.id]);
+
+    const filteredUsers = availableUsers.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const startConversation = async () => {
         if (!selectedUser || !initialMessage.trim()) return;
@@ -110,19 +124,21 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
             setSending(true);
             setError(null);
 
-            // Here you would normally send the message via messageService
-            // For now, we'll simulate the conversation start
-            console.log('Starting conversation with:', selectedUser);
-            console.log('Initial message:', initialMessage);
+            // Send initial message via API
+            await messageService.sendMessage({
+                recipientId: selectedUser.id,
+                messageText: initialMessage.trim(),
+                messageType: 'direct'
+            });
 
-            // Create a mock conversation object
+            // Optimistic conversation object for local UI update
             const newConversation = {
                 userId: selectedUser.id,
                 user: selectedUser,
                 messages: [
                     {
                         id: Date.now(),
-                        content: initialMessage,
+                        content: initialMessage.trim(),
                         createdAt: new Date().toISOString(),
                         sender: { id: user.id, name: `${user.firstName} ${user.lastName}` },
                         recipient: selectedUser,
@@ -130,16 +146,13 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
                     }
                 ],
                 latestMessage: {
-                    content: initialMessage,
+                    content: initialMessage.trim(),
                     createdAt: new Date().toISOString()
                 },
                 unreadCount: 0
             };
 
-            if (onConversationStarted) {
-                onConversationStarted(newConversation);
-            }
-
+            onConversationStarted?.(newConversation);
             onClose();
         } catch (err) {
             console.error('Failed to start conversation:', err);

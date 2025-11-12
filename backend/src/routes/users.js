@@ -6,6 +6,35 @@ const { asyncHandler } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
+// Search users by name or email
+router.get('/search', [
+    authenticateToken,
+    expressQuery('q').isString().trim().notEmpty(),
+    expressQuery('limit').optional().isInt({ min: 1, max: 50 })
+], asyncHandler(async (req, res) => {
+    const q = `%${req.query.q}%`;
+    const limit = parseInt(req.query.limit) || 20;
+    const result = await query(`
+        SELECT id, first_name, last_name, email, role, profile_picture_url
+        FROM users
+        WHERE (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1)
+          AND is_active = true
+        ORDER BY last_name ASC
+        LIMIT $2
+    `, [q, limit]);
+
+    const users = result.rows.map(u => ({
+        id: u.id,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        role: u.role,
+        avatarUrl: u.profile_picture_url
+    }));
+
+    res.json({ users });
+}));
+
 // Get user profile
 router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async (req, res) => {
     const result = await query(`

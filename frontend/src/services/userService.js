@@ -1,6 +1,26 @@
 import apiClient from './apiClient';
 
 const userService = {
+    // Search users by name or email
+    search: async (query, limit = 20) => {
+        try {
+            const res = await apiClient.get(`/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+            // Normalize to array of simple user objects
+            const users = res.users || [];
+            return users.map(u => ({
+                id: u.id,
+                firstName: u.firstName || u.first_name,
+                lastName: u.lastName || u.last_name,
+                name: `${u.firstName || u.first_name || ''} ${u.lastName || u.last_name || ''}`.trim(),
+                role: u.role,
+                email: u.email,
+                profileImageUrl: u.avatarUrl || u.profile_picture_url
+            }));
+        } catch (error) {
+            console.error('Error searching users:', error);
+            throw error;
+        }
+    },
     // Get user profile
     getProfile: async (userId) => {
         try {

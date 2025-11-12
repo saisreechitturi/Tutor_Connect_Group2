@@ -3,14 +3,21 @@ const { body, query: expressQuery, validationResult } = require('express-validat
 const { query } = require('../database/connection');
 const { authenticateToken } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { getIO } = require('../utils/socket');
 
 const router = express.Router();
 
 // Get messages for a user (sent and received)
+// Get messages for a user (supports multiple filter styles)
 router.get('/', [
     authenticateToken,
     expressQuery('type').optional().isIn(['sent', 'received']),
     expressQuery('unread').optional().isBoolean(),
+    // New style filters used by frontend messageService
+    expressQuery('conversationWith').optional().isString(),
+    // accept true/false strings to avoid 400s
+    expressQuery('isRead').optional().isIn(['true', 'false']),
+    expressQuery('sessionId').optional().isString(),
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
 ], asyncHandler(async (req, res) => {
@@ -25,19 +32,19 @@ router.get('/', [
     const { type, unread } = req.query;
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
-
     let queryText = `
-    SELECT m.*, 
-           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.profile_picture_url as sender_avatar,
-           recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.profile_picture_url as recipient_avatar
-    FROM messages m
-    JOIN users sender ON m.sender_id = sender.id
-    JOIN users recipient ON m.recipient_id = recipient.id
-    WHERE (m.sender_id = $1 OR m.recipient_id = $1)
-  `;
+        SELECT m.*, 
+               sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.profile_picture_url as sender_avatar,
+               recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.profile_picture_url as recipient_avatar
+        FROM messages m
+        JOIN users sender ON m.sender_id = sender.id
+        JOIN users recipient ON m.recipient_id = recipient.id
+        WHERE (m.sender_id = $1 OR m.recipient_id = $1)
+    `;
 
     const params = [req.user.id];
 
+    // Legacy filters
     if (type === 'sent') {
         queryText += ` AND m.sender_id = $1`;
     } else if (type === 'received') {
@@ -46,6 +53,21 @@ router.get('/', [
 
     if (unread === 'true') {
         queryText += ` AND m.is_read = false AND m.recipient_id = $1`;
+    }
+
+    // New style filters
+    if (req.query.conversationWith) {
+        queryText += ` AND ( (m.sender_id = $1 AND m.recipient_id = $${params.length + 1}) OR (m.sender_id = $${params.length + 1} AND m.recipient_id = $1) )`;
+        params.push(req.query.conversationWith);
+    }
+    if (req.query.isRead !== undefined) {
+        const isReadBool = `${req.query.isRead}` === 'true';
+        queryText += ` AND m.is_read = $${params.length + 1}`;
+        params.push(isReadBool);
+    }
+    if (req.query.sessionId) {
+        queryText += ` AND m.session_id = $${params.length + 1}`;
+        params.push(req.query.sessionId);
     }
 
     queryText += ` ORDER BY m.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -80,11 +102,12 @@ router.get('/', [
 // Send a new message
 router.post('/', [
     authenticateToken,
-    body('recipientId').isInt({ min: 1 }),
+    body('recipientId').isString().trim().notEmpty(),
     body('subject').optional().trim().isLength({ min: 1, max: 255 }),
-    body('content').trim().isLength({ min: 1, max: 2000 }),
+    body('content').optional().trim().isLength({ min: 1, max: 2000 }),
+    body('messageText').optional().trim().isLength({ min: 1, max: 2000 }),
     body('messageType').optional().isIn(['direct', 'session', 'system']),
-    body('sessionId').optional().isInt({ min: 1 })
+    body('sessionId').optional().isString()
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -94,7 +117,8 @@ router.post('/', [
         });
     }
 
-    const { recipientId, subject, content, messageType, sessionId } = req.body;
+    const { recipientId, subject, messageType, sessionId } = req.body;
+    const content = req.body.content || req.body.messageText;
 
     // Verify recipient exists
     const recipientCheck = await query(
@@ -119,12 +143,30 @@ router.post('/', [
     }
 
     const result = await query(`
-    INSERT INTO messages (sender_id, recipient_id, subject, content, message_type, session_id)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING *
-  `, [req.user.id, recipientId, subject, content, messageType || 'direct', sessionId]);
+        INSERT INTO messages (sender_id, recipient_id, subject, content, message_type, session_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+    `, [req.user.id, recipientId, subject || null, content, messageType || 'direct', sessionId || null]);
 
     const message = result.rows[0];
+
+    // Emit socket event to recipient if socket server is available
+    try {
+        const io = getIO();
+        if (io) {
+            io.to(`user:${recipientId}`).emit('message:new', {
+                id: message.id,
+                subject: message.subject,
+                content: message.content,
+                messageType: message.message_type,
+                sessionId: message.session_id,
+                isRead: false,
+                sender: { id: req.user.id },
+                recipient: { id: recipientId },
+                createdAt: message.created_at
+            });
+        }
+    } catch (_) { /* noop */ }
 
     res.status(201).json({
         message: 'Message sent successfully',
@@ -140,6 +182,46 @@ router.post('/', [
 }));
 
 // Get specific message
+// Unread count BEFORE param routes to avoid collision with '/:id'
+router.get('/unread-count', authenticateToken, asyncHandler(async (req, res) => {
+    const result = await query(
+        'SELECT COUNT(*)::int AS count FROM messages WHERE recipient_id = $1 AND is_read = false',
+        [req.user.id]
+    );
+    res.json({ count: result.rows[0]?.count || 0 });
+}));
+
+// Search messages BEFORE param routes to avoid collision with '/:id'
+router.get('/search', [
+    authenticateToken,
+    expressQuery('q').isString().trim().notEmpty(),
+    expressQuery('limit').optional().isInt({ min: 1, max: 100 })
+], asyncHandler(async (req, res) => {
+    const q = `%${req.query.q}%`;
+    const limit = parseInt(req.query.limit) || 50;
+    const result = await query(`
+        SELECT m.*, sender.first_name as sender_first_name, sender.last_name as sender_last_name
+        FROM messages m
+        JOIN users sender ON m.sender_id = sender.id
+        WHERE (m.sender_id = $1 OR m.recipient_id = $1)
+          AND (m.subject ILIKE $2 OR m.content ILIKE $2)
+        ORDER BY m.created_at DESC
+        LIMIT $3
+    `, [req.user.id, q, limit]);
+
+    const messages = result.rows.map(row => ({
+        id: row.id,
+        content: row.content,
+        subject: row.subject,
+        senderId: row.sender_id,
+        senderName: `${row.sender_first_name} ${row.sender_last_name}`,
+        isRead: row.is_read,
+        createdAt: row.created_at
+    }));
+
+    res.json({ messages });
+}));
+
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(`
     SELECT m.*, 
@@ -200,6 +282,18 @@ router.patch('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
     res.json({ message: 'Message marked as read' });
 }));
 
+// Also support PUT for frontend compatibility
+router.put('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
+    const result = await query(
+        'UPDATE messages SET is_read = true, read_at = NOW() WHERE id = $1 AND recipient_id = $2 RETURNING id',
+        [req.params.id, req.user.id]
+    );
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Message not found' });
+    }
+    res.json({ message: 'Message marked as read' });
+}));
+
 // Delete message
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(
@@ -256,6 +350,16 @@ router.get('/conversation/:userId', [
   `, [otherUserId, req.user.id]);
 
     res.json({ messages });
+}));
+
+// Mark entire conversation as read
+router.put('/conversation/:userId/read', authenticateToken, asyncHandler(async (req, res) => {
+    const otherUserId = req.params.userId;
+    await query(
+        'UPDATE messages SET is_read = true, read_at = NOW() WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false',
+        [otherUserId, req.user.id]
+    );
+    res.json({ message: 'Conversation marked as read' });
 }));
 
 module.exports = router;
