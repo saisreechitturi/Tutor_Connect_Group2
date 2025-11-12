@@ -124,16 +124,29 @@ const TutorSearch = () => {
             {/* Search and Filters */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="space-y-4">
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                            type="text"
-                            placeholder="Search by subject, tutor name..."
-                            className="input-field pl-10"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    {/* Search Bar with Filter Button */}
+                    <div className="flex space-x-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                            <input
+                                type="text"
+                                placeholder="Search by subject, tutor name..."
+                                className="input-field pl-10"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <button
+                            onClick={() => {
+                                setFilters({ subject: '', maxRate: '', rating: '', availability: '' });
+                                setSearchTerm('');
+                            }}
+                            className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            title="Reset all filters"
+                        >
+                            <Filter className="h-4 w-4 mr-2" />
+                            <span className="text-sm font-medium">Reset</span>
+                        </button>
                     </div>
 
                     {/* Filters */}

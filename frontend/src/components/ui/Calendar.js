@@ -49,6 +49,9 @@ const Calendar = () => {
     }, [user?.id, currentDate]);
 
     const handleTaskAdded = (newTask) => {
+        // Log the newly added task for debugging
+        console.log('New task added:', newTask);
+        
         // Refresh calendar data after task is added
         const refreshCalendar = async () => {
             try {
@@ -73,6 +76,9 @@ const Calendar = () => {
     };
 
     const handleSessionBooked = (newSession) => {
+        // Log the newly booked session for debugging
+        console.log('New session booked:', newSession);
+        
         // Refresh calendar data after session is booked
         const refreshCalendar = async () => {
             try {
@@ -139,6 +145,12 @@ const Calendar = () => {
 
     const getDayEvents = (day) => {
         const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        // Use eventsByDate if available (optimized lookup), otherwise filter manually
+        if (eventsByDate && eventsByDate[dateStr]) {
+            return eventsByDate[dateStr];
+        }
+        
         return userEvents.filter(event => event.date === dateStr);
     };
 
