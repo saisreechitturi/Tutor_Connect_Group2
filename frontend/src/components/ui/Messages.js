@@ -190,21 +190,6 @@ const Messages = () => {
 
     // Process conversations from messages (simplified approach)
     const conversationMap = new Map();
-    
-    // First, add conversations from the server if available
-    if (conversations && conversations.length > 0) {
-        conversations.forEach(conv => {
-            conversationMap.set(conv.userId || conv.id, {
-                userId: conv.userId || conv.id,
-                user: conv.user || conv,
-                messages: conv.messages || [],
-                latestMessage: conv.latestMessage,
-                unreadCount: conv.unreadCount || 0
-            });
-        });
-    }
-    
-    // Then process messages to build/update conversations
     messages.forEach(message => {
         const otherUser = message.sender.id === user.id ? message.recipient : message.sender;
         const key = otherUser.id;
@@ -393,22 +378,12 @@ const Messages = () => {
                                         </span>
                                     )}
                                 </h1>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => setShowNewConversation(true)}
-                                        className="bg-primary-600 text-white p-2 rounded-lg hover:bg-primary-700 transition-colors"
-                                        title="Start new conversation"
-                                    >
-                                        <Users className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setShowNewConversation(true)}
-                                        className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors"
-                                        title="New message"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() => setShowNewConversation(true)}
+                                    className="bg-primary-600 text-white p-2 rounded-lg hover:bg-primary-700 transition-colors"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </button>
                             </div>
 
                             {/* Search */}

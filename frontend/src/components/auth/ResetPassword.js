@@ -83,18 +83,12 @@ const ResetPassword = () => {
 
         try {
             const response = await authService.resetPassword(token, formData.password);
-            
-            // Log successful password reset for debugging
-            console.log('Password reset successful:', response?.message || 'Password updated');
-            
             setIsSuccess(true);
 
             // Redirect to login after 3 seconds
             setTimeout(() => {
                 navigate('/login', {
-                    state: { 
-                        message: response?.message || 'Password reset successful. Please log in with your new password.' 
-                    }
+                    state: { message: 'Password reset successful. Please log in with your new password.' }
                 });
             }, 3000);
         } catch (error) {
