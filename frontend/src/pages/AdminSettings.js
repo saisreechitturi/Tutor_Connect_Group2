@@ -112,11 +112,13 @@ const AdminSettings = () => {
 
     const tabs = [
         { id: 'general', name: 'General', icon: Settings },
-        { id: 'security', name: 'Security', icon: Shield },
+        { id: 'security', name: 'Security', icon: Key },
         { id: 'payment', name: 'Payments', icon: DollarSign },
         { id: 'users', name: 'User Management', icon: Users },
-        { id: 'notifications', name: 'Notifications', icon: Bell },
-        { id: 'platform', name: 'Platform', icon: Globe }
+        { id: 'notifications', name: 'Notifications', icon: Mail },
+        { id: 'platform', name: 'Platform', icon: Clock },
+        { id: 'database', name: 'Database', icon: Database },
+        { id: 'content', name: 'Content', icon: BookOpen }
     ];
 
     const renderGeneralSettings = () => (
@@ -579,6 +581,54 @@ const AdminSettings = () => {
         </div>
     );
 
+    const renderDatabaseSettings = () => (
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Database Configuration</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center">
+                            <Database className="h-5 w-5 text-blue-500 mr-3" />
+                            <div>
+                                <label className="text-sm font-medium text-blue-700">
+                                    Database Backup
+                                </label>
+                                <p className="text-sm text-blue-600">Schedule automatic database backups</p>
+                            </div>
+                        </div>
+                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Configure
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderContentSettings = () => (
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Content Management</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center">
+                            <BookOpen className="h-5 w-5 text-green-500 mr-3" />
+                            <div>
+                                <label className="text-sm font-medium text-green-700">
+                                    Content Moderation
+                                </label>
+                                <p className="text-sm text-green-600">Manage and moderate platform content</p>
+                            </div>
+                        </div>
+                        <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            Manage
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'general':
@@ -593,6 +643,10 @@ const AdminSettings = () => {
                 return renderNotificationSettings();
             case 'platform':
                 return renderPlatformSettings();
+            case 'database':
+                return renderDatabaseSettings();
+            case 'content':
+                return renderContentSettings();
             default:
                 return renderGeneralSettings();
         }

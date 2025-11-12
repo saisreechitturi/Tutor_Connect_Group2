@@ -206,6 +206,21 @@ const BrowseTutors = () => {
                                 <option value="price_high">Price: High to Low</option>
                             </select>
                         </div>
+                        
+                        {/* Filter Reset Button */}
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setSelectedSubject('');
+                                setPriceRange('');
+                                setSortBy('price_low');
+                            }}
+                            className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            title="Reset all filters"
+                        >
+                            <Filter className="h-4 w-4 mr-2" />
+                            Reset
+                        </button>
                     </div>
 
                     {/* Results Count */}
@@ -250,7 +265,16 @@ const BrowseTutors = () => {
                                         <span className="ml-2 text-sm text-gray-600">
                                             {tutor.rating} ({tutor.totalSessions} sessions)
                                         </span>
+                                        {tutor.rating >= 4.5 && (
+                                            <Award className="h-4 w-4 ml-2 text-yellow-500" title="Top-rated tutor" />
+                                        )}
                                     </div>
+                                    {tutor.location && (
+                                        <div className="flex items-center mt-1 text-sm text-gray-500">
+                                            <MapPin className="h-3 w-3 mr-1" />
+                                            <span>{tutor.location}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -138,14 +138,16 @@ const AdminUserManagement = () => {
             setLoading(true);
             setError(null);
 
-            // Use mock data for now instead of API call
-            // TODO: Replace with actual API call when backend is ready
-            // const usersData = await adminService.getAllUsers();
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setUsers(mockUsers);
+            // Try to fetch from API first
+            try {
+                const usersData = await adminService.getAllUsers();
+                setUsers(usersData || mockUsers);
+            } catch (apiError) {
+                console.warn('API not available, using mock data:', apiError);
+                // Fallback to mock data
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setUsers(mockUsers);
+            }
         } catch (err) {
             console.error('Error fetching users:', err);
             setError('Failed to load users. Please try again.');
@@ -531,10 +533,7 @@ const AdminUserManagement = () => {
                     <p className="text-gray-600 mt-1">Manage all platform users, roles, and permissions</p>
                 </div>
                 <button
-                    onClick={() => {
-                        console.log('Create new user');
-                        alert('Create user functionality will be implemented soon.');
-                    }}
+                    onClick={() => setShowCreateModal(true)}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors flex items-center space-x-2"
                 >
                     <Plus className="h-4 w-4" />
@@ -588,6 +587,19 @@ const AdminUserManagement = () => {
                         />
                     </div>
                     <div className="flex space-x-2">
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setRoleFilter('all');
+                                setStatusFilter('all');
+                            }}
+                            className="flex items-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                            title="Reset all filters"
+                        >
+                            <Filter className="h-4 w-4 mr-2" />
+                            <span>Reset</span>
+                        </button>
+                        
                         <select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
@@ -634,6 +646,37 @@ const AdminUserManagement = () => {
                     user={selectedUser}
                     onClose={() => setSelectedUser(null)}
                 />
+            )}
+
+            {/* Create User Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg max-w-2xl w-full">
+                        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900">Create New User</h2>
+                            <button 
+                                onClick={() => setShowCreateModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <XCircle className="h-6 w-6" />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="flex items-center justify-center py-8">
+                                <div className="text-center">
+                                    <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                                    <p className="text-gray-600">User creation form will be implemented here.</p>
+                                    <button
+                                        onClick={() => setShowCreateModal(false)}
+                                        className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
