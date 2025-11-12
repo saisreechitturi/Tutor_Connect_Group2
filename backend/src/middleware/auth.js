@@ -6,12 +6,18 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
+    logger.info(`Authentication attempt - Path: ${req.path}, Method: ${req.method}`);
+    logger.info(`Auth header present: ${!!authHeader}`);
+    logger.info(`Token extracted: ${!!token}`);
+
     if (!token) {
+        logger.error('No token provided');
         return res.status(401).json({ message: 'Access token required' });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        logger.info(`Token decoded successfully - User ID: ${decoded.userId}, Role: ${decoded.role}`);
 
         // Verify user still exists and is active
         const result = await query(
@@ -19,11 +25,15 @@ const authenticateToken = async (req, res, next) => {
             [decoded.userId, true]
         );
 
+        logger.info(`User lookup result - Found: ${result.rows.length} users`);
+
         if (result.rows.length === 0) {
+            logger.error(`User not found or inactive for token user ID: ${decoded.userId}`);
             return res.status(401).json({ message: 'Invalid token or user not found' });
         }
 
         req.user = result.rows[0];
+        logger.info(`Authentication successful - User: ${req.user.email}, Role: ${req.user.role}, ID: ${req.user.id}`);
 
         // Check if token expires within 7 days and auto-refresh if needed
         const currentTime = Math.floor(Date.now() / 1000);
@@ -46,7 +56,8 @@ const authenticateToken = async (req, res, next) => {
 
         next();
     } catch (error) {
-        logger.error('Token verification failed:', error);
+        logger.error('Token verification failed:', error.message);
+        logger.error('Token that failed:', token?.substring(0, 20) + '...');
         return res.status(403).json({ message: 'Invalid or expired token' });
     }
 };

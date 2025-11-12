@@ -292,11 +292,30 @@ const TutorProfileSetup = () => {
     const handleSubmit = async () => {
         if (!validateStep(currentStep)) return;
 
+        // Validate user authentication
+        if (!user) {
+            setError('User not authenticated. Please log in again.');
+            return;
+        }
+
+        if (user.role !== 'tutor') {
+            setError(`Access denied. User role is '${user.role}', but 'tutor' role is required.`);
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setError('Authentication token not found. Please log in again.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
             console.log('🚀 Starting profile setup submission...');
+            console.log('👤 Current user:', user);
+            console.log('🔑 Token exists:', !!localStorage.getItem('token'));
 
             // Step 1: Update tutor profile
             console.log('📝 Step 1: Updating tutor profile...');
@@ -304,7 +323,8 @@ const TutorProfileSetup = () => {
                 yearsOfExperience: parseInt(profileData.yearsOfExperience),
                 hourlyRate: parseFloat(profileData.hourlyRate),
                 educationBackground: profileData.educationBackground,
-                certifications: profileData.certifications,
+                certifications: profileData.certifications ?
+                    profileData.certifications.split(',').map(cert => cert.trim()).filter(cert => cert) : [],
                 languagesSpoken: profileData.languagesSpoken.filter(lang => lang.trim()),
                 teachingPhilosophy: profileData.teachingPhilosophy,
                 preferredTeachingMethod: profileData.preferredTeachingMethod
@@ -321,10 +341,20 @@ const TutorProfileSetup = () => {
             });
 
             if (!profileResponse.ok) {
-                const errorText = await profileResponse.text();
+                let errorText;
+                try {
+                    const errorData = await profileResponse.json();
+                    errorText = errorData.message || `HTTP ${profileResponse.status}`;
+                    console.error('❌ Profile update failed - JSON response:', errorData);
+                } catch {
+                    errorText = await profileResponse.text();
+                    console.error('❌ Profile update failed - Text response:', errorText);
+                }
+
                 console.error('❌ Profile update failed:', {
                     status: profileResponse.status,
                     statusText: profileResponse.statusText,
+                    headers: Object.fromEntries(profileResponse.headers.entries()),
                     error: errorText
                 });
                 throw new Error(`Failed to update profile: ${profileResponse.status} - ${errorText}`);

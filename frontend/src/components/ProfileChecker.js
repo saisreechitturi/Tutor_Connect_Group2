@@ -54,7 +54,9 @@ const ProfileChecker = ({ children }) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const tutorProfile = data.tutorProfile;
+                    // Backend wraps payload as { profile: {...} }
+                    const profile = data?.profile || data;
+                    const tutorProfile = profile?.tutorProfile;
 
                     console.log('Tutor profile data:', tutorProfile);
 
@@ -103,16 +105,23 @@ const ProfileChecker = ({ children }) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const studentProfile = data.studentProfile || data.user;
+                    // Backend wraps payload as { profile: {...} }
+                    const profile = data?.profile || data;
+                    const studentProfile = profile?.studentProfile || profile?.user || profile;
 
                     console.log('Student profile data:', studentProfile);
 
                     // Check if essential student profile fields are completed
                     // For students, we mainly need basic info which might already be set during registration
-                    const isComplete = studentProfile &&
+                    const isComplete = !!(studentProfile &&
                         studentProfile.firstName &&
                         studentProfile.lastName &&
-                        studentProfile.grade !== null;
+                        (
+                            // prefer explicit grade level when available
+                            studentProfile.gradeLevel !== undefined ||
+                            studentProfile.grade !== undefined ||
+                            studentProfile.schoolName // fallback heuristic
+                        ));
 
                     console.log('Student profile complete:', isComplete);
                     setProfileComplete(isComplete);

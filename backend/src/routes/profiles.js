@@ -8,7 +8,8 @@ const logger = require('../utils/logger');
 const router = express.Router();
 
 // Get user profile (public info for any user, full info for own profile)
-router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
+// Constrain :id to UUID to avoid collisions with static routes like "/tutor"
+router.get('/:id([0-9a-fA-F-]{36})', authenticateToken, asyncHandler(async (req, res) => {
     const { id } = req.params;
     const requesterId = req.user?.id;
     const isOwnProfile = requesterId === id;
@@ -18,7 +19,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
         SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.bio, 
                u.profile_picture_url, u.role, u.created_at, u.is_active,
                ${isOwnProfile ? 'u.date_of_birth,' : ''}
-               ua.street_address, ua.city, ua.state, ua.postal_code, ua.country
+               ua.address_line1, ua.address_line2, ua.city, ua.state, ua.postal_code, ua.country
         FROM users u
         LEFT JOIN user_addresses ua ON u.id = ua.user_id AND ua.is_primary = true
         WHERE u.id = $1 AND u.is_active = true
@@ -42,8 +43,9 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             phone: user.phone,
             dateOfBirth: user.date_of_birth
         }),
-        address: user.street_address ? {
-            street: user.street_address,
+        address: user.address_line1 ? {
+            line1: user.address_line1,
+            line2: user.address_line2,
             city: user.city,
             state: user.state,
             postalCode: user.postal_code,
@@ -55,8 +57,8 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     if (user.role === 'tutor') {
         const tutorResult = await query(`
             SELECT tp.hourly_rate, tp.years_of_experience, tp.education_background, tp.certifications,
-                   tp.languages_spoken, tp.availability_schedule, tp.preferred_tutoring_style,
-                   tp.is_available, tp.rating, tp.total_sessions
+                   tp.languages_spoken, tp.preferred_teaching_method, tp.teaching_philosophy,
+                   tp.is_verified, tp.rating, tp.total_sessions, tp.total_students
             FROM tutor_profiles tp
             WHERE tp.user_id = $1
         `, [id]);
@@ -69,11 +71,12 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
                 education: tutorData.education_background,
                 certifications: tutorData.certifications,
                 languages: tutorData.languages_spoken,
-                availabilitySchedule: tutorData.availability_schedule,
-                preferredTutoringStyle: tutorData.preferred_tutoring_style,
-                isAvailable: tutorData.is_available,
+                preferredTeachingMethod: tutorData.preferred_teaching_method,
+                teachingPhilosophy: tutorData.teaching_philosophy,
+                isVerified: tutorData.is_verified,
                 rating: tutorData.rating,
-                totalSessions: tutorData.total_sessions
+                totalSessions: tutorData.total_sessions,
+                totalStudents: tutorData.total_students
             };
 
             // Get subjects (public info)
@@ -120,7 +123,8 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
 }));
 
 // Update user profile
-router.put('/:id', [
+// Constrain :id to UUID to avoid collisions with static routes like "/tutor"
+router.put('/:id([0-9a-fA-F-]{36})', [
     authenticateToken,
     body('firstName').optional().trim().isLength({ min: 1, max: 100 }).withMessage('First name must be 1-100 characters'),
     body('lastName').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Last name must be 1-100 characters'),
@@ -188,17 +192,22 @@ router.put('/:id', [
 }));
 
 // Update tutor profile
-router.put('/:id/tutor', [
+// Constrain :id to UUID to avoid collisions with static routes like "/tutor"
+router.put('/:id([0-9a-fA-F-]{36})/tutor', [
     authenticateToken,
     body('hourlyRate').optional().isFloat({ min: 0 }).withMessage('Hourly rate must be a positive number'),
     body('experienceYears').optional().isInt({ min: 0 }).withMessage('Experience years must be a non-negative integer'),
     body('education').optional().isString().isLength({ max: 1000 }).withMessage('Education must be max 1000 characters'),
     body('certifications').optional().isArray().withMessage('Certifications must be an array'),
     body('languages').optional().isString().isLength({ max: 255 }).withMessage('Languages must be max 255 characters'),
-    body('availabilitySchedule').optional().isObject().withMessage('Availability schedule must be an object'),
-    body('preferredTutoringStyle').optional().isString().isLength({ max: 500 }).withMessage('Preferred tutoring style must be max 500 characters'),
-    body('isAvailable').optional().isBoolean().withMessage('Is available must be a boolean')
+    body('teachingPhilosophy').optional().isString().isLength({ max: 1000 }).withMessage('Teaching philosophy must be max 1000 characters'),
+    body('preferredTeachingMethod').optional().isIn(['online', 'in_person', 'both']).withMessage('Preferred teaching method must be online, in_person, or both')
 ], asyncHandler(async (req, res) => {
+    // 🚨 ROUTE LEVEL LOGGING - Check if /:id/tutor route is being hit
+    logger.info(`🚀 PUT /api/profiles/:id/tutor - REQUEST RECEIVED for ID: ${req.params.id}`);
+    console.log('🚀 PUT /api/profiles/:id/tutor - REQUEST RECEIVED for ID:', req.params.id);
+    console.log('🔍 User from token:', req.user ? { id: req.user.id, role: req.user.role, email: req.user.email } : 'NO USER');
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -210,7 +219,7 @@ router.put('/:id/tutor', [
     const { id } = req.params;
     const {
         hourlyRate, experienceYears, education, certifications, languages,
-        availabilitySchedule, preferredTutoringStyle, isAvailable
+        teachingPhilosophy, preferredTeachingMethod
     } = req.body;
 
     // Check authorization
@@ -242,23 +251,19 @@ router.put('/:id/tutor', [
     }
     if (certifications !== undefined) {
         updates.push(`certifications = $${params.length + 1}`);
-        params.push(JSON.stringify(certifications));
+        params.push(certifications);
     }
     if (languages !== undefined) {
         updates.push(`languages_spoken = $${params.length + 1}`);
         params.push(languages);
     }
-    if (availabilitySchedule !== undefined) {
-        updates.push(`availability_schedule = $${params.length + 1}`);
-        params.push(JSON.stringify(availabilitySchedule));
+    if (teachingPhilosophy !== undefined) {
+        updates.push(`teaching_philosophy = $${params.length + 1}`);
+        params.push(teachingPhilosophy);
     }
-    if (preferredTutoringStyle !== undefined) {
-        updates.push(`preferred_tutoring_style = $${params.length + 1}`);
-        params.push(preferredTutoringStyle);
-    }
-    if (isAvailable !== undefined) {
-        updates.push(`is_available = $${params.length + 1}`);
-        params.push(isAvailable);
+    if (preferredTeachingMethod !== undefined) {
+        updates.push(`preferred_teaching_method = $${params.length + 1}`);
+        params.push(preferredTeachingMethod);
     }
 
     if (updates.length === 0) {
@@ -283,17 +288,37 @@ router.put('/tutor', [
     body('yearsOfExperience').optional().isInt({ min: 0, max: 50 }).withMessage('Years of experience must be between 0 and 50'),
     body('hourlyRate').optional().isFloat({ min: 0, max: 1000 }).withMessage('Hourly rate must be between 0 and 1000'),
     body('educationBackground').optional().isString().isLength({ max: 1000 }).withMessage('Education background must be max 1000 characters'),
-    body('certifications').optional().isString().isLength({ max: 1000 }).withMessage('Certifications must be max 1000 characters'),
+    body('certifications').optional().isArray().withMessage('Certifications must be an array'),
     body('teachingPhilosophy').optional().isString().isLength({ max: 1000 }).withMessage('Teaching philosophy must be max 1000 characters'),
     body('preferredTeachingMethod').optional().isString().isLength({ max: 100 }).withMessage('Preferred teaching method must be max 100 characters'),
     body('languagesSpoken').optional().isArray().withMessage('Languages spoken must be an array')
 ], asyncHandler(async (req, res) => {
+    // 🚨 ROUTE LEVEL LOGGING - Add this to see if request reaches the route
+    logger.info(`🚀 PUT /api/profiles/tutor - REQUEST RECEIVED`);
+    logger.info(`🔍 User from token: ${req.user ? JSON.stringify({ id: req.user.id, role: req.user.role, email: req.user.email }) : 'NO USER'}`);
+    logger.info(`📦 Request body keys: ${Object.keys(req.body).join(', ')}`);
+    console.log('🚀 PUT /api/profiles/tutor - REQUEST RECEIVED');
+    console.log('🔍 User from token:', req.user ? { id: req.user.id, role: req.user.role, email: req.user.email } : 'NO USER');
+    // Trigger restart
+    console.log('📦 Request body keys:', Object.keys(req.body).join(', '));
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({
             message: 'Validation failed',
             errors: errors.array()
         });
+    }
+
+    // Check if req.user exists
+    if (!req.user) {
+        logger.error('req.user is not set - authentication middleware may have failed');
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!req.user.id) {
+        logger.error('req.user.id is not set:', req.user);
+        return res.status(401).json({ message: 'Invalid user data' });
     }
 
     const userId = req.user.id;
@@ -307,10 +332,31 @@ router.put('/tutor', [
         languagesSpoken
     } = req.body;
 
+    // Add detailed logging for debugging
+    logger.info(`Tutor profile update attempt - User ID: ${userId}, User object:`, req.user);
+    logger.info(`Request body:`, req.body);
+
     // Check if user is a tutor
     const userResult = await query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0 || userResult.rows[0].role !== 'tutor') {
+    logger.info(`User lookup result for ${userId}:`, userResult.rows);
+    if (userResult.rows.length === 0) {
+        logger.error(`User not found for tutor profile update: ${userId}`);
+        return res.status(403).json({ message: 'Access denied. User not found.' });
+    }
+
+    if (userResult.rows[0].role !== 'tutor') {
+        logger.error(`Non-tutor user attempting to update tutor profile: ${userId}, role: ${userResult.rows[0].role}`);
         return res.status(403).json({ message: 'Access denied. Only tutors can update tutor profiles.' });
+    }
+
+    // Check if tutor profile exists, create if it doesn't
+    const profileCheck = await query('SELECT id FROM tutor_profiles WHERE user_id = $1', [userId]);
+    if (profileCheck.rows.length === 0) {
+        logger.info(`Creating tutor profile for user: ${userId}`);
+        await query(`
+            INSERT INTO tutor_profiles (user_id, hourly_rate, years_of_experience)
+            VALUES ($1, 0.00, 0)
+        `, [userId]);
     }
 
     // Build dynamic update query
@@ -372,7 +418,8 @@ router.put('/tutor', [
 }));
 
 // Update student profile
-router.put('/:id/student', [
+// Constrain :id to UUID to avoid collisions with static routes like "/tutor"
+router.put('/:id([0-9a-fA-F-]{36})/student', [
     authenticateToken,
     body('gradeLevel').optional().isString().isLength({ max: 50 }).withMessage('Grade level must be max 50 characters'),
     body('schoolName').optional().isString().isLength({ max: 255 }).withMessage('School name must be max 255 characters'),
@@ -462,9 +509,11 @@ router.put('/:id/student', [
 }));
 
 // Update user address
-router.put('/:id/address', [
+// Constrain :id to UUID to avoid collisions with static routes like "/tutor"
+router.put('/:id([0-9a-fA-F-]{36})/address', [
     authenticateToken,
-    body('streetAddress').optional().isString().isLength({ max: 255 }).withMessage('Street address must be max 255 characters'),
+    body('addressLine1').optional().isString().isLength({ max: 255 }).withMessage('Address line 1 must be max 255 characters'),
+    body('addressLine2').optional().isString().isLength({ max: 255 }).withMessage('Address line 2 must be max 255 characters'),
     body('city').optional().isString().isLength({ max: 100 }).withMessage('City must be max 100 characters'),
     body('state').optional().isString().isLength({ max: 50 }).withMessage('State must be max 50 characters'),
     body('postalCode').optional().isString().isLength({ max: 20 }).withMessage('Postal code must be max 20 characters'),
@@ -479,7 +528,7 @@ router.put('/:id/address', [
     }
 
     const { id } = req.params;
-    const { streetAddress, city, state, postalCode, country } = req.body;
+    const { addressLine1, addressLine2, city, state, postalCode, country } = req.body;
 
     // Check authorization
     if (req.user.id !== id && req.user.role !== 'admin') {
@@ -494,9 +543,13 @@ router.put('/:id/address', [
         const updates = [];
         const params = [];
 
-        if (streetAddress !== undefined) {
-            updates.push(`street_address = $${params.length + 1}`);
-            params.push(streetAddress);
+        if (addressLine1 !== undefined) {
+            updates.push(`address_line1 = $${params.length + 1}`);
+            params.push(addressLine1);
+        }
+        if (addressLine2 !== undefined) {
+            updates.push(`address_line2 = $${params.length + 1}`);
+            params.push(addressLine2);
         }
         if (city !== undefined) {
             updates.push(`city = $${params.length + 1}`);
@@ -526,9 +579,9 @@ router.put('/:id/address', [
     } else {
         // Create new address
         await query(`
-            INSERT INTO user_addresses (user_id, street_address, city, state, postal_code, country, is_primary)
-            VALUES ($1, $2, $3, $4, $5, $6, true)
-        `, [id, streetAddress || null, city || null, state || null, postalCode || null, country || 'USA']);
+            INSERT INTO user_addresses (user_id, address_line1, address_line2, city, state, postal_code, country, is_primary)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+        `, [id, addressLine1 || null, addressLine2 || null, city || null, state || null, postalCode || null, country || 'USA']);
     }
 
     logger.info(`Address updated for user ${id}`);
