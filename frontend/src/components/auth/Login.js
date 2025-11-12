@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
 import Alert from '../ui/Alert';
+import Modal from '../ui/Modal';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -14,16 +15,37 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showErrorShake, setShowErrorShake] = useState(false);
+    const [attempts, setAttempts] = useState(0);
+    const [showWrongPasswordModal, setShowWrongPasswordModal] = useState(false);
+
+    const passwordInputRef = useRef(null);
 
     const { login } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const successMessage = location.state?.message;
 
+    // Prefill email from previous attempts in this tab
+    useEffect(() => {
+        const savedEmail = sessionStorage.getItem('loginEmail');
+        if (savedEmail && !formData.email) {
+            setFormData(prev => ({ ...prev, email: savedEmail }));
+        }
+    }, []);
+
+    // Focus the password field when the wrong-password modal closes
+    useEffect(() => {
+        if (!showWrongPasswordModal && passwordInputRef.current) {
+            passwordInputRef.current.focus();
+        }
+    }, [showWrongPasswordModal]);
+
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'email') {
+            sessionStorage.setItem('loginEmail', value.trim());
+        }
         // Clear error and shake animation when user starts typing
         if (error) {
             setError('');
@@ -83,11 +105,41 @@ const Login = () => {
                 errorMessage = '🌐 Network error. Please check your connection and try again.';
             }
 
-            setError(errorMessage);
+            // Determine if this is a wrong password/email case
+            const isWrongCred = (
+                errorMessage.includes('Invalid email or password') ||
+                errorMessage.includes('Wrong email or password') ||
+                errorMessage.includes('HTTP Error: 401') ||
+                errorMessage.toLowerCase().includes('unauthorized')
+            );
+
+            if (isWrongCred) {
+                // increment attempts and either show modal or redirect if over limit
+                setAttempts(prev => {
+                    const next = prev + 1;
+                    if (next >= 5) {
+                        // redirect to forgot password with email preserved
+                        navigate('/forgot-password', { state: { email: formData.email } });
+                    } else {
+                        setShowWrongPasswordModal(true);
+                    }
+                    return next;
+                });
+
+                // clear only the password field for retry; keep email as requested
+                setFormData(prev => ({ ...prev, password: '' }));
+                setError('');
+            } else {
+                // Other types of errors surface as inline alert
+                setError(errorMessage);
+            }
 
             // Add shake animation for visual feedback
             setShowErrorShake(true);
             setTimeout(() => setShowErrorShake(false), 1000);
+        } else {
+            // on success clear persisted email
+            sessionStorage.removeItem('loginEmail');
         }
 
         setLoading(false);
@@ -164,6 +216,7 @@ const Login = () => {
                                         placeholder="Enter your password"
                                         value={formData.password}
                                         onChange={handleChange}
+                                        ref={passwordInputRef}
                                         disabled={loading}
                                     />
                                     <button
@@ -201,6 +254,25 @@ const Login = () => {
                         </div>
 
                     </form>
+
+                    {/* Wrong password modal */}
+                    <Modal
+                        isOpen={showWrongPasswordModal}
+                        title="Incorrect email or password"
+                        onClose={() => setShowWrongPasswordModal(false)}
+                        primaryAction={{
+                            label: `Try again (${attempts}/5)`,
+                            onClick: () => setShowWrongPasswordModal(false)
+                        }}
+                        secondaryAction={{
+                            label: 'Forgot password',
+                            onClick: () => navigate('/forgot-password', { state: { email: formData.email } })
+                        }}
+                    >
+                        <p className="text-sm text-gray-700">
+                            The email or password you entered is incorrect. You have {Math.max(0, 5 - attempts)} attempts left before we redirect you to reset your password.
+                        </p>
+                    </Modal>
                 </div>
             </div>
         </div>

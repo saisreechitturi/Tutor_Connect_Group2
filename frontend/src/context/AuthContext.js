@@ -13,12 +13,18 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    // Tracks initial auth check only; avoids unmounting routes during actions like login
+    const [initializing, setInitializing] = useState(true);
+    // Optional UI-level loading for actions (login/signup) if components want it
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     // Check for existing auth on app load
     useEffect(() => {
         checkAuth();
+        // We intentionally run this once on mount to verify existing auth
+        // and initialize user state.
+        // eslint-disable-next-line
     }, []);
 
     const checkAuth = async () => {
@@ -42,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Auth check failed:', error);
         } finally {
-            setLoading(false);
+            setInitializing(false);
         }
     };
 
@@ -116,6 +122,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         loading,
+        initializing,
         error,
         login,
         signup,

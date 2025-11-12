@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, ArrowLeft, Key } from 'lucide-react';
 import AuthNavbar from './AuthNavbar';
 import { authService } from '../../services';
@@ -15,6 +15,15 @@ const ForgotPassword = () => {
     const [manualToken, setManualToken] = useState('');
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Prefill email if provided via navigation state (e.g., after 5 failed logins)
+    useEffect(() => {
+        const prefill = location.state?.email;
+        if (prefill) {
+            setEmail(prefill);
+        }
+    }, [location.state]);
 
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -188,10 +197,10 @@ const ForgotPassword = () => {
                                                     setError(''); // Clear error when typing
                                                 }}
                                                 className={`w-full px-3 py-2 border rounded-md focus:outline-none text-sm font-mono ${manualToken && manualToken.length !== 64
-                                                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                                                        : manualToken && manualToken.length === 64
-                                                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
-                                                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                                    : manualToken && manualToken.length === 64
+                                                        ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
+                                                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                                                     }`}
                                                 placeholder="Paste your 64-character reset token here..."
                                             />

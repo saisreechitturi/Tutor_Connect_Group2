@@ -3,10 +3,11 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => {
-    const { isAuthenticated, user, loading } = useAuth();
+    const { isAuthenticated, user, initializing } = useAuth();
     const location = useLocation();
 
-    if (loading) {
+    // Only block rendering while the app is performing the initial auth check.
+    if (initializing) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
