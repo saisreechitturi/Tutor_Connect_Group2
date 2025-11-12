@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import AboutUs from './pages/AboutUs';
 import BrowseTutors from './pages/BrowseTutors';
+import TutorProfile from './pages/TutorProfile';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -84,6 +85,18 @@ function App() {
                                     <>
                                         <Navbar />
                                         <BrowseTutors />
+                                    </>
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/tutor/:id"
+                            element={
+                                <ProtectedRoute requireAuth={false}>
+                                    <>
+                                        <Navbar />
+                                        <TutorProfile />
                                     </>
                                 </ProtectedRoute>
                             }

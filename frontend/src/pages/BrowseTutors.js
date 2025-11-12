@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { tutorService } from '../services';
+import { tutorService, subjectsService } from '../services';
 import BookSessionModal from '../components/modals/BookSessionModal';
 
 const BrowseTutors = () => {
@@ -12,25 +12,52 @@ const BrowseTutors = () => {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [priceRange, setPriceRange] = useState('');
     const [sortBy, setSortBy] = useState('price_low');
+    const [subjects, setSubjects] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedTutor, setSelectedTutor] = useState(null);
 
-    // Fetch tutors from database
+    // Initial load: fetch subjects once
     useEffect(() => {
-        fetchTutors();
+        fetchSubjects();
     }, []);
 
-    const fetchTutors = async () => {
+    // Build the fetchTutors function with stable deps so we don't need to disable ESLint rules
+    const fetchTutors = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            const data = await tutorService.getTutors();
+            const data = await tutorService.getTutors({
+                subject: selectedSubject || undefined,
+                ...(priceRange === 'low' && { minRate: 0, maxRate: 30 }),
+                ...(priceRange === 'medium' && { minRate: 30, maxRate: 60 }),
+                ...(priceRange === 'high' && { minRate: 60 }),
+                minRating: undefined,
+                search: searchTerm || undefined,
+            });
             setTutors(data || []);
         } catch (err) {
             setError(err.message || 'Failed to fetch tutors');
             console.error('Error fetching tutors:', err);
         } finally {
             setLoading(false);
+        }
+    }, [selectedSubject, priceRange, searchTerm]);
+
+    // Refetch tutors when filters change (debounced search could be added later)
+    useEffect(() => {
+        fetchTutors();
+    }, [fetchTutors, selectedSubject, priceRange, sortBy]);
+
+
+
+    const fetchSubjects = async () => {
+        try {
+            const res = await subjectsService.list({ active: true, limit: 100 });
+            const names = (res.subjects || []).map(s => s.name).sort();
+            setSubjects(names);
+        } catch (err) {
+            console.warn('Failed to load subjects; falling back to static list.', err);
+            setSubjects(['Mathematics', 'Physics', 'Spanish', 'Chemistry', 'Biology']);
         }
     };
 
@@ -74,8 +101,7 @@ const BrowseTutors = () => {
         );
     }
 
-    // Get unique subjects from tutors (placeholder - we'll need to fetch subjects separately)
-    const subjects = ['Mathematics', 'Physics', 'Spanish', 'Chemistry', 'Biology'];
+    // subjects are loaded from API into state
 
     // Filter tutors based on search criteria
     const filteredTutors = tutors.filter(tutor => {
@@ -291,9 +317,12 @@ const BrowseTutors = () => {
                                 >
                                     Book Session
                                 </button>
-                                <button className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                                <Link
+                                    to={`/tutor/${tutor.id}`}
+                                    className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium text-center block"
+                                >
                                     View Profile
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     ))}

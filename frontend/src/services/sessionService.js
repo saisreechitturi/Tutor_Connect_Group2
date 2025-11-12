@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import availabilityService from './availabilityService';
 
 class SessionService {
     // Get user's sessions (student or tutor)
@@ -34,23 +35,26 @@ class SessionService {
         }
     }
 
-    // Create new tutoring session
+    // Create new tutoring session (align with backend contracts)
+    // Accepts { tutorId, subjectId, title, description, scheduledStart, scheduledEnd, rate }
     async createSession(sessionData) {
         try {
-            const response = await apiClient.post('/sessions', {
+            const { scheduledStart, scheduledEnd } = sessionData;
+            const start = new Date(scheduledStart);
+            const end = new Date(scheduledEnd);
+            const durationMinutes = Math.max(0, Math.round((end - start) / 60000));
+
+            const payload = {
                 tutorId: sessionData.tutorId,
                 subjectId: sessionData.subjectId,
                 title: sessionData.title,
                 description: sessionData.description,
-                sessionType: sessionData.sessionType, // 'online' or 'in-person'
-                scheduledStart: sessionData.scheduledStart,
-                scheduledEnd: sessionData.scheduledEnd,
-                hourlyRate: sessionData.hourlyRate,
-                meetingLink: sessionData.meetingLink, // for online sessions
-                locationAddress: sessionData.locationAddress, // for in-person sessions
-            });
+                scheduledAt: start.toISOString(),
+                durationMinutes,
+                rate: sessionData.rate ?? sessionData.hourlyRate,
+            };
 
-            return response;
+            return await apiClient.post('/sessions', payload);
         } catch (error) {
             console.error('[SessionService] Create session failed:', error);
             throw error;
@@ -68,57 +72,42 @@ class SessionService {
         }
     }
 
-    // Cancel session
-    async cancelSession(sessionId, reason = '') {
+    // Cancel session (backend uses DELETE /sessions/:id)
+    async cancelSession(sessionId) {
         try {
-            const response = await apiClient.put(`/sessions/${sessionId}/cancel`, {
-                cancellationReason: reason,
-            });
-            return response;
+            return await apiClient.delete(`/sessions/${sessionId}`);
         } catch (error) {
             console.error('[SessionService] Cancel session failed:', error);
             throw error;
         }
     }
 
-    // Start session (for tutors)
+    // Start session: use generic update to set status to in_progress
     async startSession(sessionId) {
         try {
-            const response = await apiClient.put(`/sessions/${sessionId}/start`);
-            return response;
+            return await apiClient.put(`/sessions/${sessionId}`, { status: 'in_progress' });
         } catch (error) {
             console.error('[SessionService] Start session failed:', error);
             throw error;
         }
     }
 
-    // End session (for tutors)
-    async endSession(sessionId, sessionNotes = '', homeworkAssigned = '') {
+    // End session (for tutors): set status completed and add notes
+    async endSession(sessionId, sessionNotes = '') {
         try {
-            const response = await apiClient.put(`/sessions/${sessionId}/end`, {
+            return await apiClient.put(`/sessions/${sessionId}`, {
+                status: 'completed',
                 sessionNotes,
-                homeworkAssigned,
             });
-            return response;
         } catch (error) {
             console.error('[SessionService] End session failed:', error);
             throw error;
         }
     }
 
-    // Add session review/rating
-    async addSessionReview(sessionId, reviewData) {
-        try {
-            const response = await apiClient.post(`/sessions/${sessionId}/review`, {
-                rating: reviewData.rating,
-                reviewText: reviewData.reviewText,
-                isPublic: reviewData.isPublic !== false, // default to public
-            });
-            return response;
-        } catch (error) {
-            console.error('[SessionService] Add session review failed:', error);
-            throw error;
-        }
+    // Reviews are handled by reviewService; keep a thin helper if needed
+    async addSessionReview() {
+        throw new Error('Use reviewService.create({ sessionId, revieweeId, rating, reviewText, isPublic })');
     }
 
     // Get upcoming sessions
@@ -151,15 +140,14 @@ class SessionService {
         }
     }
 
-    // Check for scheduling conflicts
+    // Check for scheduling conflicts by comparing with bookable slots
     async checkAvailability(tutorId, startTime, endTime) {
         try {
-            const response = await apiClient.post('/sessions/check-availability', {
-                tutorId,
-                startTime,
-                endTime,
-            });
-            return response.available || false;
+            const date = new Date(startTime).toISOString().split('T')[0];
+            const { availableSlots = [] } = await availabilityService.getAvailableTimeSlots(tutorId, { date, duration: Math.max(15, Math.round((new Date(endTime) - new Date(startTime)) / 60000)) });
+            const startHHMM = new Date(startTime).toTimeString().slice(0, 5);
+            const endHHMM = new Date(endTime).toTimeString().slice(0, 5);
+            return availableSlots.some(s => s.date === date && s.startTime === startHHMM && s.endTime === endHHMM);
         } catch (error) {
             console.error('[SessionService] Check availability failed:', error);
             throw error;
@@ -177,15 +165,17 @@ class SessionService {
         }
     }
 
-    // Reschedule session
-    async rescheduleSession(sessionId, newStartTime, newEndTime, reason = '') {
+    // Reschedule session (no dedicated endpoint; use update)
+    async rescheduleSession(sessionId, newStartTime, newEndTime) {
         try {
-            const response = await apiClient.put(`/sessions/${sessionId}/reschedule`, {
-                scheduledStart: newStartTime,
-                scheduledEnd: newEndTime,
-                reason,
+            const start = new Date(newStartTime);
+            const end = new Date(newEndTime);
+            const durationMinutes = Math.max(0, Math.round((end - start) / 60000));
+            return await apiClient.put(`/sessions/${sessionId}`, {
+                // Assuming backend supports these fields in generic update; if not, this will need backend support.
+                scheduledAt: start.toISOString(),
+                durationMinutes,
             });
-            return response;
         } catch (error) {
             console.error('[SessionService] Reschedule session failed:', error);
             throw error;

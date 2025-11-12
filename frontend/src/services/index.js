@@ -13,21 +13,29 @@ import calendarService from './calendarService';
 import analyticsService from './analyticsService';
 import availabilityService from './availabilityService';
 import paymentService from './paymentService';
+import subjectsService from './subjectsService';
+import reviewService from './reviewService';
+import notificationService from './notificationService';
+import settingsService from './settingsService';
 
 // Export individual services
-export { 
-    apiClient, 
-    authService, 
-    tutorService, 
-    sessionService, 
-    messageService, 
-    taskService, 
-    adminService, 
-    userService, 
+export {
+    apiClient,
+    authService,
+    tutorService,
+    sessionService,
+    messageService,
+    taskService,
+    adminService,
+    userService,
     calendarService,
     analyticsService,
     availabilityService,
-    paymentService
+    paymentService,
+    subjectsService,
+    reviewService,
+    notificationService,
+    settingsService
 };
 
 // Re-export for convenience
@@ -43,5 +51,9 @@ export {
     calendarService as calendar,
     analyticsService as analytics,
     availabilityService as availability,
-    paymentService as payments
+    paymentService as payments,
+    subjectsService as subjects,
+    reviewService as reviews,
+    notificationService as notifications,
+    settingsService as settings
 };

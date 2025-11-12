@@ -57,7 +57,7 @@ class MessageService {
     // Mark message as read
     async markAsRead(messageId) {
         try {
-            const response = await apiClient.put(`/messages/${messageId}/read`);
+            const response = await apiClient.request(`/messages/${messageId}/read`, { method: 'PATCH' });
             return response;
         } catch (error) {
             console.error('[MessageService] Mark as read failed:', error);
@@ -85,23 +85,30 @@ class MessageService {
     // Get unread message count
     async getUnreadCount() {
         try {
-            const response = await apiClient.get('/messages/unread-count');
-            return response.count || 0;
+            const { messages = [] } = await this.getMessages({ unread: true });
+            return messages.length;
         } catch (error) {
             console.error('[MessageService] Get unread count failed:', error);
-            // Return 0 instead of throwing to avoid disrupting UX
             return 0;
         }
     }
 
     // Get list of conversations (users the current user has messaged with)
     async getConversationsList() {
+        // Backend has conversation by user endpoint but not a list; derive from recent messages
         try {
-            const response = await apiClient.get('/messages/conversations');
-            return response.conversations || response;
+            const { messages = [] } = await this.getMessages({ limit: 100 });
+            const byPeer = new Map();
+            messages.forEach(m => {
+                const me = localStorage.getItem('userId');
+                const peerId = m.sender?.id === me ? m.recipient?.id : m.sender?.id;
+                if (!peerId) return;
+                if (!byPeer.has(peerId)) byPeer.set(peerId, m);
+            });
+            return Array.from(byPeer.values());
         } catch (error) {
             console.error('[MessageService] Get conversations list failed:', error);
-            throw error;
+            return [];
         }
     }
 
@@ -152,19 +159,8 @@ class MessageService {
     }
 
     // Send system message (for session updates, etc.)
-    async sendSystemMessage(recipientId, messageText, sessionId = null) {
-        try {
-            const response = await apiClient.post('/messages/system', {
-                recipientId,
-                messageText,
-                sessionId,
-            });
-
-            return response;
-        } catch (error) {
-            console.error('[MessageService] Send system message failed:', error);
-            throw error;
-        }
+    async sendSystemMessage() {
+        throw new Error('System messages endpoint is not available on the backend.');
     }
 }
 

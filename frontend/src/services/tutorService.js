@@ -9,12 +9,14 @@ class TutorService {
             // Add filters to query params
             if (filters.subject) queryParams.append('subject', filters.subject);
             if (filters.priceRange) {
-                queryParams.append('minPrice', filters.priceRange[0]);
-                queryParams.append('maxPrice', filters.priceRange[1]);
+                if (Array.isArray(filters.priceRange)) {
+                    queryParams.append('minRate', filters.priceRange[0]);
+                    queryParams.append('maxRate', filters.priceRange[1]);
+                }
             }
-            if (filters.rating) queryParams.append('minRating', filters.rating);
-            if (filters.availability) queryParams.append('availability', filters.availability);
-            if (filters.sessionType) queryParams.append('sessionType', filters.sessionType);
+            if (filters.minRate) queryParams.append('minRate', filters.minRate);
+            if (filters.maxRate) queryParams.append('maxRate', filters.maxRate);
+            if (filters.rating || filters.minRating) queryParams.append('minRating', filters.rating ?? filters.minRating);
             if (filters.search) queryParams.append('search', filters.search);
 
             const endpoint = `/tutors${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
@@ -86,51 +88,39 @@ class TutorService {
         }
     }
 
-    // Update tutor profile (for tutors only)
-    async updateTutorProfile(profileData) {
+    // Update tutor profile fields lives under /users/:id per backend
+    async updateTutorProfile(userId, profileData) {
         try {
-            const response = await apiClient.put('/tutors/profile', profileData);
-            return response;
+            return await apiClient.put(`/users/${userId}`, profileData);
         } catch (error) {
             console.error('[TutorService] Update tutor profile failed:', error);
             throw error;
         }
     }
 
-    // Add subject to tutor (for tutors only)
-    async addSubject(subjectId, proficiencyLevel = 'intermediate') {
+    // Add subject to tutor (requires tutorId per backend)
+    async addSubject(tutorId, subjectId, proficiencyLevel = 'intermediate') {
         try {
-            const response = await apiClient.post('/tutors/subjects', {
-                subjectId,
-                proficiencyLevel,
-            });
-            return response;
+            return await apiClient.post(`/tutors/${tutorId}/subjects`, { subjectId, proficiencyLevel });
         } catch (error) {
             console.error('[TutorService] Add subject failed:', error);
             throw error;
         }
     }
 
-    // Remove subject from tutor (for tutors only)
-    async removeSubject(subjectId) {
+    // Remove subject from tutor
+    async removeSubject(tutorId, subjectId) {
         try {
-            const response = await apiClient.delete(`/tutors/subjects/${subjectId}`);
-            return response;
+            return await apiClient.delete(`/tutors/${tutorId}/subjects/${subjectId}`);
         } catch (error) {
             console.error('[TutorService] Remove subject failed:', error);
             throw error;
         }
     }
 
-    // Update tutor availability
-    async updateAvailability(availabilityData) {
-        try {
-            const response = await apiClient.put('/tutors/availability', availabilityData);
-            return response;
-        } catch (error) {
-            console.error('[TutorService] Update availability failed:', error);
-            throw error;
-        }
+    // Availability handled by availabilityService; method kept for back-compat
+    async updateAvailability() {
+        throw new Error('Use availabilityService to manage availability slots.');
     }
 
     // Get tutor's availability

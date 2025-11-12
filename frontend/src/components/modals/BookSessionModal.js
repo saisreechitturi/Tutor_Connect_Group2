@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, DollarSign, User, MapPin, Video, AlertCircle, CheckCircle } from 'lucide-react';
-import { sessionService, tutorService } from '../../services';
+import { sessionService, tutorService, subjectsService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = null }) => {
@@ -15,7 +15,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         tutorId: selectedTutor?.id || '',
         title: '',
         description: '',
-        subjectId: '',
+        subjectId: null,
         sessionType: 'online', // 'online' or 'in-person'
         scheduledDate: '',
         scheduledTime: '',
@@ -38,17 +38,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         { value: 180, label: '3 hours' }
     ];
 
-    const subjects = [
-        'Mathematics',
-        'Science',
-        'English',
-        'History',
-        'Computer Science',
-        'Languages',
-        'Arts',
-        'Music',
-        'Other'
-    ];
+    const [subjects, setSubjects] = useState([]);
 
     useEffect(() => {
         if (isOpen && !selectedTutor) {
@@ -65,6 +55,19 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             }));
         }
     }, [selectedTutor]);
+
+    useEffect(() => {
+        const loadSubjects = async () => {
+            try {
+                const res = await subjectsService.list({ active: true, limit: 100 });
+                setSubjects(res.subjects || []);
+            } catch (err) {
+                console.warn('Failed to load subjects list', err);
+                setSubjects([]);
+            }
+        };
+        if (isOpen) loadSubjects();
+    }, [isOpen]);
 
     const fetchTutors = async () => {
         try {
@@ -196,7 +199,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             tutorId: selectedTutor?.id || '',
             title: '',
             description: '',
-            subjectId: '',
+            subjectId: null,
             sessionType: 'online',
             scheduledDate: '',
             scheduledTime: '',
@@ -338,13 +341,13 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                             </label>
                             <select
                                 className="input-field"
-                                value={formData.subjectId}
-                                onChange={(e) => handleInputChange('subjectId', e.target.value)}
+                                value={formData.subjectId ?? ''}
+                                onChange={(e) => handleInputChange('subjectId', e.target.value ? parseInt(e.target.value) : null)}
                                 disabled={loading}
                             >
                                 <option value="">Select a subject...</option>
                                 {subjects.map(subject => (
-                                    <option key={subject} value={subject}>{subject}</option>
+                                    <option key={subject.id} value={subject.id}>{subject.name}</option>
                                 ))}
                             </select>
                         </div>
