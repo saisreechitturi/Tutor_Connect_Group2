@@ -104,14 +104,16 @@ const TutorTasks = () => {
             setLoading(true);
             setError(null);
 
-            // Use mock data for now instead of API call
-            // TODO: Replace with actual API call when backend is ready
-            // const tasksData = await taskService.getUserTasks(user.id);
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            setTasks(mockTasks);
+            // Try to fetch from taskService, fall back to mock data
+            try {
+                const tasksData = await taskService.getUserTasks(user.id);
+                setTasks(tasksData || mockTasks);
+            } catch (apiError) {
+                console.warn('Task service not available, using mock data:', apiError);
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setTasks(mockTasks);
+            }
         } catch (err) {
             console.error('Error fetching tasks:', err);
             setError('Failed to load tasks. Please try again.');
@@ -688,6 +690,26 @@ const TutorTasks = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10 input-field"
                         />
+                    </div>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setActiveTab('all');
+                            }}
+                            className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title="Reset filters"
+                        >
+                            <Filter className="h-4 w-4 mr-2" />
+                            Reset
+                        </button>
+                        <button
+                            className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            title="View calendar"
+                        >
+                            <Calendar className="h-4 w-4 mr-2" />
+                            Calendar
+                        </button>
                     </div>
                     <div className="flex space-x-2">
                         {['all', 'pending', 'in-progress', 'completed'].map(tab => (
