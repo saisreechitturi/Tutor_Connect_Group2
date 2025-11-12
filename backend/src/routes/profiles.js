@@ -97,9 +97,8 @@ router.get('/:id([0-9a-fA-F-]{36})', authenticateToken, asyncHandler(async (req,
         }
     } else if (user.role === 'student' && isOwnProfile) {
         const studentResult = await query(`
-            SELECT sp.grade_level, sp.school_name, sp.academic_goals, sp.learning_style,
-                   sp.parent_contact_info, sp.emergency_contact, sp.learning_disabilities,
-                   sp.preferred_tutoring_mode
+            SELECT sp.grade_level, sp.school_name, sp.learning_goals, sp.preferred_learning_style,
+                   sp.subjects_of_interest, sp.availability_schedule, sp.emergency_contact
             FROM student_profiles sp
             WHERE sp.user_id = $1
         `, [id]);
@@ -109,12 +108,11 @@ router.get('/:id([0-9a-fA-F-]{36})', authenticateToken, asyncHandler(async (req,
             profile.studentProfile = {
                 gradeLevel: studentData.grade_level,
                 schoolName: studentData.school_name,
-                academicGoals: studentData.academic_goals,
-                learningStyle: studentData.learning_style,
-                parentContactInfo: studentData.parent_contact_info,
-                emergencyContact: studentData.emergency_contact,
-                learningDisabilities: studentData.learning_disabilities,
-                preferredTutoringMode: studentData.preferred_tutoring_mode
+                learningGoals: studentData.learning_goals,
+                preferredLearningStyle: studentData.preferred_learning_style,
+                subjectsOfInterest: studentData.subjects_of_interest || [],
+                availabilitySchedule: studentData.availability_schedule || null,
+                emergencyContact: studentData.emergency_contact || null
             };
         }
     }
@@ -423,12 +421,11 @@ router.put('/:id([0-9a-fA-F-]{36})/student', [
     authenticateToken,
     body('gradeLevel').optional().isString().isLength({ max: 50 }).withMessage('Grade level must be max 50 characters'),
     body('schoolName').optional().isString().isLength({ max: 255 }).withMessage('School name must be max 255 characters'),
-    body('academicGoals').optional().isString().isLength({ max: 1000 }).withMessage('Academic goals must be max 1000 characters'),
-    body('learningStyle').optional().isString().isLength({ max: 100 }).withMessage('Learning style must be max 100 characters'),
-    body('parentContactInfo').optional().isObject().withMessage('Parent contact info must be an object'),
-    body('emergencyContact').optional().isObject().withMessage('Emergency contact must be an object'),
-    body('learningDisabilities').optional().isString().isLength({ max: 500 }).withMessage('Learning disabilities must be max 500 characters'),
-    body('preferredTutoringMode').optional().isIn(['online', 'in-person', 'both']).withMessage('Preferred tutoring mode must be online, in-person, or both')
+    body('learningGoals').optional().isString().isLength({ max: 2000 }).withMessage('Learning goals must be max 2000 characters'),
+    body('preferredLearningStyle').optional({ nullable: true, checkFalsy: true }).isIn(['visual', 'auditory', 'kinesthetic', 'reading', 'both']).withMessage('Preferred learning style is invalid'),
+    body('subjectsOfInterest').optional().isArray().withMessage('Subjects of interest must be an array'),
+    body('availabilitySchedule').optional().isObject().withMessage('Availability schedule must be an object'),
+    body('emergencyContact').optional().isObject().withMessage('Emergency contact must be an object')
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -440,8 +437,8 @@ router.put('/:id([0-9a-fA-F-]{36})/student', [
 
     const { id } = req.params;
     const {
-        gradeLevel, schoolName, academicGoals, learningStyle, parentContactInfo,
-        emergencyContact, learningDisabilities, preferredTutoringMode
+        gradeLevel, schoolName, learningGoals, preferredLearningStyle,
+        subjectsOfInterest, availabilitySchedule, emergencyContact
     } = req.body;
 
     // Check authorization
@@ -453,6 +450,12 @@ router.put('/:id([0-9a-fA-F-]{36})/student', [
     const userCheck = await query('SELECT role FROM users WHERE id = $1', [id]);
     if (userCheck.rows.length === 0 || userCheck.rows[0].role !== 'student') {
         return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Ensure a student profile exists for this user
+    const profileCheck = await query('SELECT id FROM student_profiles WHERE user_id = $1', [id]);
+    if (profileCheck.rows.length === 0) {
+        await query('INSERT INTO student_profiles (user_id) VALUES ($1)', [id]);
     }
 
     // Build dynamic update query
@@ -467,29 +470,30 @@ router.put('/:id([0-9a-fA-F-]{36})/student', [
         updates.push(`school_name = $${params.length + 1}`);
         params.push(schoolName);
     }
-    if (academicGoals !== undefined) {
-        updates.push(`academic_goals = $${params.length + 1}`);
-        params.push(academicGoals);
+    if (learningGoals !== undefined) {
+        updates.push(`learning_goals = $${params.length + 1}`);
+        params.push(learningGoals);
     }
-    if (learningStyle !== undefined) {
-        updates.push(`learning_style = $${params.length + 1}`);
-        params.push(learningStyle);
+    if (preferredLearningStyle !== undefined) {
+        updates.push(`preferred_learning_style = $${params.length + 1}`);
+        params.push(preferredLearningStyle);
     }
-    if (parentContactInfo !== undefined) {
-        updates.push(`parent_contact_info = $${params.length + 1}`);
-        params.push(JSON.stringify(parentContactInfo));
+    if (subjectsOfInterest !== undefined) {
+        updates.push(`subjects_of_interest = $${params.length + 1}`);
+        // Accept comma-separated string or array of strings
+        let subjects = subjectsOfInterest;
+        if (typeof subjectsOfInterest === 'string') {
+            subjects = subjectsOfInterest.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        params.push(subjects);
+    }
+    if (availabilitySchedule !== undefined) {
+        updates.push(`availability_schedule = $${params.length + 1}`);
+        params.push(JSON.stringify(availabilitySchedule));
     }
     if (emergencyContact !== undefined) {
         updates.push(`emergency_contact = $${params.length + 1}`);
         params.push(JSON.stringify(emergencyContact));
-    }
-    if (learningDisabilities !== undefined) {
-        updates.push(`learning_disabilities = $${params.length + 1}`);
-        params.push(learningDisabilities);
-    }
-    if (preferredTutoringMode !== undefined) {
-        updates.push(`preferred_tutoring_mode = $${params.length + 1}`);
-        params.push(preferredTutoringMode);
     }
 
     if (updates.length === 0) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { profiles } from '../services';
 
 const StudentProfileSetup = () => {
     const { user, updateProfile } = useAuth();
@@ -44,38 +45,36 @@ const StudentProfileSetup = () => {
         setError('');
 
         try {
-            const token = localStorage.getItem('token');
-            console.log('Submitting student profile:', formData);
-
-            const response = await fetch(`/api/profiles/${user.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    grade: formData.grade ? parseInt(formData.grade) : null,
-                    school: formData.school,
-                    interests: formData.interests,
-                    bio: formData.bio
-                })
+            // Save base user info
+            await profiles.updateUser(user.id, {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                bio: formData.bio
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Profile updated successfully:', data);
-
-                // Update auth context
-                await updateProfile(formData);
-
-                // Redirect to student dashboard
-                navigate('/student', { replace: true });
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update profile');
+            // Save student-specific info aligned with backend schema
+            const payload = {};
+            if (formData.grade) payload.gradeLevel = String(formData.grade);
+            if (formData.school) payload.schoolName = formData.school;
+            if (formData.interests) {
+                payload.learningGoals = formData.interests;
+                const arr = formData.interests.split(',').map(s => s.trim()).filter(Boolean);
+                if (arr.length) payload.subjectsOfInterest = arr;
             }
+            // Only include preferredLearningStyle if user explicitly selects one (avoid empty string)
+            if (formData.preferredLearningStyle) payload.preferredLearningStyle = formData.preferredLearningStyle;
+
+            await profiles.updateStudent(user.id, payload);
+
+            // Update auth context display fields
+            await updateProfile({
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                bio: formData.bio
+            });
+
+            // Redirect to student dashboard
+            navigate('/student', { replace: true });
         } catch (err) {
             console.error('Profile update error:', err);
             setError(err.message || 'Failed to update profile. Please try again.');

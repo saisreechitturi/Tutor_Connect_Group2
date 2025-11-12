@@ -7,7 +7,6 @@ const ProfileChecker = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(true);
-    const [profileComplete, setProfileComplete] = useState(false);
 
     useEffect(() => {
         const checkUserProfile = async () => {
@@ -20,7 +19,6 @@ const ProfileChecker = ({ children }) => {
             const setupPaths = ['/tutor-setup', '/student-setup', '/profile-setup'];
             if (setupPaths.some(path => location.pathname.startsWith(path))) {
                 setLoading(false);
-                setProfileComplete(true);
                 return;
             }
 
@@ -32,12 +30,12 @@ const ProfileChecker = ({ children }) => {
                     await checkStudentProfile();
                 } else {
                     // Admin users don't need profile setup
-                    setProfileComplete(true);
+                    // Allow access
                 }
             } catch (error) {
                 console.error('Error checking user profile:', error);
                 // On error, allow access but log the issue
-                setProfileComplete(true);
+                // Allow access
             }
 
             setLoading(false);
@@ -69,8 +67,6 @@ const ProfileChecker = ({ children }) => {
                         tutorProfile.subjects.length > 0;
 
                     console.log('Tutor profile complete:', isComplete);
-                    setProfileComplete(isComplete);
-
                     // If profile is not complete, redirect to setup
                     if (!isComplete) {
                         console.log('Redirecting to tutor setup...');
@@ -80,17 +76,15 @@ const ProfileChecker = ({ children }) => {
                 } else if (response.status === 404) {
                     // No profile exists, redirect to setup
                     console.log('No tutor profile found, redirecting to setup...');
-                    setProfileComplete(false);
                     navigate('/tutor-setup', { replace: true });
                     return;
                 } else {
                     console.error('Error fetching tutor profile:', response.status);
                     // Allow access on error
-                    setProfileComplete(true);
                 }
             } catch (error) {
                 console.error('Error checking tutor profile:', error);
-                setProfileComplete(true);
+                // Allow access
             }
         };
 
@@ -106,25 +100,17 @@ const ProfileChecker = ({ children }) => {
                 if (response.ok) {
                     const data = await response.json();
                     // Backend wraps payload as { profile: {...} }
-                    const profile = data?.profile || data;
-                    const studentProfile = profile?.studentProfile || profile?.user || profile;
+                    const p = data?.profile || data;
+                    const sp = p?.studentProfile || {};
 
-                    console.log('Student profile data:', studentProfile);
+                    console.log('Student profile data:', { base: p, student: sp });
 
-                    // Check if essential student profile fields are completed
-                    // For students, we mainly need basic info which might already be set during registration
-                    const isComplete = !!(studentProfile &&
-                        studentProfile.firstName &&
-                        studentProfile.lastName &&
-                        (
-                            // prefer explicit grade level when available
-                            studentProfile.gradeLevel !== undefined ||
-                            studentProfile.grade !== undefined ||
-                            studentProfile.schoolName // fallback heuristic
-                        ));
+                    // Completion: must have base names, and either gradeLevel or schoolName present
+                    const hasNames = !!(p?.firstName && p?.lastName);
+                    const hasStudentInfo = !!(sp?.gradeLevel || sp?.schoolName);
+                    const isComplete = hasNames && hasStudentInfo;
 
                     console.log('Student profile complete:', isComplete);
-                    setProfileComplete(isComplete);
 
                     // If profile is not complete, redirect to student setup
                     if (!isComplete) {
@@ -135,17 +121,15 @@ const ProfileChecker = ({ children }) => {
                 } else if (response.status === 404) {
                     // No profile exists, redirect to setup
                     console.log('No student profile found, redirecting to setup...');
-                    setProfileComplete(false);
                     navigate('/student-setup', { replace: true });
                     return;
                 } else {
                     console.error('Error fetching student profile:', response.status);
                     // Allow access on error
-                    setProfileComplete(true);
                 }
             } catch (error) {
                 console.error('Error checking student profile:', error);
-                setProfileComplete(true);
+                // Allow access
             }
         };
 

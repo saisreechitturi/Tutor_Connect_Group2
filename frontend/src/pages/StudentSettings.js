@@ -1,509 +1,241 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { userService } from '../services';
-import { User, Mail, Phone, MapPin, Bell, Shield, CreditCard, Trash2, Save } from 'lucide-react';
+import { profiles } from '../services';
+import { User, Mail, Phone, Save } from 'lucide-react';
+
+const learningStyleOptions = [
+    { value: 'visual', label: 'Visual' },
+    { value: 'auditory', label: 'Auditory' },
+    { value: 'kinesthetic', label: 'Kinesthetic' },
+    { value: 'reading', label: 'Reading/Writing' },
+    { value: 'both', label: 'Both / Mixed' }
+];
 
 const StudentSettings = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('profile');
     const [loading, setLoading] = useState(false);
-    const [saveStatus, setSaveStatus] = useState(null); // 'saving', 'success', 'error'
+    const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'success' | 'error'
 
-    const [formData, setFormData] = useState({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        location: user?.location || '',
-        bio: user?.bio || '',
-        avatarUrl: user?.avatarUrl || ''
+    const [baseForm, setBaseForm] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        bio: '',
+        profileImage: ''
     });
 
-    const [notifications, setNotifications] = useState({
-        emailNotifications: true,
-        pushNotifications: true,
-        sessionReminders: true,
-        weeklyDigest: false,
-        promotionalEmails: false
+    const [studentForm, setStudentForm] = useState({
+        gradeLevel: '',
+        schoolName: '',
+        learningGoals: '',
+        preferredLearningStyle: '',
+        subjectsOfInterest: '', // comma-separated for UI
+        emergencyName: '',
+        emergencyPhone: '',
+        emergencyEmail: '',
+        availabilityNotes: ''
     });
 
-    const [privacy, setPrivacy] = useState({
-        profileVisibility: 'public',
-        showEmail: false,
-        showPhone: false,
-        allowMessages: true
-    });
-
-    // Load user preferences on component mount
+    // Load current profile
     useEffect(() => {
-        if (user?.id) {
-            loadUserPreferences();
-            // Update form data when user changes
-            setFormData({
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                location: user.location || '',
-                bio: user.bio || '',
-                avatarUrl: user.avatarUrl || ''
-            });
-        }
+        const load = async () => {
+            if (!user?.id) return;
+            try {
+                const data = await profiles.getByUserId(user.id);
+                const p = data?.profile || {};
+                const sp = p.studentProfile || {};
+
+                setBaseForm({
+                    firstName: p.firstName || '',
+                    lastName: p.lastName || '',
+                    email: p.email || user.email || '',
+                    phone: p.phone || '',
+                    bio: p.bio || '',
+                    profileImage: p.profileImage || ''
+                });
+
+                const emergency = sp.emergencyContact || {};
+                const availability = sp.availabilitySchedule || {};
+
+                setStudentForm({
+                    gradeLevel: sp.gradeLevel || '',
+                    schoolName: sp.schoolName || '',
+                    learningGoals: sp.learningGoals || '',
+                    preferredLearningStyle: sp.preferredLearningStyle || '',
+                    subjectsOfInterest: Array.isArray(sp.subjectsOfInterest) ? sp.subjectsOfInterest.join(', ') : '',
+                    emergencyName: emergency.name || '',
+                    emergencyPhone: emergency.phone || '',
+                    emergencyEmail: emergency.email || '',
+                    availabilityNotes: availability.notes || ''
+                });
+            } catch (err) {
+                console.error('Failed to load student profile:', err);
+            }
+        };
+        load();
     }, [user]);
 
-    const loadUserPreferences = async () => {
-        try {
-            const preferences = await userService.getPreferences(user.id);
-            if (preferences.notifications) {
-                setNotifications(preferences.notifications);
-            }
-            if (preferences.privacy) {
-                setPrivacy(preferences.privacy);
-            }
-        } catch (error) {
-            console.error('Failed to load user preferences:', error);
-        }
-    };
+    const handleBaseChange = (field, value) => setBaseForm(prev => ({ ...prev, [field]: value }));
+    const handleStudentChange = (field, value) => setStudentForm(prev => ({ ...prev, [field]: value }));
 
-    const handlePhotoUpload = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            // Check file size (1MB max)
-            if (file.size > 1024 * 1024) {
-                alert('File size must be less than 1MB');
-                return;
-            }
-
-            // Check file type
-            if (!file.type.match('image.*')) {
-                alert('Please select an image file');
-                return;
-            }
-
-            // Create preview URL
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setFormData(prev => ({ ...prev, avatarUrl: e.target.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleInputChange = (section, field, value) => {
-        if (section === 'profile') {
-            setFormData(prev => ({ ...prev, [field]: value }));
-        } else if (section === 'notifications') {
-            setNotifications(prev => ({ ...prev, [field]: value }));
-        } else if (section === 'privacy') {
-            setPrivacy(prev => ({ ...prev, [field]: value }));
-        }
-    };
-
-    const handleSave = async (section) => {
-        if (!user?.id) {
-            setSaveStatus('error');
-            console.error('No user ID available');
-            return;
-        }
-
+    const handleSave = async () => {
+        if (!user?.id) return;
         setLoading(true);
         setSaveStatus('saving');
-
         try {
-            if (section === 'profile') {
-                await userService.updateProfile(user.id, formData);
-                setSaveStatus('success');
-            } else if (section === 'notifications') {
-                await userService.updatePreferences(user.id, { notifications });
-                setSaveStatus('success');
-            } else if (section === 'privacy') {
-                await userService.updatePreferences(user.id, { privacy });
-                setSaveStatus('success');
-            }
+            // Update base user fields
+            const { firstName, lastName, phone, bio, profileImage } = baseForm;
+            await profiles.updateUser(user.id, { firstName, lastName, phone, bio, profileImage });
 
-            // Clear success status after 3 seconds
-            setTimeout(() => setSaveStatus(null), 3000);
-        } catch (error) {
-            console.error(`Error saving ${section} settings:`, error);
+            // Update student profile fields
+            const {
+                gradeLevel, schoolName, learningGoals, preferredLearningStyle,
+                subjectsOfInterest, emergencyName, emergencyPhone, emergencyEmail, availabilityNotes
+            } = studentForm;
+
+            const payload = {};
+            if (gradeLevel) payload.gradeLevel = gradeLevel;
+            if (schoolName) payload.schoolName = schoolName;
+            if (learningGoals) payload.learningGoals = learningGoals;
+            if (preferredLearningStyle) payload.preferredLearningStyle = preferredLearningStyle;
+            const subjectsArr = subjectsOfInterest
+                ? subjectsOfInterest.split(',').map(s => s.trim()).filter(Boolean)
+                : [];
+            if (subjectsArr.length) payload.subjectsOfInterest = subjectsArr;
+            if (availabilityNotes) payload.availabilitySchedule = { notes: availabilityNotes };
+            const emergency = {
+                name: emergencyName || '',
+                phone: emergencyPhone || '',
+                email: emergencyEmail || ''
+            };
+            // Only send emergencyContact if any field provided
+            if (emergency.name || emergency.phone || emergency.email) payload.emergencyContact = emergency;
+
+            await profiles.updateStudent(user.id, payload);
+
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus(null), 2500);
+        } catch (err) {
+            console.error('Failed to save profile:', err);
             setSaveStatus('error');
-            // Clear error status after 5 seconds
-            setTimeout(() => setSaveStatus(null), 5000);
+            setTimeout(() => setSaveStatus(null), 4000);
         } finally {
             setLoading(false);
         }
     };
 
-    const tabs = [
-        { id: 'profile', label: 'Profile', icon: User },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'privacy', label: 'Privacy', icon: Shield },
-        { id: 'billing', label: 'Billing', icon: CreditCard }
-    ];
-
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                    <p className="text-gray-600 mt-1">Manage your account settings and preferences</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Student Profile</h1>
+                    <p className="text-gray-600 mt-1">Update your personal details and learning preferences</p>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="border-b border-gray-200">
-                    <nav className="flex space-x-8 px-6">
-                        {tabs.map(({ id, label, icon: Icon }) => (
-                            <button
-                                key={id}
-                                onClick={() => setActiveTab(id)}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${activeTab === id
-                                    ? 'border-primary-500 text-primary-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                            >
-                                <Icon className="h-4 w-4" />
-                                <span>{label}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+                <div className="p-6 space-y-8">
+                    {/* Basic Info */}
+                    <section>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            Personal Information
+                        </h3>
 
-                {/* Tab Content */}
-                <div className="p-6">
-                    {activeTab === 'profile' && (
-                        <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Information</h3>
-
-                                {/* Avatar Section */}
-                                <div className="flex items-center space-x-6 mb-6">
-                                    <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                                        {formData.avatarUrl ? (
-                                            <img
-                                                src={formData.avatarUrl}
-                                                alt="Profile"
-                                                className="h-full w-full object-cover"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                    e.target.nextSibling.style.display = 'flex';
-                                                }}
-                                            />
-                                        ) : null}
-                                        <div
-                                            className={`h-full w-full bg-blue-500 flex items-center justify-center text-white text-2xl font-medium ${formData.avatarUrl ? 'hidden' : 'flex'}`}
-                                            style={{ display: formData.avatarUrl ? 'none' : 'flex' }}
-                                        >
-                                            {user?.firstName?.[0] || user?.email?.[0] || 'U'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="file"
-                                            id="photo-upload"
-                                            accept="image/*"
-                                            onChange={handlePhotoUpload}
-                                            className="hidden"
-                                        />
-                                        <label
-                                            htmlFor="photo-upload"
-                                            className="btn-primary text-sm cursor-pointer"
-                                        >
-                                            Change Photo
-                                        </label>
-                                        <p className="text-xs text-gray-500 mt-1">JPG, GIF or PNG. 1MB max.</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            First Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.firstName}
-                                            onChange={(e) => handleInputChange('profile', 'firstName', e.target.value)}
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Last Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.lastName}
-                                            onChange={(e) => handleInputChange('profile', 'lastName', e.target.value)}
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            <Mail className="inline h-4 w-4 mr-1" />
-                                            Email Address
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => handleInputChange('profile', 'email', e.target.value)}
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            <Phone className="inline h-4 w-4 mr-1" />
-                                            Phone Number
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            value={formData.phone}
-                                            onChange={(e) => handleInputChange('profile', 'phone', e.target.value)}
-                                            className="input-field"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            <MapPin className="inline h-4 w-4 mr-1" />
-                                            Location
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.location}
-                                            onChange={(e) => handleInputChange('profile', 'location', e.target.value)}
-                                            className="input-field"
-                                            placeholder="City, State/Country"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Bio
-                                        </label>
-                                        <textarea
-                                            rows={4}
-                                            value={formData.bio}
-                                            onChange={(e) => handleInputChange('profile', 'bio', e.target.value)}
-                                            className="input-field"
-                                            placeholder="Tell us about yourself, your interests, and learning goals..."
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end pt-4">
-                                    {/* Status Messages */}
-                                    {saveStatus === 'success' && (
-                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
-                                            ✓ Profile saved successfully!
-                                        </div>
-                                    )}
-                                    {saveStatus === 'error' && (
-                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
-                                            ✗ Failed to save profile. Please try again.
-                                        </div>
-                                    )}
-
-                                    <button
-                                        onClick={() => handleSave('profile')}
-                                        disabled={loading}
-                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <Save className="h-4 w-4" />
-                                        <span>{loading ? 'Saving...' : 'Save Changes'}</span>
-                                    </button>
-                                </div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                <input type="text" className="input-field" value={baseForm.firstName} onChange={(e) => handleBaseChange('firstName', e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                <input type="text" className="input-field" value={baseForm.lastName} onChange={(e) => handleBaseChange('lastName', e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                                    <Mail className="h-4 w-4" /> Email (read-only)
+                                </label>
+                                <input type="email" className="input-field bg-gray-50" value={baseForm.email} disabled readOnly />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                                    <Phone className="h-4 w-4" /> Phone Number
+                                </label>
+                                <input type="tel" className="input-field" value={baseForm.phone} onChange={(e) => handleBaseChange('phone', e.target.value)} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                                <textarea rows={4} className="input-field" value={baseForm.bio} onChange={(e) => handleBaseChange('bio', e.target.value)} placeholder="Tell us about yourself and your learning goals..." />
                             </div>
                         </div>
-                    )}
+                    </section>
 
-                    {activeTab === 'notifications' && (
-                        <div className="space-y-6">
+                    {/* Student Profile */}
+                    <section>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Learning Profile</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Preferences</h3>
-                                <p className="text-gray-600 mb-6">Choose how you want to be notified about activities and updates.</p>
-
-                                <div className="space-y-4">
-                                    {[
-                                        { key: 'emailNotifications', label: 'Email Notifications', description: 'Receive notifications via email' },
-                                        { key: 'pushNotifications', label: 'Push Notifications', description: 'Receive push notifications in your browser' },
-                                        { key: 'sessionReminders', label: 'Session Reminders', description: 'Get reminded before your tutoring sessions' },
-                                        { key: 'weeklyDigest', label: 'Weekly Digest', description: 'Receive a weekly summary of your activities' },
-                                        { key: 'promotionalEmails', label: 'Promotional Emails', description: 'Receive emails about new features and offers' }
-                                    ].map(({ key, label, description }) => (
-                                        <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <h4 className="font-medium text-gray-900">{label}</h4>
-                                                <p className="text-sm text-gray-500">{description}</p>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={notifications[key]}
-                                                    onChange={(e) => handleInputChange('notifications', key, e.target.checked)}
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                                            </label>
-                                        </div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                                <input type="text" className="input-field" placeholder="e.g., 10th Grade or Sophomore" value={studentForm.gradeLevel} onChange={(e) => handleStudentChange('gradeLevel', e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">School / Institution</label>
+                                <input type="text" className="input-field" value={studentForm.schoolName} onChange={(e) => handleStudentChange('schoolName', e.target.value)} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Learning Goals</label>
+                                <textarea rows={3} className="input-field" value={studentForm.learningGoals} onChange={(e) => handleStudentChange('learningGoals', e.target.value)} placeholder="What would you like to achieve?" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Learning Style</label>
+                                <select className="input-field" value={studentForm.preferredLearningStyle} onChange={(e) => handleStudentChange('preferredLearningStyle', e.target.value)}>
+                                    <option value="">Select style</option>
+                                    {learningStyleOptions.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
-                                </div>
-
-                                <div className="flex justify-end pt-4">
-                                    {/* Status Messages */}
-                                    {saveStatus === 'success' && activeTab === 'notifications' && (
-                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
-                                            ✓ Notification preferences saved!
-                                        </div>
-                                    )}
-                                    {saveStatus === 'error' && activeTab === 'notifications' && (
-                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
-                                            ✗ Failed to save preferences. Please try again.
-                                        </div>
-                                    )}
-
-                                    <button
-                                        onClick={() => handleSave('notifications')}
-                                        disabled={loading}
-                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <Save className="h-4 w-4" />
-                                        <span>{loading ? 'Saving...' : 'Save Preferences'}</span>
-                                    </button>
-                                </div>
+                                </select>
                             </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'privacy' && (
-                        <div className="space-y-6">
                             <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Privacy Settings</h3>
-                                <p className="text-gray-600 mb-6">Control who can see your information and how you can be contacted.</p>
-
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Profile Visibility
-                                        </label>
-                                        <select
-                                            value={privacy.profileVisibility}
-                                            onChange={(e) => handleInputChange('privacy', 'profileVisibility', e.target.value)}
-                                            className="input-field"
-                                        >
-                                            <option value="public">Public - Anyone can see your profile</option>
-                                            <option value="tutors">Tutors Only - Only tutors can see your profile</option>
-                                            <option value="private">Private - Only you can see your profile</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        {[
-                                            { key: 'showEmail', label: 'Show Email Address', description: 'Display your email address on your public profile' },
-                                            { key: 'showPhone', label: 'Show Phone Number', description: 'Display your phone number on your public profile' },
-                                            { key: 'allowMessages', label: 'Allow Direct Messages', description: 'Let tutors send you direct messages' }
-                                        ].map(({ key, label, description }) => (
-                                            <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                                <div>
-                                                    <h4 className="font-medium text-gray-900">{label}</h4>
-                                                    <p className="text-sm text-gray-500">{description}</p>
-                                                </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="sr-only peer"
-                                                        checked={privacy[key]}
-                                                        onChange={(e) => handleInputChange('privacy', key, e.target.checked)}
-                                                    />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                                                </label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end pt-4">
-                                    {/* Status Messages */}
-                                    {saveStatus === 'success' && activeTab === 'privacy' && (
-                                        <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">
-                                            ✓ Privacy settings saved!
-                                        </div>
-                                    )}
-                                    {saveStatus === 'error' && activeTab === 'privacy' && (
-                                        <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">
-                                            ✗ Failed to save privacy settings. Please try again.
-                                        </div>
-                                    )}
-
-                                    <button
-                                        onClick={() => handleSave('privacy')}
-                                        disabled={loading}
-                                        className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <Save className="h-4 w-4" />
-                                        <span>{loading ? 'Saving...' : 'Save Privacy Settings'}</span>
-                                    </button>
-                                </div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Subjects of Interest</label>
+                                <input type="text" className="input-field" placeholder="e.g., Math, Physics, English" value={studentForm.subjectsOfInterest} onChange={(e) => handleStudentChange('subjectsOfInterest', e.target.value)} />
+                                <p className="text-xs text-gray-500 mt-1">Separate multiple subjects with commas</p>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Availability Notes</label>
+                                <textarea rows={3} className="input-field" placeholder="Share general times or constraints (e.g., Weekdays after 5pm)" value={studentForm.availabilityNotes} onChange={(e) => handleStudentChange('availabilityNotes', e.target.value)} />
                             </div>
                         </div>
-                    )}
+                    </section>
 
-                    {activeTab === 'billing' && (
-                        <div className="space-y-6">
+                    {/* Emergency Contact */}
+                    <section>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Emergency Contact</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Billing & Payment</h3>
-                                <p className="text-gray-600 mb-6">Manage your payment methods and billing information.</p>
-
-                                {/* Payment Methods */}
-                                <div className="mb-8">
-                                    <h4 className="font-medium text-gray-900 mb-4">Payment Methods</h4>
-                                    <div className="border border-gray-200 rounded-lg p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <CreditCard className="h-8 w-8 text-gray-400" />
-                                                <div>
-                                                    <p className="font-medium text-gray-900">•••• •••• •••• 4242</p>
-                                                    <p className="text-sm text-gray-500">Expires 12/25</p>
-                                                </div>
-                                            </div>
-                                            <button className="btn-secondary text-sm">Edit</button>
-                                        </div>
-                                    </div>
-                                    <button className="btn-outline mt-4">Add New Payment Method</button>
-                                </div>
-
-                                {/* Billing History */}
-                                <div>
-                                    <h4 className="font-medium text-gray-900 mb-4">Recent Transactions</h4>
-                                    <div className="space-y-2">
-                                        {[
-                                            { date: 'Sep 10, 2025', description: 'JavaScript Tutoring Session - Sai Sree Chitturi', amount: '$45.00' },
-                                            { date: 'Sep 8, 2025', description: 'Calculus Tutoring Session - Chandan Cheni', amount: '$60.00' },
-                                            { date: 'Sep 5, 2025', description: 'Physics Tutoring Session - Maatheswaran Kannan Chellapandian', amount: '$55.00' }
-                                        ].map((transaction, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                                                <div>
-                                                    <p className="font-medium text-gray-900">{transaction.description}</p>
-                                                    <p className="text-sm text-gray-500">{transaction.date}</p>
-                                                </div>
-                                                <p className="font-medium text-gray-900">{transaction.amount}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button className="btn-outline mt-4">View All Transactions</button>
-                                </div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                                <input type="text" className="input-field" value={studentForm.emergencyName} onChange={(e) => handleStudentChange('emergencyName', e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                                <input type="text" className="input-field" value={studentForm.emergencyPhone} onChange={(e) => handleStudentChange('emergencyPhone', e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                <input type="email" className="input-field" value={studentForm.emergencyEmail} onChange={(e) => handleStudentChange('emergencyEmail', e.target.value)} />
                             </div>
                         </div>
-                    )}
-                </div>
-            </div>
+                    </section>
 
-            {/* Account Deletion Section */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                <div className="flex items-start space-x-3">
-                    <Trash2 className="h-6 w-6 text-red-600 mt-1" />
-                    <div className="flex-1">
-                        <h3 className="text-lg font-medium text-red-900">Delete Account</h3>
-                        <p className="text-red-700 mt-1">
-                            Once you delete your account, there is no going back. Please be certain.
-                        </p>
-                        <button className="btn-danger mt-4">Delete My Account</button>
+                    <div className="flex justify-end pt-2">
+                        {saveStatus === 'success' && (
+                            <div className="mr-4 px-3 py-2 bg-green-100 text-green-800 rounded-md text-sm">✓ Saved</div>
+                        )}
+                        {saveStatus === 'error' && (
+                            <div className="mr-4 px-3 py-2 bg-red-100 text-red-800 rounded-md text-sm">✗ Failed to save</div>
+                        )}
+                        <button onClick={handleSave} disabled={loading} className={`btn-primary flex items-center space-x-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <Save className="h-4 w-4" />
+                            <span>{loading ? 'Saving...' : 'Save Changes'}</span>
+                        </button>
                     </div>
                 </div>
             </div>
