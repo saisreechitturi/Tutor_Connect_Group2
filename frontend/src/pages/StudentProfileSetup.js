@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const StudentProfileSetup = () => {
     const { user, updateProfile } = useAuth();
     const navigate = useNavigate();
-    
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -218,7 +218,7 @@ const StudentProfileSetup = () => {
                         >
                             Skip for Now
                         </button>
-                        
+
                         <button
                             type="submit"
                             disabled={loading}

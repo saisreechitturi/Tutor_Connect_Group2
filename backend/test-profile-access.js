@@ -24,7 +24,7 @@ async function testProfileAccess() {
 
         console.log('GET Response status:', getResponse.status);
         console.log('GET Response headers:', Object.fromEntries(getResponse.headers));
-        
+
         if (getResponse.ok) {
             const getData = await getResponse.json();
             console.log('✅ GET Profile successful!');
@@ -50,7 +50,7 @@ async function testProfileAccess() {
         });
 
         console.log('PUT Response status:', putResponse.status);
-        
+
         if (putResponse.ok) {
             const putData = await putResponse.json();
             console.log('✅ PUT Profile successful!');

@@ -12,15 +12,15 @@ try {
     console.log('User ID from token:', decoded.userId);
     console.log('Role from token:', decoded.role);
     console.log('Token expires:', new Date(decoded.exp * 1000).toLocaleString());
-    
+
     // Test if this would work with the profile endpoint
     console.log('\n=== Profile Endpoint Test ===');
     console.log('Profile URL: /api/profiles/' + decoded.userId);
     console.log('Expected user ID match:', decoded.userId);
-    
+
 } catch (error) {
     console.error('❌ Token verification failed:', error.message);
-    
+
     if (error.name === 'JsonWebTokenError') {
         console.log('\n🔧 The token format is invalid. Please use the new token generated earlier:');
         console.log('1. Open browser console on your TutorConnect page');
