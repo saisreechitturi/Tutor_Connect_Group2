@@ -15,7 +15,7 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
         SELECT sr.id, sr.rating, sr.review_text, sr.is_public, sr.created_at,
                reviewer.first_name as reviewer_first_name,
                reviewer.last_name as reviewer_last_name,
-               reviewer.profile_image_url as reviewer_avatar,
+               reviewer.profile_picture_url as reviewer_avatar,
                reviewee.first_name as reviewee_first_name,
                reviewee.last_name as reviewee_last_name,
                reviewee.role as reviewee_role
@@ -67,7 +67,7 @@ router.get('/tutor/:tutorId', [
         SELECT sr.id, sr.rating, sr.review_text, sr.created_at,
                student.first_name as student_first_name,
                student.last_name as student_last_name,
-               student.profile_image_url as student_avatar,
+               student.profile_picture_url as student_avatar,
                s.session_date, sub.name as subject_name
         FROM session_reviews sr
         JOIN users student ON sr.reviewer_id = student.id
@@ -138,7 +138,7 @@ router.get('/student/:studentId', [
         SELECT sr.id, sr.rating, sr.review_text, sr.is_public, sr.created_at,
                tutor.first_name as tutor_first_name,
                tutor.last_name as tutor_last_name,
-               tutor.profile_image_url as tutor_avatar,
+               tutor.profile_picture_url as tutor_avatar,
                s.session_date, sub.name as subject_name
         FROM session_reviews sr
         JOIN users tutor ON sr.reviewee_id = tutor.id

@@ -30,9 +30,9 @@ router.get('/', [
     const offset = parseInt(req.query.offset) || 0;
 
     let queryText = `
-    SELECT u.id, u.first_name, u.last_name, u.profile_image_url, u.bio,
-           tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions,
-           tp.languages, tp.education, tp.is_available,
+    SELECT u.id, u.first_name, u.last_name, u.profile_picture_url, u.bio,
+           tp.hourly_rate, tp.years_of_experience, tp.rating, tp.total_sessions,
+           tp.languages_spoken, tp.education_background, tp.is_verified,
            COALESCE(
                JSON_AGG(
                    DISTINCT JSONB_BUILD_OBJECT(
@@ -68,11 +68,11 @@ router.get('/', [
     }
 
     if (search) {
-        queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR tp.education ILIKE $${params.length + 1})`;
+        queryText += ` AND (u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1} OR tp.education_background ILIKE $${params.length + 1})`;
         params.push(`%${search}%`);
     }
 
-    queryText += ` GROUP BY u.id, u.first_name, u.last_name, u.profile_image_url, u.bio, tp.hourly_rate, tp.experience_years, tp.rating, tp.total_sessions, tp.languages, tp.education, tp.is_available`;
+    queryText += ` GROUP BY u.id, u.first_name, u.last_name, u.profile_picture_url, u.bio, tp.hourly_rate, tp.years_of_experience, tp.rating, tp.total_sessions, tp.languages_spoken, tp.education_background, tp.is_verified`;
     queryText += ` ORDER BY tp.rating DESC, tp.total_sessions DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
@@ -83,15 +83,15 @@ router.get('/', [
         name: `${row.first_name} ${row.last_name}`,
         firstName: row.first_name,
         lastName: row.last_name,
-        profileImageUrl: row.profile_image_url,
+        profileImageUrl: row.profile_picture_url,
         bio: row.bio,
         hourlyRate: row.hourly_rate,
-        experienceYears: row.experience_years,
+        experienceYears: row.years_of_experience,
         rating: row.rating,
         totalSessions: row.total_sessions,
-        languages: row.languages,
-        education: row.education,
-        isAvailable: row.is_available,
+        languages: row.languages_spoken,
+        education: row.education_background,
+        isAvailable: row.is_verified, // Using is_verified as availability indicator
         subjects: row.subjects || []
     }));
 
@@ -101,9 +101,9 @@ router.get('/', [
 // Get specific tutor profile
 router.get('/:id', asyncHandler(async (req, res) => {
     const result = await query(`
-    SELECT u.id, u.first_name, u.last_name, u.profile_image_url, u.bio,
-           tp.hourly_rate, tp.experience_years, tp.education,
-           tp.languages, tp.rating, tp.total_sessions, tp.is_available
+    SELECT u.id, u.first_name, u.last_name, u.profile_picture_url, u.bio,
+           tp.hourly_rate, tp.years_of_experience, tp.education_background,
+           tp.languages_spoken, tp.rating, tp.total_sessions, tp.is_verified
     FROM users u
     JOIN tutor_profiles tp ON u.id = tp.user_id
     WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true
@@ -117,7 +117,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Get tutor's subjects
     const subjectsResult = await query(`
-    SELECT s.name, s.category, ts.rate, ts.proficiency_level
+    SELECT s.name, s.category, ts.proficiency_level, ts.years_of_experience
     FROM tutor_subjects ts
     JOIN subjects s ON ts.subject_id = s.id
     WHERE ts.tutor_id = $1
@@ -125,11 +125,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Get recent reviews (if any)
     const reviewsResult = await query(`
-    SELECT s.student_rating, s.student_feedback, u.first_name
-    FROM tutoring_sessions s
-    JOIN users u ON s.student_id = u.id
-    WHERE s.tutor_id = $1 AND s.student_rating IS NOT NULL
-    ORDER BY s.updated_at DESC
+    SELECT sr.rating, sr.review_text, u.first_name
+    FROM session_reviews sr
+    JOIN tutoring_sessions ts ON sr.session_id = ts.id
+    JOIN users u ON sr.reviewer_id = u.id
+    WHERE ts.tutor_id = $1 AND sr.is_public = true
+    ORDER BY sr.created_at DESC
     LIMIT 5
   `, [req.params.id]);
 
@@ -139,29 +140,24 @@ router.get('/:id', asyncHandler(async (req, res) => {
             name: `${tutor.first_name} ${tutor.last_name}`,
             firstName: tutor.first_name,
             lastName: tutor.last_name,
-            avatarUrl: tutor.avatar_url,
+            avatarUrl: tutor.profile_picture_url,
             bio: tutor.bio,
-            location: tutor.location,
-            timezone: tutor.timezone,
-            title: tutor.title,
             hourlyRate: tutor.hourly_rate,
-            experienceYears: tutor.experience_years,
-            education: tutor.education,
-            certifications: tutor.certifications,
-            languages: tutor.languages,
-            specializations: tutor.specializations,
+            experienceYears: tutor.years_of_experience,
+            education: tutor.education_background,
+            languages: tutor.languages_spoken,
             rating: tutor.rating,
             totalSessions: tutor.total_sessions,
-            totalEarnings: tutor.total_earnings,
+            isVerified: tutor.is_verified,
             subjects: subjectsResult.rows.map(row => ({
                 name: row.name,
                 category: row.category,
-                rate: row.rate,
-                proficiency: row.proficiency_level
+                proficiency: row.proficiency_level,
+                yearsExperience: row.years_of_experience
             })),
             reviews: reviewsResult.rows.map(row => ({
-                rating: row.student_rating,
-                feedback: row.student_feedback,
+                rating: row.rating,
+                feedback: row.review_text,
                 studentName: row.first_name
             }))
         }
@@ -176,16 +172,16 @@ router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => 
     }
 
     const result = await query(`
-    SELECT DISTINCT u.id, u.first_name, u.last_name, u.avatar_url, u.email,
+    SELECT DISTINCT u.id, u.first_name, u.last_name, u.profile_picture_url, u.email,
            COUNT(s.id) as total_sessions,
            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions,
-           AVG(sr.tutor_rating) as avg_rating,
+           AVG(sr.rating) as avg_rating,
            MAX(s.scheduled_start) as last_session
     FROM users u
     JOIN tutoring_sessions s ON u.id = s.student_id
     LEFT JOIN session_reviews sr ON s.id = sr.session_id
     WHERE s.tutor_id = $1
-    GROUP BY u.id, u.first_name, u.last_name, u.avatar_url, u.email
+    GROUP BY u.id, u.first_name, u.last_name, u.profile_picture_url, u.email
     ORDER BY last_session DESC
   `, [req.params.id]);
 
@@ -195,7 +191,7 @@ router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => 
         firstName: row.first_name,
         lastName: row.last_name,
         email: row.email,
-        avatarUrl: row.avatar_url,
+        avatarUrl: row.profile_picture_url,
         totalSessions: parseInt(row.total_sessions),
         completedSessions: parseInt(row.completed_sessions),
         avgRating: parseFloat(row.avg_rating) || 0,

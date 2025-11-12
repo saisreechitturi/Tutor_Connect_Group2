@@ -28,8 +28,8 @@ router.get('/', [
 
     let queryText = `
     SELECT s.*, 
-           student.first_name as student_first_name, student.last_name as student_last_name, student.profile_image_url as student_avatar,
-           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.profile_image_url as tutor_avatar,
+           student.first_name as student_first_name, student.last_name as student_last_name, student.profile_picture_url as student_avatar,
+           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.profile_picture_url as tutor_avatar,
            sub.name as subject_name
     FROM tutoring_sessions s
     JOIN users student ON s.student_id = student.id
@@ -170,8 +170,8 @@ router.post('/', [
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(`
     SELECT s.*, 
-           student.first_name as student_first_name, student.last_name as student_last_name, student.avatar_url as student_avatar,
-           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.avatar_url as tutor_avatar,
+           student.first_name as student_first_name, student.last_name as student_last_name, student.profile_picture_url as student_avatar,
+           tutor.first_name as tutor_first_name, tutor.last_name as tutor_last_name, tutor.profile_picture_url as tutor_avatar,
            sub.name as subject_name
     FROM tutoring_sessions s
     JOIN users student ON s.student_id = student.id

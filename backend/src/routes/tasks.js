@@ -3,6 +3,7 @@ const { body, query: expressQuery, validationResult } = require('express-validat
 const { query } = require('../database/connection');
 const { authenticateToken } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 

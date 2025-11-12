@@ -16,7 +16,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
     // Get basic user info
     const userResult = await query(`
         SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.bio, 
-               u.profile_image_url, u.role, u.created_at, u.is_active,
+               u.profile_picture_url, u.role, u.created_at, u.is_active,
                ${isOwnProfile ? 'u.date_of_birth,' : ''}
                ua.street_address, ua.city, ua.state, ua.postal_code, ua.country
         FROM users u
@@ -34,7 +34,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
         firstName: user.first_name,
         lastName: user.last_name,
         bio: user.bio,
-        profileImage: user.profile_image_url,
+        profileImage: user.profile_picture_url,
         role: user.role,
         createdAt: user.created_at,
         ...(isOwnProfile && {
@@ -54,8 +54,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
     // Add role-specific profile data
     if (user.role === 'tutor') {
         const tutorResult = await query(`
-            SELECT tp.hourly_rate, tp.experience_years, tp.education, tp.certifications,
-                   tp.languages, tp.availability_schedule, tp.preferred_tutoring_style,
+            SELECT tp.hourly_rate, tp.years_of_experience, tp.education_background, tp.certifications,
+                   tp.languages_spoken, tp.availability_schedule, tp.preferred_tutoring_style,
                    tp.is_available, tp.rating, tp.total_sessions
             FROM tutor_profiles tp
             WHERE tp.user_id = $1
@@ -65,10 +65,10 @@ router.get('/:id', asyncHandler(async (req, res) => {
             const tutorData = tutorResult.rows[0];
             profile.tutorProfile = {
                 hourlyRate: tutorData.hourly_rate,
-                experienceYears: tutorData.experience_years,
-                education: tutorData.education,
+                experienceYears: tutorData.years_of_experience,
+                education: tutorData.education_background,
                 certifications: tutorData.certifications,
-                languages: tutorData.languages,
+                languages: tutorData.languages_spoken,
                 availabilitySchedule: tutorData.availability_schedule,
                 preferredTutoringStyle: tutorData.preferred_tutoring_style,
                 isAvailable: tutorData.is_available,
@@ -170,7 +170,7 @@ router.put('/:id', [
         params.push(dateOfBirth);
     }
     if (profileImage !== undefined) {
-        updates.push(`profile_image_url = $${params.length + 1}`);
+        updates.push(`profile_picture_url = $${params.length + 1}`);
         params.push(profileImage);
     }
 
@@ -233,11 +233,11 @@ router.put('/:id/tutor', [
         params.push(hourlyRate);
     }
     if (experienceYears !== undefined) {
-        updates.push(`experience_years = $${params.length + 1}`);
+        updates.push(`years_of_experience = $${params.length + 1}`);
         params.push(experienceYears);
     }
     if (education !== undefined) {
-        updates.push(`education = $${params.length + 1}`);
+        updates.push(`education_background = $${params.length + 1}`);
         params.push(education);
     }
     if (certifications !== undefined) {
@@ -245,7 +245,7 @@ router.put('/:id/tutor', [
         params.push(JSON.stringify(certifications));
     }
     if (languages !== undefined) {
-        updates.push(`languages = $${params.length + 1}`);
+        updates.push(`languages_spoken = $${params.length + 1}`);
         params.push(languages);
     }
     if (availabilitySchedule !== undefined) {

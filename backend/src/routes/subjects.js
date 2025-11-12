@@ -109,7 +109,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Get tutors teaching this subject
     const tutorsResult = await query(`
-        SELECT u.id, u.first_name, u.last_name, u.profile_image_url,
+        SELECT u.id, u.first_name, u.last_name, u.profile_picture_url,
                tp.hourly_rate, tp.rating, tp.total_sessions
         FROM tutor_subjects ts
         JOIN users u ON ts.tutor_id = u.id
@@ -125,7 +125,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
             id: tutor.id,
             firstName: tutor.first_name,
             lastName: tutor.last_name,
-            profileImage: tutor.profile_image_url,
+            profileImage: tutor.profile_picture_url,
             hourlyRate: tutor.hourly_rate,
             rating: tutor.rating,
             totalSessions: tutor.total_sessions

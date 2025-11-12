@@ -9,10 +9,10 @@ const router = express.Router();
 // Get user profile
 router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async (req, res) => {
     const result = await query(`
-    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.avatar_url, 
+    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.profile_picture_url, 
            u.bio, u.location, u.timezone, u.status, u.created_at,
-           tp.title, tp.hourly_rate, tp.experience_years, tp.education, tp.certifications,
-           tp.languages, tp.specializations, tp.rating, tp.total_sessions, tp.total_earnings
+           tp.title, tp.hourly_rate, tp.years_of_experience, tp.education_background, tp.certifications,
+           tp.languages_spoken, tp.specializations, tp.rating, tp.total_sessions, tp.total_earnings
     FROM users u
     LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
     WHERE u.id = $1
@@ -32,7 +32,7 @@ router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async
             lastName: user.last_name,
             role: user.role,
             phone: user.phone,
-            avatarUrl: user.avatar_url,
+            avatarUrl: user.profile_picture_url,
             bio: user.bio,
             location: user.location,
             timezone: user.timezone,
@@ -42,10 +42,10 @@ router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async
                 profile: {
                     title: user.title,
                     hourlyRate: user.hourly_rate,
-                    experienceYears: user.experience_years,
-                    education: user.education,
+                    experienceYears: user.years_of_experience,
+                    education: user.education_background,
                     certifications: user.certifications,
-                    languages: user.languages,
+                    languages: user.languages_spoken,
                     specializations: user.specializations,
                     rating: user.rating,
                     totalSessions: user.total_sessions,
@@ -86,7 +86,7 @@ router.put('/:id', [
         bio = COALESCE($4, bio),
         location = COALESCE($5, location),
         timezone = COALESCE($6, timezone),
-        avatar_url = COALESCE($7, avatar_url)
+        profile_picture_url = COALESCE($7, profile_picture_url)
     WHERE id = $8
     RETURNING *
   `, [firstName, lastName, phone, bio, location, timezone, avatarUrl, req.params.id]);
@@ -103,10 +103,10 @@ router.put('/:id', [
       UPDATE tutor_profiles 
       SET title = COALESCE($1, title),
           hourly_rate = COALESCE($2, hourly_rate),
-          experience_years = COALESCE($3, experience_years),
-          education = COALESCE($4, education),
+          years_of_experience = COALESCE($3, years_of_experience),
+          education_background = COALESCE($4, education_background),
           certifications = COALESCE($5, certifications),
-          languages = COALESCE($6, languages),
+          languages_spoken = COALESCE($6, languages_spoken),
           specializations = COALESCE($7, specializations)
       WHERE user_id = $8
     `, [title, hourlyRate, experienceYears, education, certifications, languages, specializations, req.params.id]);

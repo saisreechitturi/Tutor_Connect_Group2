@@ -28,8 +28,8 @@ router.get('/', [
 
     let queryText = `
     SELECT m.*, 
-           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.avatar_url as sender_avatar,
-           recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.avatar_url as recipient_avatar
+           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.profile_picture_url as sender_avatar,
+           recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.profile_picture_url as recipient_avatar
     FROM messages m
     JOIN users sender ON m.sender_id = sender.id
     JOIN users recipient ON m.recipient_id = recipient.id
@@ -143,8 +143,8 @@ router.post('/', [
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(`
     SELECT m.*, 
-           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.avatar_url as sender_avatar,
-           recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.avatar_url as recipient_avatar
+           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.profile_picture_url as sender_avatar,
+           recipient.first_name as recipient_first_name, recipient.last_name as recipient_last_name, recipient.profile_picture_url as recipient_avatar
     FROM messages m
     JOIN users sender ON m.sender_id = sender.id
     JOIN users recipient ON m.recipient_id = recipient.id
@@ -226,7 +226,7 @@ router.get('/conversation/:userId', [
 
     const result = await query(`
     SELECT m.*, 
-           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.avatar_url as sender_avatar
+           sender.first_name as sender_first_name, sender.last_name as sender_last_name, sender.profile_picture_url as sender_avatar
     FROM messages m
     JOIN users sender ON m.sender_id = sender.id
     WHERE (

@@ -53,10 +53,10 @@ router.get('/events', [
                     s.updated_at,
                     student.first_name as student_first_name, 
                     student.last_name as student_last_name,
-                    student.profile_image_url as student_avatar,
+                    student.profile_picture_url as student_avatar,
                     tutor.first_name as tutor_first_name, 
                     tutor.last_name as tutor_last_name,
-                    tutor.profile_image_url as tutor_avatar,
+                    tutor.profile_picture_url as tutor_avatar,
                     sub.name as subject_name,
                     'session' as event_type
                 FROM tutoring_sessions s

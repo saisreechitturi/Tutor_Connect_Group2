@@ -134,7 +134,7 @@ router.get('/dashboard/:tutorId', [
                 u.id,
                 u.first_name,
                 u.last_name,
-                u.profile_image_url,
+                u.profile_picture_url,
                 COUNT(ts.id) as total_sessions,
                 COUNT(CASE WHEN ts.status = 'completed' THEN 1 END) as completed_sessions,
                 AVG(CASE WHEN sr.rating IS NOT NULL THEN sr.rating END) as avg_rating_given,
@@ -143,7 +143,7 @@ router.get('/dashboard/:tutorId', [
             JOIN tutoring_sessions ts ON u.id = ts.student_id
             LEFT JOIN session_reviews sr ON ts.id = sr.session_id AND sr.reviewer_id = u.id
             WHERE ts.tutor_id = $1 ${dateFilter}
-            GROUP BY u.id, u.first_name, u.last_name, u.profile_image_url
+            GROUP BY u.id, u.first_name, u.last_name, u.profile_picture_url
             ORDER BY completed_sessions DESC, last_session_date DESC
             LIMIT 10
         `, [tutorId, ...dateParams]);
@@ -172,7 +172,7 @@ router.get('/dashboard/:tutorId', [
                 topStudents: topStudents.rows.map(row => ({
                     id: row.id,
                     name: `${row.first_name} ${row.last_name}`,
-                    profileImage: row.profile_image_url,
+                    profileImage: row.profile_picture_url,
                     totalSessions: parseInt(row.total_sessions),
                     completedSessions: parseInt(row.completed_sessions),
                     avgRating: parseFloat(row.avg_rating_given) || 0,
@@ -359,7 +359,7 @@ router.get('/student-progress/:tutorId', [
             u.id as student_id,
             u.first_name,
             u.last_name,
-            u.profile_image_url,
+            u.profile_picture_url,
             s.name as subject_name,
             COUNT(spt.id) as total_sessions_tracked,
             AVG(spt.comprehension_level) as avg_comprehension,
@@ -369,7 +369,7 @@ router.get('/student-progress/:tutorId', [
         JOIN users u ON spt.student_id = u.id
         JOIN subjects s ON spt.subject_id = s.id
         WHERE spt.tutor_id = $1 ${whereClause}
-        GROUP BY u.id, u.first_name, u.last_name, u.profile_image_url, s.name
+        GROUP BY u.id, u.first_name, u.last_name, u.profile_picture_url, s.name
         ORDER BY total_sessions_tracked DESC
     `, params);
 
@@ -394,7 +394,7 @@ router.get('/student-progress/:tutorId', [
         overview: progressOverview.rows.map(row => ({
             studentId: row.student_id,
             studentName: `${row.first_name} ${row.last_name}`,
-            profileImage: row.profile_image_url,
+            profileImage: row.profile_picture_url,
             subjectName: row.subject_name,
             totalSessionsTracked: parseInt(row.total_sessions_tracked),
             avgComprehension: Math.round((parseFloat(row.avg_comprehension) || 0) * 100) / 100,
