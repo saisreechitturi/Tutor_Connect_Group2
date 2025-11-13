@@ -28,6 +28,7 @@ router.get('/events', [
     }
 
     const userId = req.user.id;
+    const userRole = req.user.role;
     const { startDate, endDate, type = 'all', status, limit = 100, view = 'month' } = req.query;
 
     let events = [];
@@ -38,16 +39,16 @@ router.get('/events', [
             let sessionQuery = `
                 SELECT 
                     s.id,
-                    s.notes as title,
-                    s.notes as description,
+                    s.title,
+                    s.description,
                     s.session_date,
-                    s.start_time,
-                    s.end_time,
+                    CAST(s.scheduled_start AS TIME) as start_time,
+                    CAST(s.scheduled_end AS TIME) as end_time,
                     s.duration_minutes,
                     s.status,
                     s.session_type,
                     s.meeting_link,
-                    s.location,
+                    s.meeting_room as location,
                     s.payment_amount as hourly_rate,
                     s.created_at,
                     s.updated_at,
@@ -63,12 +64,18 @@ router.get('/events', [
                 JOIN users student ON s.student_id = student.id
                 JOIN users tutor ON s.tutor_id = tutor.id
                 LEFT JOIN subjects sub ON s.subject_id = sub.id
-                WHERE (s.student_id = $1 OR s.tutor_id = $1)
-                AND s.session_date IS NOT NULL
+                WHERE s.session_date IS NOT NULL
             `;
 
-            const sessionParams = [userId];
-            let paramCount = 1;
+            const sessionParams = [];
+            let paramCount = 0;
+
+            // Filter by user for students and tutors, show all for admins
+            if (userRole !== 'admin') {
+                paramCount++;
+                sessionQuery += ` AND (s.student_id = $${paramCount} OR s.tutor_id = $${paramCount})`;
+                sessionParams.push(userId);
+            }
 
             // Add date filters for sessions
             if (startDate) {
@@ -90,7 +97,7 @@ router.get('/events', [
                 sessionParams.push(status);
             }
 
-            sessionQuery += ` ORDER BY s.session_date ASC, s.start_time ASC`;
+            sessionQuery += ` ORDER BY s.session_date ASC, s.scheduled_start ASC`;
 
             const sessionResult = await query(sessionQuery, sessionParams);
 
@@ -141,8 +148,8 @@ router.get('/events', [
             });
         }
 
-        // Get tasks if requested
-        if (type === 'all' || type === 'task') {
+        // Get tasks if requested (only for students and tutors, not admins)
+        if ((type === 'all' || type === 'task') && userRole !== 'admin') {
             let taskQuery = `
                 SELECT 
                     t.id,
@@ -151,7 +158,6 @@ router.get('/events', [
                     t.due_date,
                     t.status,
                     t.priority,
-                    t.category,
                     t.estimated_hours,
                     t.completed_at,
                     t.created_at,
@@ -204,7 +210,6 @@ router.get('/events', [
                     type: 'task',
                     status: task.status,
                     priority: task.priority,
-                    category: task.category,
                     estimatedDuration: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null, // Convert hours to minutes
                     completedAt: task.completed_at,
                     createdAt: task.created_at,
@@ -308,6 +313,7 @@ router.get('/stats', [
     expressQuery('period').optional().isIn(['week', 'month', 'year'])
 ], asyncHandler(async (req, res) => {
     const userId = req.user.id;
+    const userRole = req.user.role;
     const { period = 'month' } = req.query;
 
     let dateFilter;
@@ -325,45 +331,74 @@ router.get('/stats', [
     }
 
     try {
-        // Get session statistics
-        const sessionStats = await query(`
-            SELECT 
-                COUNT(*) as total_sessions,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sessions,
-                COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as upcoming_sessions,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_sessions
-            FROM tutoring_sessions 
-            WHERE (student_id = $1 OR tutor_id = $1)
-            AND session_date >= $2::date
-        `, [userId, dateFilter.toISOString().split('T')[0]]);
+        let sessionStats;
 
-        // Get task statistics
-        const taskStats = await query(`
-            SELECT 
-                COUNT(*) as total_tasks,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
-                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
-                COUNT(CASE WHEN due_date < NOW() AND status != 'completed' THEN 1 END) as overdue_tasks
-            FROM tasks 
-            WHERE user_id = $1
-            AND created_at >= $2
-        `, [userId, dateFilter]);
+        // Get session statistics - admin sees all, others see only their sessions
+        if (userRole === 'admin') {
+            sessionStats = await query(`
+                SELECT 
+                    COUNT(*) as total_sessions,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sessions,
+                    COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as upcoming_sessions,
+                    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_sessions
+                FROM tutoring_sessions 
+                WHERE session_date >= $1::date
+            `, [dateFilter.toISOString().split('T')[0]]);
+        } else {
+            sessionStats = await query(`
+                SELECT 
+                    COUNT(*) as total_sessions,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sessions,
+                    COUNT(CASE WHEN status = 'scheduled' THEN 1 END) as upcoming_sessions,
+                    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_sessions
+                FROM tutoring_sessions 
+                WHERE (student_id = $1 OR tutor_id = $1)
+                AND session_date >= $2::date
+            `, [userId, dateFilter.toISOString().split('T')[0]]);
+        }
+
+        let taskStats = { rows: [{ total_tasks: 0, completed_tasks: 0, pending_tasks: 0, overdue_tasks: 0 }] };
+
+        // Get task statistics (only for students and tutors)
+        if (userRole !== 'admin') {
+            taskStats = await query(`
+                SELECT 
+                    COUNT(*) as total_tasks,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
+                    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
+                    COUNT(CASE WHEN due_date < NOW() AND status != 'completed' THEN 1 END) as overdue_tasks
+                FROM tasks 
+                WHERE user_id = $1
+                AND created_at >= $2
+            `, [userId, dateFilter]);
+        }
+
+        let upcomingEvents;
 
         // Get upcoming events (next 7 days)
-        const upcomingEvents = await query(`
-            SELECT COUNT(*) as upcoming_events
-            FROM (
-                SELECT session_date as event_date FROM tutoring_sessions 
-                WHERE (student_id = $1 OR tutor_id = $1) 
-                AND session_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+        if (userRole === 'admin') {
+            upcomingEvents = await query(`
+                SELECT COUNT(*) as upcoming_events
+                FROM tutoring_sessions 
+                WHERE session_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
                 AND status = 'scheduled'
-                UNION ALL
-                SELECT DATE(due_date) as event_date FROM tasks 
-                WHERE user_id = $1 
-                AND DATE(due_date) BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
-                AND status != 'completed'
-            ) combined_events
-        `, [userId]);
+            `);
+        } else {
+            upcomingEvents = await query(`
+                SELECT COUNT(*) as upcoming_events
+                FROM (
+                    SELECT session_date as event_date FROM tutoring_sessions 
+                    WHERE (student_id = $1 OR tutor_id = $1) 
+                    AND session_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+                    AND status = 'scheduled'
+                    UNION ALL
+                    SELECT DATE(due_date) as event_date FROM tasks 
+                    WHERE user_id = $1 
+                    AND DATE(due_date) BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+                    AND status != 'completed'
+                ) combined_events
+            `, [userId]);
+        }
 
         res.json({
             success: true,

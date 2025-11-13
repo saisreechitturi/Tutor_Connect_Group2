@@ -4,6 +4,8 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminUserManagement from '../pages/AdminUserManagement';
 import AdminSessionManagement from '../pages/AdminSessionManagement';
 import AdminSettings from '../pages/AdminSettings';
+import AdminCalendar from '../pages/AdminCalendar';
+import Notifications from '../pages/Notifications';
 // Removed advanced analytics and admin messaging per scope simplification
 
 const AdminDashboard = () => (
@@ -47,6 +49,8 @@ const AdminRoutes = () => {
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUserManagement />} />
                 <Route path="sessions" element={<AdminSessionManagement />} />
+                <Route path="calendar" element={<AdminCalendar />} />
+                <Route path="notifications" element={<Notifications />} />
                 {/* Analytics and Admin Messaging removed */}
                 <Route path="settings" element={<AdminSettings />} />
             </Routes>

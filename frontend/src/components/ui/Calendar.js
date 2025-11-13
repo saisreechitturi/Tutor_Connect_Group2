@@ -7,6 +7,7 @@ import BookSessionModal from '../modals/BookSessionModal';
 
 const Calendar = () => {
     const { user } = useAuth();
+    const userRole = user?.role || 'student'; // Default to student for safety
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarEvents, setCalendarEvents] = useState([]);
@@ -527,6 +528,14 @@ const Calendar = () => {
                                                             {event.location}
                                                         </p>
                                                     )}
+                                                    {/* Role-specific info */}
+                                                    {event.type === 'session' && (
+                                                        <p className="text-xs mt-1 text-gray-600">
+                                                            {userRole === 'student' && event.tutor?.name && `with ${event.tutor.name}`}
+                                                            {userRole === 'tutor' && event.student?.name && `with ${event.student.name}`}
+                                                            {userRole === 'admin' && event.subject && `${event.subject}`}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded">
                                                     {event.type === 'session' ? 'Session' : 'Task'}
@@ -546,20 +555,42 @@ const Calendar = () => {
                         <div className="bg-white rounded-lg border border-gray-200 p-4">
                             <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
                             <div className="space-y-2">
-                                <button
-                                    onClick={() => setShowAddTaskModal(true)}
-                                    className="w-full bg-green-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Task
-                                </button>
-                                <button
-                                    onClick={() => setShowBookSessionModal(true)}
-                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Book Session
-                                </button>
+                                {/* Show Add Task button for students and tutors only */}
+                                {userRole !== 'admin' && (
+                                    <button
+                                        onClick={() => setShowAddTaskModal(true)}
+                                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-green-700 transition-colors flex items-center justify-center"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Task
+                                    </button>
+                                )}
+                                {/* Different session button text based on role */}
+                                {userRole === 'student' && (
+                                    <button
+                                        onClick={() => setShowBookSessionModal(true)}
+                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Book Session
+                                    </button>
+                                )}
+                                {userRole === 'tutor' && (
+                                    <button
+                                        onClick={() => setShowBookSessionModal(true)}
+                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Schedule Session
+                                    </button>
+                                )}
+                                {/* Admin sees view for overview only */}
+                                {userRole === 'admin' && (
+                                    <div className="text-sm text-gray-600 text-center py-2">
+                                        <CalendarIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                                        <p>View platform-wide calendar activity</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -572,17 +603,32 @@ const Calendar = () => {
                                     <span className="font-medium">{calendarEvents.length}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Sessions:</span>
+                                    <span className="text-gray-600">
+                                        {userRole === 'admin' ? 'Platform Sessions:' : 'Sessions:'}
+                                    </span>
                                     <span className="font-medium">
                                         {calendarEvents.filter(e => e.type === 'session').length}
                                     </span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Tasks:</span>
-                                    <span className="font-medium">
-                                        {calendarEvents.filter(e => e.type === 'task').length}
-                                    </span>
-                                </div>
+                                {userRole !== 'admin' && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Tasks:</span>
+                                        <span className="font-medium">
+                                            {calendarEvents.filter(e => e.type === 'task').length}
+                                        </span>
+                                    </div>
+                                )}
+                                {userRole === 'tutor' && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Students:</span>
+                                        <span className="font-medium">
+                                            {new Set(calendarEvents
+                                                .filter(e => e.type === 'session' && e.student?.name)
+                                                .map(e => e.student.name)
+                                            ).size}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

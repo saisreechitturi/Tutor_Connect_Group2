@@ -1,8 +1,8 @@
 import React from 'react';
 import Calendar from '../components/ui/Calendar';
 
-const TutorCalendar = () => {
+const AdminCalendar = () => {
     return <Calendar />;
 };
 
-export default TutorCalendar;
+export default AdminCalendar;

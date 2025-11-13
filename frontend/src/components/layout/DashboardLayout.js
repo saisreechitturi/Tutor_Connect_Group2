@@ -34,9 +34,11 @@ const DashboardLayout = ({ userRole, children }) => {
             { name: 'Notifications', href: `/${userRole}/notifications`, icon: Bell }
         ];
 
-        // Admin gets different common items (no calendar or tasks) and no platform messages
+        // Admin gets calendar and notifications but no tasks or platform messages
         const adminCommonItems = [
-            { name: 'Dashboard', href: `/${userRole}`, icon: Home }
+            { name: 'Dashboard', href: `/${userRole}`, icon: Home },
+            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
+            { name: 'Notifications', href: `/${userRole}/notifications`, icon: Bell }
         ];
 
         const commonItems = userRole === 'admin' ? adminCommonItems : baseCommonItems;
