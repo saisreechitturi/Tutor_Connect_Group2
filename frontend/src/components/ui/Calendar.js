@@ -225,7 +225,10 @@ const Calendar = () => {
 
     // Utility functions
     const formatDate = (date) => {
-        return date.toLocaleDateString('en-US', {
+        if (!date || isNaN(new Date(date).getTime())) {
+            return 'Invalid Date';
+        }
+        return new Date(date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long'
         });
@@ -233,6 +236,7 @@ const Calendar = () => {
 
     const formatTime = (time) => {
         if (!time) return '';
+        if (time === 'Due') return 'Due';
         try {
             const [hours, minutes] = time.split(':');
             const date = new Date();
@@ -262,12 +266,33 @@ const Calendar = () => {
                 default: return 'bg-gray-100 text-gray-800 border-gray-200';
             }
         } else {
-            switch (event.status) {
-                case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-                case 'in_progress': return 'bg-purple-100 text-purple-800 border-purple-200';
-                case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-                case 'pending': return 'bg-orange-100 text-orange-800 border-orange-200';
+            // For tasks, use priority-based colors
+            if (event.status === 'completed') {
+                return 'bg-green-100 text-green-800 border-green-200';
+            }
+
+            switch (event.priority) {
+                case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
+                case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+                case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
                 default: return 'bg-gray-100 text-gray-800 border-gray-200';
+            }
+        }
+    };
+
+    const getPriorityDotColor = (event) => {
+        if (event.type === 'session') {
+            return 'bg-blue-500';
+        } else {
+            if (event.status === 'completed') return 'bg-green-500';
+
+            switch (event.priority) {
+                case 'urgent': return 'bg-red-500';
+                case 'high': return 'bg-orange-500';
+                case 'medium': return 'bg-yellow-500';
+                case 'low': return 'bg-blue-500';
+                default: return 'bg-gray-500';
             }
         }
     };
@@ -509,18 +534,23 @@ const Calendar = () => {
                                         {/* Event Indicators */}
                                         {day.hasEvents && (
                                             <div className="absolute bottom-1 left-1 right-1">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {day.events.slice(0, 3).map((event, eventIndex) => (
+                                                <div className="space-y-0.5">
+                                                    {day.events.slice(0, 2).map((event, eventIndex) => (
                                                         <div
                                                             key={eventIndex}
-                                                            className={`h-1 flex-1 rounded-full ${getEventColor(event).split(' ')[0]}`}
-                                                            title={event.title || event.description}
-                                                        />
+                                                            className="flex items-center gap-1"
+                                                            title={`${event.title || 'Untitled'} ${event.type === 'task' ? `(${event.priority || 'medium'} priority)` : ''}`}
+                                                        >
+                                                            <div className={`h-1.5 w-1.5 rounded-full ${getPriorityDotColor(event)} flex-shrink-0`} />
+                                                            <span className="text-xs truncate">
+                                                                {event.title || event.description || 'Untitled'}
+                                                            </span>
+                                                        </div>
                                                     ))}
                                                 </div>
-                                                {day.events.length > 3 && (
-                                                    <div className="text-xs text-gray-500 text-center mt-1">
-                                                        +{day.events.length - 3} more
+                                                {day.events.length > 2 && (
+                                                    <div className="text-xs text-gray-500 text-center mt-0.5">
+                                                        +{day.events.length - 2}
                                                     </div>
                                                 )}
                                             </div>
@@ -537,11 +567,14 @@ const Calendar = () => {
                         <div className="bg-gray-50 rounded-lg p-4">
                             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                                 <Clock className="h-4 w-4 mr-2" />
-                                {selectedDate.toLocaleDateString('en-US', {
-                                    weekday: 'long',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
+                                {selectedDate && !isNaN(selectedDate.getTime())
+                                    ? selectedDate.toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })
+                                    : 'Select a date'
+                                }
                             </h3>
 
                             <div className="space-y-2">
@@ -576,10 +609,23 @@ const Calendar = () => {
                                                             {userRole === 'admin' && event.subject && `${event.subject}`}
                                                         </p>
                                                     )}
+                                                    {/* Task priority info */}
+                                                    {event.type === 'task' && event.priority && (
+                                                        <p className="text-xs mt-1 text-gray-600 capitalize">
+                                                            {event.priority} priority
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded">
-                                                    {event.type === 'session' ? 'Session' : 'Task'}
-                                                </span>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded">
+                                                        {event.type === 'session' ? 'Session' : 'Task'}
+                                                    </span>
+                                                    {event.type === 'task' && event.status && (
+                                                        <span className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded capitalize">
+                                                            {event.status.replace('_', ' ')}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))

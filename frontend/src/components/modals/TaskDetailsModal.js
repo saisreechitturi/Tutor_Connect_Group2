@@ -16,12 +16,12 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
 
             const response = await taskService.updateTaskProgress(task.id, newProgress);
             const updatedTask = response.task || response;
-            
+
             setProgress(newProgress);
 
             if (onTaskUpdated) {
-                onTaskUpdated({ 
-                    ...task, 
+                onTaskUpdated({
+                    ...task,
                     progress: newProgress,
                     progressPercentage: newProgress,
                     status: newProgress === 100 ? 'completed' : task.status,
