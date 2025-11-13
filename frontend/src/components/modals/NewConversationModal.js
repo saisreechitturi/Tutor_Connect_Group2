@@ -28,65 +28,30 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
 
             // If current user is a student, fetch tutors
             if (user.role === 'student') {
-                try {
-                    const tutors = await tutorService.getTutors();
-                    users = tutors.map(tutor => ({
-                        id: tutor.id,
-                        name: `${tutor.firstName} ${tutor.lastName}`,
-                        role: 'tutor',
-                        subjects: tutor.subjects || [],
-                        rating: tutor.rating,
-                        profileImageUrl: tutor.profileImageUrl
-                    }));
-                } catch (apiError) {
-                    // Fallback mock data for tutors
-                    users = [
-                        {
-                            id: 101,
-                            name: "Dr. Sarah Johnson",
-                            firstName: "Sarah",
-                            lastName: "Johnson",
-                            role: "tutor",
-                            subjects: ["Mathematics", "Physics"],
-                            rating: 4.9,
-                            profileImageUrl: null
-                        },
-                        {
-                            id: 102,
-                            name: "Prof. Michael Chen",
-                            firstName: "Michael",
-                            lastName: "Chen",
-                            role: "tutor",
-                            subjects: ["Computer Science", "Programming"],
-                            rating: 4.8,
-                            profileImageUrl: null
-                        },
-                        {
-                            id: 103,
-                            name: "Emma Williams",
-                            firstName: "Emma",
-                            lastName: "Williams",
-                            role: "tutor",
-                            subjects: ["English Literature", "Writing"],
-                            rating: 4.7,
-                            profileImageUrl: null
-                        }
-                    ];
-                }
+                const tutors = await tutorService.getTutors();
+                users = tutors.map(tutor => ({
+                    id: tutor.id,
+                    name: `${tutor.firstName} ${tutor.lastName}`,
+                    firstName: tutor.firstName,
+                    lastName: tutor.lastName,
+                    role: 'tutor',
+                    subjects: tutor.subjects || [],
+                    rating: tutor.rating,
+                    profileImageUrl: tutor.profileImageUrl
+                }));
             } else if (user.role === 'tutor') {
-                // For tutors, we might want to show students they've had sessions with
-                // For now, provide a simple interface
-                users = [
-                    {
-                        id: 201,
-                        name: "Alex Johnson",
-                        firstName: "Alex",
-                        lastName: "Johnson",
-                        role: "student",
-                        subjects: ["Mathematics"],
-                        profileImageUrl: null
-                    }
-                ];
+                // For tutors, fetch students they've had sessions with
+                const students = await tutorService.getTutorStudents(user.id);
+                users = students.map(student => ({
+                    id: student.id,
+                    name: `${student.firstName} ${student.lastName}`,
+                    firstName: student.firstName,
+                    lastName: student.lastName,
+                    role: 'student',
+                    email: student.email,
+                    totalSessions: student.totalSessions,
+                    profileImageUrl: student.avatarUrl
+                }));
             }
 
             setAvailableUsers(users);
@@ -245,10 +210,15 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
                                                     {user.role === 'tutor' ? 'Tutor' : 'Student'}
                                                     {user.rating && ` • ⭐ ${user.rating}`}
                                                 </p>
-                                                {user.subjects.length > 0 && (
+                                                {user.subjects && user.subjects.length > 0 && (
                                                     <p className="text-xs text-gray-400 truncate">
                                                         {user.subjects.slice(0, 2).join(', ')}
                                                         {user.subjects.length > 2 && ` +${user.subjects.length - 2} more`}
+                                                    </p>
+                                                )}
+                                                {user.totalSessions && (
+                                                    <p className="text-xs text-gray-400">
+                                                        {user.totalSessions} session{user.totalSessions !== 1 ? 's' : ''}
                                                     </p>
                                                 )}
                                             </div>

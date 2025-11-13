@@ -79,18 +79,19 @@ router.get('/', [
         id: row.id,
         subject: row.subject,
         content: row.content,
-        messageType: row.message_type,
         isRead: row.is_read,
-        attachmentUrl: row.attachment_url,
-        sessionId: row.session_id,
         sender: {
             id: row.sender_id,
             name: `${row.sender_first_name} ${row.sender_last_name}`,
+            firstName: row.sender_first_name,
+            lastName: row.sender_last_name,
             avatarUrl: row.sender_avatar
         },
         recipient: {
             id: row.recipient_id,
             name: `${row.recipient_first_name} ${row.recipient_last_name}`,
+            firstName: row.recipient_first_name,
+            lastName: row.recipient_last_name,
             avatarUrl: row.recipient_avatar
         },
         createdAt: row.created_at
@@ -143,28 +144,50 @@ router.post('/', [
     }
 
     const result = await query(`
-        INSERT INTO messages (sender_id, recipient_id, subject, content, message_type, session_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO messages (sender_id, recipient_id, subject, content)
+        VALUES ($1, $2, $3, $4)
         RETURNING *
-    `, [req.user.id, recipientId, subject || null, content, messageType || 'direct', sessionId || null]);
+    `, [req.user.id, recipientId, subject || null, content]);
 
     const message = result.rows[0];
+
+    // Fetch sender and recipient details for socket event
+    const [senderDetails, recipientDetails] = await Promise.all([
+        query('SELECT id, first_name, last_name FROM users WHERE id = $1', [req.user.id]),
+        query('SELECT id, first_name, last_name FROM users WHERE id = $1', [recipientId])
+    ]);
+
+    const sender = senderDetails.rows[0];
+    const recipient = recipientDetails.rows[0];
 
     // Emit socket event to recipient if socket server is available
     try {
         const io = getIO();
         if (io) {
-            io.to(`user:${recipientId}`).emit('message:new', {
+            const socketData = {
                 id: message.id,
                 subject: message.subject,
                 content: message.content,
-                messageType: message.message_type,
-                sessionId: message.session_id,
                 isRead: false,
-                sender: { id: req.user.id },
-                recipient: { id: recipientId },
+                sender: {
+                    id: sender.id,
+                    firstName: sender.first_name,
+                    lastName: sender.last_name,
+                    name: `${sender.first_name} ${sender.last_name}`
+                },
+                recipient: {
+                    id: recipient.id,
+                    firstName: recipient.first_name,
+                    lastName: recipient.last_name,
+                    name: `${recipient.first_name} ${recipient.last_name}`
+                },
                 createdAt: message.created_at
-            });
+            };
+
+            // Emit to recipient
+            io.to(`user:${recipientId}`).emit('message:new', socketData);
+            // Also emit to sender for real-time update in their own chat
+            io.to(`user:${req.user.id}`).emit('message:new', socketData);
         }
     } catch (_) { /* noop */ }
 
@@ -174,8 +197,8 @@ router.post('/', [
             id: message.id,
             subject: message.subject,
             content: message.content,
-            messageType: message.message_type,
-            sessionId: message.session_id,
+            messageType: messageType || 'direct',
+            sessionId: sessionId || null,
             createdAt: message.created_at
         }
     });
@@ -248,18 +271,19 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
         id: row.id,
         subject: row.subject,
         content: row.content,
-        messageType: row.message_type,
         isRead: row.recipient_id === req.user.id ? true : row.is_read,
-        attachmentUrl: row.attachment_url,
-        sessionId: row.session_id,
         sender: {
             id: row.sender_id,
             name: `${row.sender_first_name} ${row.sender_last_name}`,
+            firstName: row.sender_first_name,
+            lastName: row.sender_last_name,
             avatarUrl: row.sender_avatar
         },
         recipient: {
             id: row.recipient_id,
             name: `${row.recipient_first_name} ${row.recipient_last_name}`,
+            firstName: row.recipient_first_name,
+            lastName: row.recipient_last_name,
             avatarUrl: row.recipient_avatar
         },
         createdAt: row.created_at
@@ -285,7 +309,7 @@ router.patch('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
 // Also support PUT for frontend compatibility
 router.put('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(
-        'UPDATE messages SET is_read = true, read_at = NOW() WHERE id = $1 AND recipient_id = $2 RETURNING id',
+        'UPDATE messages SET is_read = true WHERE id = $1 AND recipient_id = $2 RETURNING id',
         [req.params.id, req.user.id]
     );
     if (result.rows.length === 0) {
@@ -356,7 +380,7 @@ router.get('/conversation/:userId', [
 router.put('/conversation/:userId/read', authenticateToken, asyncHandler(async (req, res) => {
     const otherUserId = req.params.userId;
     await query(
-        'UPDATE messages SET is_read = true, read_at = NOW() WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false',
+        'UPDATE messages SET is_read = true WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false',
         [otherUserId, req.user.id]
     );
     res.json({ message: 'Conversation marked as read' });

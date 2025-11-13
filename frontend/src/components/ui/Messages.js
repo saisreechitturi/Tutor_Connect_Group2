@@ -19,6 +19,7 @@ const Messages = () => {
     const [sendingMessage, setSendingMessage] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const prevUnreadIdsRef = useRef(new Set());
+    const messagesEndRef = useRef(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,60 +28,8 @@ const Messages = () => {
                 setError(null);
 
                 // Get messages and conversations list
-                try {
-                    const messagesData = await messageService.getMessages();
-                    setMessages(messagesData || []);
-                } catch (apiError) {
-                    console.warn('API not available, using mock data:', apiError);
-
-                    // Provide mock data when backend is not available
-                    const mockMessages = [
-                        {
-                            id: 1,
-                            content: "Hi! I'm interested in your tutoring services for Mathematics.",
-                            createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-                            sender: {
-                                id: 2,
-                                name: "John Michael Smith",
-                                firstName: "John",
-                                lastName: "Smith",
-                                role: "student"
-                            },
-                            recipient: { id: user.id, name: user.firstName + " " + user.lastName },
-                            isRead: false
-                        },
-                        {
-                            id: 2,
-                            content: "Hello! I'd be happy to help you with Mathematics. What specific topics are you looking to improve?",
-                            createdAt: new Date(Date.now() - 3300000).toISOString(), // 55 minutes ago
-                            sender: { id: user.id, name: user.firstName + " " + user.lastName },
-                            recipient: {
-                                id: 2,
-                                name: "John Michael Smith",
-                                firstName: "John",
-                                lastName: "Smith",
-                                role: "student"
-                            },
-                            isRead: true
-                        },
-                        {
-                            id: 3,
-                            content: "I'm struggling with calculus, particularly derivatives and integrals.",
-                            createdAt: new Date(Date.now() - 3000000).toISOString(), // 50 minutes ago
-                            sender: {
-                                id: 2,
-                                name: "John Michael Smith",
-                                firstName: "John",
-                                lastName: "Smith",
-                                role: "student"
-                            },
-                            recipient: { id: user.id, name: user.firstName + " " + user.lastName },
-                            isRead: false
-                        }
-                    ];
-
-                    setMessages(mockMessages);
-                }
+                const messagesData = await messageService.getMessages();
+                setMessages(messagesData || []);
 
                 // Fetch unread count
                 try {
@@ -113,18 +62,56 @@ const Messages = () => {
             try {
                 // Only add if this message is to me or from me
                 if (msg?.recipient?.id === user.id || msg?.sender?.id === user.id) {
-                    setMessages(prev => [
-                        // place newest first since list is sorted desc in state mapping
-                        {
-                            id: msg.id,
-                            content: msg.content,
-                            createdAt: msg.createdAt || new Date().toISOString(),
-                            sender: { id: msg.sender?.id },
-                            recipient: { id: msg.recipient?.id },
-                            isRead: msg.recipient?.id === user.id ? false : true
-                        },
-                        ...prev
-                    ]);
+                    // Ensure sender and recipient have proper name fields
+                    const sender = msg.sender || {};
+                    const recipient = msg.recipient || {};
+
+                    // Build full sender object
+                    if (!sender.name && sender.firstName && sender.lastName) {
+                        sender.name = `${sender.firstName} ${sender.lastName}`;
+                    } else if (!sender.firstName && !sender.name && sender.id === user.id) {
+                        sender.firstName = user.firstName;
+                        sender.lastName = user.lastName;
+                        sender.name = `${user.firstName} ${user.lastName}`;
+                    }
+
+                    // Build full recipient object
+                    if (!recipient.name && recipient.firstName && recipient.lastName) {
+                        recipient.name = `${recipient.firstName} ${recipient.lastName}`;
+                    } else if (!recipient.firstName && !recipient.name && recipient.id === user.id) {
+                        recipient.firstName = user.firstName;
+                        recipient.lastName = user.lastName;
+                        recipient.name = `${user.firstName} ${user.lastName}`;
+                    }
+
+                    const newMessage = {
+                        id: msg.id,
+                        content: msg.content,
+                        createdAt: msg.createdAt || new Date().toISOString(),
+                        sender: sender,
+                        recipient: recipient,
+                        isRead: msg.recipient?.id === user.id ? false : true
+                    };
+
+                    setMessages(prev => [newMessage, ...prev]);
+
+                    // If this message is for the currently open conversation, update it
+                    setSelectedConversation(prev => {
+                        if (!prev) return prev;
+
+                        const otherUserId = msg.sender?.id === user.id ? msg.recipient?.id : msg.sender?.id;
+                        if (prev.userId === otherUserId) {
+                            return {
+                                ...prev,
+                                messages: [...prev.messages, newMessage].sort((a, b) =>
+                                    new Date(a.createdAt) - new Date(b.createdAt)
+                                ),
+                                latestMessage: newMessage
+                            };
+                        }
+                        return prev;
+                    });
+
                     // Bump unread if I'm the recipient
                     if (msg?.recipient?.id === user.id) {
                         setUnreadCount(c => c + 1);
@@ -202,6 +189,11 @@ const Messages = () => {
         };
     }, [user?.id]);
 
+    // Scroll to bottom when conversation changes or new message arrives
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [selectedConversation?.messages]);
+
     if (loading) {
         return (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -221,6 +213,17 @@ const Messages = () => {
     const conversationMap = new Map();
     messages.forEach(message => {
         const otherUser = message.sender.id === user.id ? message.recipient : message.sender;
+
+        // Ensure user object has both name and firstName/lastName
+        if (!otherUser.name && otherUser.firstName && otherUser.lastName) {
+            otherUser.name = `${otherUser.firstName} ${otherUser.lastName}`;
+        }
+        if (!otherUser.firstName && otherUser.name) {
+            const nameParts = otherUser.name.split(' ');
+            otherUser.firstName = nameParts[0];
+            otherUser.lastName = nameParts.slice(1).join(' ');
+        }
+
         const key = otherUser.id;
 
         if (!conversationMap.has(key)) {
@@ -500,11 +503,14 @@ const Messages = () => {
                                 <div className="p-4 border-b border-gray-200 bg-white">
                                     <div className="flex items-center space-x-3">
                                         <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
-                                            {selectedConversation.user?.name?.[0] || '?'}
+                                            {selectedConversation.user?.firstName?.[0] || selectedConversation.user?.name?.[0] || '?'}
                                         </div>
                                         <div>
                                             <h2 className="text-lg font-semibold text-gray-900">
-                                                {selectedConversation.user?.name || 'Unknown User'}
+                                                {selectedConversation.user?.firstName && selectedConversation.user?.lastName
+                                                    ? `${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`
+                                                    : selectedConversation.user?.name || 'Unknown User'
+                                                }
                                             </h2>
                                             <p className="text-sm text-gray-500">
                                                 {selectedConversation.messages.length} messages
@@ -536,6 +542,7 @@ const Messages = () => {
                                                 </div>
                                             </div>
                                         ))}
+                                    <div ref={messagesEndRef} />
                                 </div>
 
                                 {/* Message Input */}
