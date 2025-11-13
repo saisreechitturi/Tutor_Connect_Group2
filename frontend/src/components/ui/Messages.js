@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Search, Plus, X, AlertCircle, Users } from 'lucide-react';
+import { MessageSquare, Send, Search, Plus, X, AlertCircle } from 'lucide-react';
 import { messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import NewConversationModal from '../modals/NewConversationModal';
@@ -12,7 +12,7 @@ const Messages = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showNewConversation, setShowNewConversation] = useState(false);
     const [messages, setMessages] = useState([]);
-    const [conversations, setConversations] = useState([]);
+    // conversations list is derived from messages; no separate state needed
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [sendingError, setSendingError] = useState(null);
@@ -28,13 +28,8 @@ const Messages = () => {
 
                 // Get messages and conversations list
                 try {
-                    const [messagesData, conversationsData] = await Promise.all([
-                        messageService.getMessages(),
-                        messageService.getConversationsList().catch(() => []) // Fallback to empty array if not implemented
-                    ]);
-
+                    const messagesData = await messageService.getMessages();
                     setMessages(messagesData || []);
-                    setConversations(conversationsData || []);
                 } catch (apiError) {
                     console.warn('API not available, using mock data:', apiError);
 
@@ -85,7 +80,6 @@ const Messages = () => {
                     ];
 
                     setMessages(mockMessages);
-                    setConversations([]);
                 }
 
                 // Fetch unread count

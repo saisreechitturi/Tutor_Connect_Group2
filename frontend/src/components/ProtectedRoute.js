@@ -6,6 +6,14 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
     const { isAuthenticated, user, initializing } = useAuth();
     const location = useLocation();
 
+    console.log('ProtectedRoute check:', {
+        isAuthenticated,
+        userRole: user?.role,
+        allowedRoles,
+        requireAuth,
+        location: location.pathname
+    });
+
     // Only block rendering while the app is performing the initial auth check.
     if (initializing) {
         return (
@@ -17,6 +25,7 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
 
     if (requireAuth && !isAuthenticated) {
         // Redirect to login with return path
+        console.log('Redirecting to login - not authenticated');
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
@@ -24,6 +33,7 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
         // If user is already logged in, redirect to appropriate dashboard
         const dashboardPath = user?.role === 'admin' ? '/admin' :
             user?.role === 'tutor' ? '/tutor' : '/student';
+        console.log('Redirecting to dashboard - already authenticated:', dashboardPath);
         return <Navigate to={dashboardPath} replace />;
     }
 
@@ -31,9 +41,11 @@ const ProtectedRoute = ({ children, allowedRoles = [], requireAuth = true }) => 
         // User doesn't have required role, redirect to their appropriate dashboard
         const dashboardPath = user?.role === 'admin' ? '/admin' :
             user?.role === 'tutor' ? '/tutor' : '/student';
+        console.log('Role mismatch - redirecting to:', dashboardPath);
         return <Navigate to={dashboardPath} replace />;
     }
 
+    console.log('ProtectedRoute - rendering children');
     return children;
 };
 

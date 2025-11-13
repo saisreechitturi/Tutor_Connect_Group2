@@ -206,7 +206,7 @@ const BrowseTutors = () => {
                                 <option value="price_high">Price: High to Low</option>
                             </select>
                         </div>
-                        
+
                         {/* Filter Reset Button */}
                         <button
                             onClick={() => {
@@ -342,7 +342,7 @@ const BrowseTutors = () => {
                                     Book Session
                                 </button>
                                 <Link
-                                    to={`/tutor/${tutor.id}`}
+                                    to={`/tutors/${tutor.id}`}
                                     className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium text-center block"
                                 >
                                     View Profile

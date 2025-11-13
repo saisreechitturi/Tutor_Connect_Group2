@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import ProfileChecker from '../components/ProfileChecker';
 import StudentDashboard from '../components/dashboard/StudentDashboard';
 import TaskManager from '../components/ui/TaskManager';
 import TutorSearch from '../components/ui/TutorSearch';
@@ -13,20 +12,18 @@ import Notifications from '../pages/Notifications';
 
 const StudentRoutes = () => {
     return (
-        <ProfileChecker>
-            <DashboardLayout userRole="student">
-                <Routes>
-                    <Route index element={<StudentDashboard />} />
-                    <Route path="tutors" element={<TutorSearch />} />
-                    <Route path="sessions" element={<MySessions />} />
-                    <Route path="tasks" element={<TaskManager />} />
-                    <Route path="calendar" element={<Calendar />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="notifications" element={<Notifications />} />
-                    <Route path="settings" element={<StudentSettings />} />
-                </Routes>
-            </DashboardLayout>
-        </ProfileChecker>
+        <DashboardLayout userRole="student">
+            <Routes>
+                <Route index element={<StudentDashboard />} />
+                <Route path="tutors" element={<TutorSearch />} />
+                <Route path="sessions" element={<MySessions />} />
+                <Route path="tasks" element={<TaskManager />} />
+                <Route path="calendar" element={<Calendar />} />
+                <Route path="messages" element={<Messages />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="settings" element={<StudentSettings />} />
+            </Routes>
+        </DashboardLayout>
     );
 };
 

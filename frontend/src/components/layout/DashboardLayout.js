@@ -12,7 +12,9 @@ import {
     BookOpen,
     BarChart,
     Menu,
-    X
+    X,
+    Clock,
+    Bell
 } from 'lucide-react';
 import Toaster from '../ui/Toaster';
 
@@ -28,7 +30,8 @@ const DashboardLayout = ({ userRole, children }) => {
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
             { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
             { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
-            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
+            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare },
+            { name: 'Notifications', href: `/${userRole}/notifications`, icon: Bell }
         ];
 
         // Admin gets different common items (no calendar or tasks) and no platform messages
@@ -46,7 +49,8 @@ const DashboardLayout = ({ userRole, children }) => {
             tutor: [
                 { name: 'My Students', href: '/tutor/students', icon: Users },
                 { name: 'My Sessions', href: '/tutor/sessions', icon: BookOpen },
-                { name: 'Analytics', href: '/tutor/analytics', icon: BarChart }
+                { name: 'Analytics', href: '/tutor/analytics', icon: BarChart },
+                { name: 'Availability', href: '/tutor/availability', icon: Clock }
             ],
             admin: [
                 { name: 'Users', href: '/admin/users', icon: Users },

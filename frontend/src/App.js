@@ -109,8 +109,9 @@ function App() {
                             }
                         />
 
+                        {/* Public tutor profile view - Use /tutors/:id to avoid conflict with /tutor/* dashboard */}
                         <Route
-                            path="/tutor/:id"
+                            path="/tutors/:id"
                             element={
                                 <ProtectedRoute requireAuth={false}>
                                     <>
