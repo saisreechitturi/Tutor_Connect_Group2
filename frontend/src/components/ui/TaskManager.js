@@ -279,88 +279,104 @@ const TaskManager = () => {
             </div>
 
             {/* Tasks List */}
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {filteredTasks.map((task) => (
                     <div
                         key={task.id}
-                        className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${isOverdue(task.dueDate, task.status) ? 'border-l-red-500 bg-red-50' :
+                        className={`bg-white rounded-lg shadow-sm border-l-4 p-4 ${isOverdue(task.dueDate, task.status) ? 'border-l-red-500 bg-red-50' :
                             task.status === 'completed' ? 'border-l-green-500' :
                                 task.status === 'in-progress' ? 'border-l-blue-500' :
                                     'border-l-gray-300'
                             }`}
                     >
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleTaskStatus(task.id);
-                                    }}
-                                    className={`mt-1 ${getStatusColor(task.status)} hover:scale-110 transition-transform`}
-                                >
-                                    {task.status === 'completed' ? (
-                                        <CheckSquare className="h-5 w-5" />
-                                    ) : (
-                                        <Square className="h-5 w-5" />
-                                    )}
-                                </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleTaskStatus(task.id);
+                                }}
+                                className={`${getStatusColor(task.status)} hover:scale-110 transition-transform flex-shrink-0`}
+                            >
+                                {task.status === 'completed' ? (
+                                    <CheckSquare className="h-5 w-5" />
+                                ) : (
+                                    <Square className="h-5 w-5" />
+                                )}
+                            </button>
 
-                                <div
-                                    className="flex-1 cursor-pointer"
-                                    onClick={() => handleTaskClick(task)}
-                                >
+                            <div
+                                className="flex-1 cursor-pointer min-w-0"
+                                onClick={() => handleTaskClick(task)}
+                            >
+                                <div className="flex items-center gap-3 flex-wrap">
                                     <h3 className={`font-semibold text-gray-900 hover:text-blue-600 transition-colors ${task.status === 'completed' ? 'line-through text-gray-500' : ''
                                         }`}>
                                         {task.title}
                                     </h3>
-                                    {task.description && (
-                                        <p className="text-gray-600 text-sm mt-1">{task.description}</p>
+                                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
+                                        {task.priority}
+                                    </span>
+                                    {isOverdue(task.dueDate, task.status) && (
+                                        <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                                            Overdue
+                                        </span>
                                     )}
+                                </div>
 
-                                    <div className="flex flex-wrap items-center gap-4 mt-3">
-                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
-                                            {task.priority} priority
-                                        </span>
+                                {task.description && (
+                                    <p className="text-gray-600 text-sm mt-1 line-clamp-1">{task.description}</p>
+                                )}
 
-                                        <span className="text-sm text-gray-500 flex items-center">
-                                            <Calendar className="h-4 w-4 mr-1" />
-                                            Due: {new Date(task.dueDate).toLocaleDateString()}
-                                        </span>
-
-                                        <span className="text-sm text-gray-500 flex items-center">
-                                            <Clock className="h-4 w-4 mr-1" />
-                                            {task.estimatedHours}h estimated
-                                        </span>
-
-                                        {task.tags && task.tags.length > 0 && (
-                                            <span className="text-sm text-gray-500">
-                                                {task.tags.join(', ')}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {task.status !== 'completed' && task.progress > 0 && (
-                                        <div className="mt-3">
-                                            <div className="flex justify-between text-sm text-gray-600 mb-1">
-                                                <span>Progress</span>
-                                                <span>{task.progress}%</span>
-                                            </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-blue-600 h-2 rounded-full transition-all"
-                                                    style={{ width: `${task.progress}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
+                                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
+                                    <span className="flex items-center">
+                                        <Calendar className="h-3 w-3 mr-1" />
+                                        {new Date(task.dueDate).toLocaleDateString()}
+                                    </span>
+                                    <span className="flex items-center">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        {task.estimatedHours}h
+                                    </span>
+                                    {task.tags && task.tags.length > 0 && (
+                                        <span>{task.tags.join(', ')}</span>
                                     )}
                                 </div>
                             </div>
 
-                            {isOverdue(task.dueDate, task.status) && (
-                                <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full">
-                                    Overdue
-                                </span>
-                            )}
+                            {/* Circular Progress Indicator */}
+                            {task.status !== 'completed' && task.progress > 0 ? (
+                                <div className="relative flex-shrink-0" title={`${task.progress}% complete`}>
+                                    <svg className="w-12 h-12 transform -rotate-90">
+                                        <circle
+                                            cx="24"
+                                            cy="24"
+                                            r="20"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                            fill="none"
+                                            className="text-gray-200"
+                                        />
+                                        <circle
+                                            cx="24"
+                                            cy="24"
+                                            r="20"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                            fill="none"
+                                            strokeDasharray={`${2 * Math.PI * 20}`}
+                                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - task.progress / 100)}`}
+                                            className="text-blue-600 transition-all"
+                                            strokeLinecap="round"
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-xs font-semibold text-gray-700">{task.progress}%</span>
+                                    </div>
+                                </div>
+                            ) : task.status === 'completed' ? (
+                                <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+                                    <CheckSquare className="h-6 w-6 text-green-600" />
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 ))}

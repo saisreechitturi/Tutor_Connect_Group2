@@ -162,12 +162,15 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                                 Due Date
                             </h3>
                             <p className="text-gray-700 text-sm">
-                                {new Date(task.dueDate).toLocaleDateString('en-US', {
-                                    weekday: 'long',
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
+                                {task.dueDate && !isNaN(new Date(task.dueDate).getTime())
+                                    ? new Date(task.dueDate).toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })
+                                    : 'No due date set'
+                                }
                             </p>
                         </div>
 

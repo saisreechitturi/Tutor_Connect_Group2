@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { calendarService } from '../../services';
 import AddTaskModal from '../modals/AddTaskModal';
 import BookSessionModal from '../modals/BookSessionModal';
+import TaskDetailsModal from '../modals/TaskDetailsModal';
 
 const Calendar = () => {
     const { user } = useAuth();
@@ -16,6 +17,8 @@ const Calendar = () => {
     const [error, setError] = useState(null);
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
     const [showBookSessionModal, setShowBookSessionModal] = useState(false);
+    const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
 
     // Fetch calendar data with error handling and fallback
@@ -132,6 +135,39 @@ const Calendar = () => {
             }
         }
     }, [user?.id, fetchCalendarData]);
+
+    const handleTaskClick = (event) => {
+        if (event.type === 'task') {
+            // Extract task ID from event.id (format: 'task-{uuid}')
+            let taskId = event.taskId || event.id;
+
+            // If ID has 'task-' prefix, remove it
+            if (typeof taskId === 'string' && taskId.startsWith('task-')) {
+                taskId = taskId.replace('task-', '');
+            }
+
+            setSelectedTask({
+                ...event,
+                id: taskId,
+                dueDate: event.dueDate || event.due_date || event.start,
+                estimatedHours: event.estimatedHours || event.estimated_hours,
+                progress: event.progress || event.progressPercentage || event.progress_percentage || 0
+            });
+            setShowTaskDetailsModal(true);
+        }
+    };
+
+    const handleTaskUpdated = (updatedTask) => {
+        // Update the task in calendar events
+        setCalendarEvents(prev => prev.map(event =>
+            event.id === `task-${updatedTask.id}` || event.taskId === updatedTask.id
+                ? { ...event, ...updatedTask, type: 'task' }
+                : event
+        ));
+
+        // Refresh calendar to get latest data
+        fetchCalendarData(false);
+    };
 
     const handleTaskAdded = async (newTask) => {
         // Optimistically add task to local state
@@ -517,23 +553,24 @@ const Calendar = () => {
                                         key={index}
                                         onClick={() => setSelectedDate(day.date)}
                                         className={`
-                                            relative p-2 h-20 border-r border-b border-gray-200 text-left hover:bg-gray-50 transition-colors
+                                            relative p-1 h-20 border-r border-b border-gray-200 text-left hover:bg-gray-50 transition-colors flex flex-col
                                             ${!day.isCurrentMonth ? 'text-gray-400 bg-gray-50' : 'text-gray-900'}
                                             ${day.isToday ? 'bg-blue-50 border-blue-200' : ''}
                                             ${day.isSelected ? 'bg-blue-100 border-blue-300' : ''}
                                         `}
                                     >
+                                        {/* Date number at top-left */}
                                         <div className={`
-                                            inline-flex items-center justify-center w-6 h-6 text-sm rounded-full
+                                            w-6 h-6 text-sm rounded-full flex items-center justify-center flex-shrink-0
                                             ${day.isToday ? 'bg-blue-600 text-white font-semibold' : ''}
                                             ${day.isSelected && !day.isToday ? 'bg-blue-500 text-white' : ''}
                                         `}>
                                             {day.day}
                                         </div>
 
-                                        {/* Event Indicators */}
+                                        {/* Event Indicators - positioned below date */}
                                         {day.hasEvents && (
-                                            <div className="absolute bottom-1 left-1 right-1">
+                                            <div className="mt-1 flex-1 overflow-hidden">
                                                 <div className="space-y-0.5">
                                                     {day.events.slice(0, 2).map((event, eventIndex) => (
                                                         <div
@@ -549,8 +586,8 @@ const Calendar = () => {
                                                     ))}
                                                 </div>
                                                 {day.events.length > 2 && (
-                                                    <div className="text-xs text-gray-500 text-center mt-0.5">
-                                                        +{day.events.length - 2}
+                                                    <div className="text-xs text-gray-500 mt-0.5">
+                                                        +{day.events.length - 2} more
                                                     </div>
                                                 )}
                                             </div>
@@ -582,15 +619,27 @@ const Calendar = () => {
                                     getEventsForDate(selectedDate).map((event, index) => (
                                         <div
                                             key={index}
-                                            className={`p-3 rounded-lg border ${getEventColor(event)}`}
+                                            onClick={() => event.type === 'task' && handleTaskClick(event)}
+                                            className={`p-3 rounded-lg border ${getEventColor(event)} ${event.type === 'task' ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+                                                }`}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <h4 className="font-medium text-sm">
                                                         {event.title || event.notes || event.description || 'Untitled Event'}
                                                     </h4>
-                                                    {event.time && (
-                                                        <p className="text-xs mt-1 flex items-center">
+                                                    {event.type === 'task' && (event.dueDate || event.due_date || event.start) && (
+                                                        <p className="text-xs mt-1 flex items-center text-gray-600">
+                                                            <Clock className="h-3 w-3 mr-1" />
+                                                            Due: {new Date(event.dueDate || event.due_date || event.start).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </p>
+                                                    )}
+                                                    {event.type === 'session' && event.time && (
+                                                        <p className="text-xs mt-1 flex items-center text-gray-600">
                                                             <Clock className="h-3 w-3 mr-1" />
                                                             {formatTime(event.time)}
                                                         </p>
@@ -614,6 +663,23 @@ const Calendar = () => {
                                                         <p className="text-xs mt-1 text-gray-600 capitalize">
                                                             {event.priority} priority
                                                         </p>
+                                                    )}
+                                                    {/* Task progress bar */}
+                                                    {event.type === 'task' && (
+                                                        <div className="mt-2">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-xs text-gray-600">Progress</span>
+                                                                <span className="text-xs font-medium text-gray-700">
+                                                                    {event.progress || event.progressPercentage || event.progress_percentage || 0}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                                <div
+                                                                    className="bg-blue-600 h-1.5 rounded-full transition-all"
+                                                                    style={{ width: `${event.progress || event.progressPercentage || event.progress_percentage || 0}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1">
@@ -737,6 +803,18 @@ const Calendar = () => {
                     onClose={() => setShowBookSessionModal(false)}
                     onSessionBooked={handleSessionBooked}
                     initialDate={selectedDate}
+                />
+            )}
+
+            {showTaskDetailsModal && selectedTask && (
+                <TaskDetailsModal
+                    isOpen={showTaskDetailsModal}
+                    onClose={() => {
+                        setShowTaskDetailsModal(false);
+                        setSelectedTask(null);
+                    }}
+                    task={selectedTask}
+                    onTaskUpdated={handleTaskUpdated}
                 />
             )}
         </div>
