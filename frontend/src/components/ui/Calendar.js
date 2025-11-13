@@ -51,7 +51,8 @@ const Calendar = () => {
                     event.due_date,
                     event.scheduled_at,
                     event.dueDate,
-                    event.scheduledStart
+                    event.scheduledStart,
+                    event.start
                 ];
 
                 for (const dateField of possibleDates) {
@@ -77,8 +78,8 @@ const Calendar = () => {
                 }
                 eventsGrouped[dateKey].push({
                     ...event,
-                    type: event.session_type ? 'session' : 'task',
-                    time: event.start_time || event.scheduled_time || '00:00',
+                    type: event.type || (event.session_type ? 'session' : 'task'),
+                    time: event.time || event.start_time || event.scheduled_time || '00:00',
                     status: event.status || 'scheduled'
                 });
             });

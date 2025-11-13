@@ -5,7 +5,7 @@ import { taskService } from '../../services';
 const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [progress, setProgress] = useState(task?.progress || 0);
+    const [progress, setProgress] = useState(task?.progress || task?.progressPercentage || 0);
 
     if (!isOpen || !task) return null;
 
@@ -14,11 +14,19 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             setLoading(true);
             setError(null);
 
-            await taskService.updateTaskProgress(task.id, newProgress);
+            const response = await taskService.updateTaskProgress(task.id, newProgress);
+            const updatedTask = response.task || response;
+            
             setProgress(newProgress);
 
             if (onTaskUpdated) {
-                onTaskUpdated({ ...task, progress: newProgress });
+                onTaskUpdated({ 
+                    ...task, 
+                    progress: newProgress,
+                    progressPercentage: newProgress,
+                    status: newProgress === 100 ? 'completed' : task.status,
+                    completedAt: newProgress === 100 ? new Date().toISOString() : task.completedAt
+                });
             }
         } catch (err) {
             console.error('Failed to update task progress:', err);
@@ -37,8 +45,8 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             let newProgress = progress;
 
             if (task.status === 'pending') {
-                newStatus = 'in-progress';
-            } else if (task.status === 'in-progress') {
+                newStatus = 'in_progress';
+            } else if (task.status === 'in_progress') {
                 newStatus = 'completed';
                 newProgress = 100;
             } else {
@@ -46,18 +54,21 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                 newProgress = 0;
             }
 
-            await taskService.updateTask(task.id, {
+            const response = await taskService.updateTask(task.id, {
                 status: newStatus,
                 progress: newProgress
             });
 
+            const updatedTask = response.task || response;
             setProgress(newProgress);
 
             if (onTaskUpdated) {
                 onTaskUpdated({
                     ...task,
                     status: newStatus,
-                    progress: newProgress
+                    progress: newProgress,
+                    progressPercentage: newProgress,
+                    completedAt: newStatus === 'completed' ? new Date().toISOString() : null
                 });
             }
         } catch (err) {
@@ -70,7 +81,8 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
 
     const getPriorityColor = (priority) => {
         switch (priority) {
-            case 'high': return 'bg-red-100 text-red-800 border-red-200';
+            case 'urgent': return 'bg-red-200 text-red-900 border-red-300';
+            case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'low': return 'bg-green-100 text-green-800 border-green-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';

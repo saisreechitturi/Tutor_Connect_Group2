@@ -199,16 +199,23 @@ router.get('/events', [
 
                 events.push({
                     id: `task-${task.id}`,
+                    taskId: task.id,
                     title: task.title,
                     description: task.description,
                     start: task.due_date,
                     end: null,
                     date: eventDate.toISOString().split('T')[0],
+                    due_date: task.due_date,
+                    dueDate: task.due_date,
                     time: 'Due',
                     type: 'task',
                     status: task.status,
                     priority: task.priority,
+                    progress: task.progress_percentage,
+                    progressPercentage: task.progress_percentage,
                     estimatedDuration: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null, // Convert hours to minutes
+                    estimatedHours: task.estimated_hours,
+                    tags: task.tags,
                     completedAt: task.completed_at,
                     createdAt: task.created_at,
                     updatedAt: task.updated_at

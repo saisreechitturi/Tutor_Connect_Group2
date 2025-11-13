@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/', [
     authenticateToken,
     expressQuery('status').optional().isIn(['pending', 'in_progress', 'completed', 'cancelled']),
-    expressQuery('priority').optional().isIn(['low', 'medium', 'high']),
+    expressQuery('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
 ], asyncHandler(async (req, res) => {
@@ -138,7 +138,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             description: task.description,
             priority: task.priority,
             status: task.status,
-            progress: task.progress,
+            progress: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
             actualHours: task.actual_hours,
@@ -192,7 +192,9 @@ router.put('/:id', [
         due_date = COALESCE($6, due_date),
         estimated_hours = COALESCE($7, estimated_hours),
         actual_hours = COALESCE($8, actual_hours),
-        tags = COALESCE($9, tags)
+        tags = COALESCE($9, tags),
+        completed_at = CASE WHEN COALESCE($4, status) = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = $10 AND user_id = $11
     RETURNING *
   `, [title, description, priority, status, progress, dueDate, estimatedHours, actualHours, tags, req.params.id, req.user.id]);
@@ -212,6 +214,67 @@ router.put('/:id', [
             estimatedHours: task.estimated_hours,
             actualHours: task.actual_hours,
             tags: task.tags,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at
+        }
+    });
+}));
+
+// Update task progress only
+router.put('/:id/progress', [
+    authenticateToken,
+    body('progress').isInt({ min: 0, max: 100 })
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { progress } = req.body;
+
+    // Check if task exists and belongs to user
+    const existingTask = await query(
+        'SELECT id, status FROM tasks WHERE id = $1 AND user_id = $2',
+        [req.params.id, req.user.id]
+    );
+
+    if (existingTask.rows.length === 0) {
+        return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Auto-complete if progress reaches 100%
+    const newStatus = progress === 100 ? 'completed' : existingTask.rows[0].status;
+    const completedAt = progress === 100 ? 'CURRENT_TIMESTAMP' : 'completed_at';
+
+    const result = await query(`
+        UPDATE tasks 
+        SET progress_percentage = $1,
+            status = $2,
+            completed_at = ${completedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3 AND user_id = $4
+        RETURNING *
+    `, [progress, newStatus, req.params.id, req.user.id]);
+
+    const task = result.rows[0];
+
+    res.json({
+        message: 'Task progress updated successfully',
+        task: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            status: task.status,
+            progress: task.progress_percentage,
+            dueDate: task.due_date,
+            estimatedHours: task.estimated_hours,
+            actualHours: task.actual_hours,
+            tags: task.tags,
+            completedAt: task.completed_at,
             createdAt: task.created_at,
             updatedAt: task.updated_at
         }

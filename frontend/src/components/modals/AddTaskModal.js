@@ -19,7 +19,8 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
     const priorityOptions = [
         { value: 'low', label: 'Low Priority', color: 'text-green-600' },
         { value: 'medium', label: 'Medium Priority', color: 'text-yellow-600' },
-        { value: 'high', label: 'High Priority', color: 'text-red-600' }
+        { value: 'high', label: 'High Priority', color: 'text-red-600' },
+        { value: 'urgent', label: 'Urgent', color: 'text-red-800' }
     ];
 
     const handleInputChange = (field, value) => {

@@ -17,7 +17,9 @@ const TaskManager = () => {
     const [selectedTask, setSelectedTask] = useState(null);
     const [showTaskDetails, setShowTaskDetails] = useState(false);
 
-    const handleTaskAdded = (newTask) => {
+    const handleTaskAdded = (response) => {
+        // Extract task from response object
+        const newTask = response.task || response;
         setUserTasks(prev => [...prev, newTask]);
     };
 
@@ -184,6 +186,7 @@ const TaskManager = () => {
 
     const getPriorityColor = (priority) => {
         switch (priority) {
+            case 'urgent': return 'bg-red-200 text-red-900 border-red-300';
             case 'high': return 'bg-red-100 text-red-800 border-red-200';
             case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'low': return 'bg-green-100 text-green-800 border-green-200';
