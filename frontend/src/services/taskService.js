@@ -9,7 +9,6 @@ class TaskService {
             // Add filters to query params
             if (filters.status) queryParams.append('status', filters.status);
             if (filters.priority) queryParams.append('priority', filters.priority);
-            if (filters.category) queryParams.append('category', filters.category);
             if (filters.dueDate) queryParams.append('dueDate', filters.dueDate);
             if (filters.completed !== undefined) queryParams.append('completed', filters.completed);
             if (filters.sessionId) queryParams.append('sessionId', filters.sessionId);
@@ -43,11 +42,10 @@ class TaskService {
                 title: taskData.title,
                 description: taskData.description,
                 priority: taskData.priority || 'medium',
-                category: taskData.category || 'general',
                 dueDate: taskData.dueDate,
                 sessionId: taskData.sessionId, // optional - link to specific session
                 subjectId: taskData.subjectId, // optional - link to subject
-                estimatedDuration: taskData.estimatedDuration, // in minutes
+                estimatedHours: taskData.estimatedHours, // in hours
                 tags: taskData.tags || [],
             });
 

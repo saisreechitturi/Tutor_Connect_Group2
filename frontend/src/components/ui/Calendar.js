@@ -43,7 +43,33 @@ const Calendar = () => {
 
             // Group events by date for easy lookup
             events.forEach(event => {
-                const eventDate = new Date(event.session_date || event.due_date || event.scheduled_at);
+                // Try multiple date fields and validate
+                let eventDate = null;
+                const possibleDates = [
+                    event.session_date,
+                    event.scheduled_start,
+                    event.due_date,
+                    event.scheduled_at,
+                    event.dueDate,
+                    event.scheduledStart
+                ];
+
+                for (const dateField of possibleDates) {
+                    if (dateField) {
+                        const testDate = new Date(dateField);
+                        if (!isNaN(testDate.getTime())) {
+                            eventDate = testDate;
+                            break;
+                        }
+                    }
+                }
+
+                // Skip events without valid dates
+                if (!eventDate) {
+                    console.warn('Event has no valid date:', event);
+                    return;
+                }
+
                 const dateKey = eventDate.toISOString().split('T')[0];
 
                 if (!eventsGrouped[dateKey]) {
@@ -108,22 +134,28 @@ const Calendar = () => {
 
     const handleTaskAdded = async (newTask) => {
         // Optimistically add task to local state
-        if (newTask) {
-            const taskDate = new Date(newTask.due_date || newTask.created_at);
-            const dateKey = taskDate.toISOString().split('T')[0];
+        if (newTask && newTask.task) {
+            const task = newTask.task;
+            const taskDate = new Date(task.dueDate || task.createdAt);
 
-            const taskEvent = {
-                ...newTask,
-                type: 'task',
-                time: newTask.due_time || '09:00',
-                status: newTask.status || 'pending'
-            };
+            // Validate date before using toISOString
+            if (!isNaN(taskDate.getTime())) {
+                const dateKey = taskDate.toISOString().split('T')[0];
 
-            setCalendarEvents(prev => [...prev, taskEvent]);
-            setEventsByDate(prev => ({
-                ...prev,
-                [dateKey]: [...(prev[dateKey] || []), taskEvent]
-            }));
+                const taskEvent = {
+                    ...task,
+                    type: 'task',
+                    time: task.due_time || '09:00',
+                    status: task.status || 'pending',
+                    due_date: task.dueDate // For backward compatibility
+                };
+
+                setCalendarEvents(prev => [...prev, taskEvent]);
+                setEventsByDate(prev => ({
+                    ...prev,
+                    [dateKey]: [...(prev[dateKey] || []), taskEvent]
+                }));
+            }
         }
 
         // Refresh calendar data after task is added
@@ -136,22 +168,29 @@ const Calendar = () => {
 
     const handleSessionBooked = async (newSession) => {
         // Optimistically add session to local state
-        if (newSession) {
-            const sessionDate = new Date(newSession.session_date || newSession.scheduled_at);
-            const dateKey = sessionDate.toISOString().split('T')[0];
+        if (newSession && newSession.session) {
+            const session = newSession.session;
+            const sessionDate = new Date(session.scheduledStart || session.createdAt);
 
-            const sessionEvent = {
-                ...newSession,
-                type: 'session',
-                time: newSession.start_time || newSession.scheduled_time || '10:00',
-                status: newSession.status || 'scheduled'
-            };
+            // Validate date before using toISOString
+            if (!isNaN(sessionDate.getTime())) {
+                const dateKey = sessionDate.toISOString().split('T')[0];
 
-            setCalendarEvents(prev => [...prev, sessionEvent]);
-            setEventsByDate(prev => ({
-                ...prev,
-                [dateKey]: [...(prev[dateKey] || []), sessionEvent]
-            }));
+                const sessionEvent = {
+                    ...session,
+                    type: 'session',
+                    time: session.start_time || '10:00',
+                    status: session.status || 'scheduled',
+                    session_date: session.scheduledStart, // For backward compatibility
+                    scheduled_at: session.scheduledStart
+                };
+
+                setCalendarEvents(prev => [...prev, sessionEvent]);
+                setEventsByDate(prev => ({
+                    ...prev,
+                    [dateKey]: [...(prev[dateKey] || []), sessionEvent]
+                }));
+            }
         }
 
         // Refresh calendar data after session is booked

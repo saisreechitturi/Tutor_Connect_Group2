@@ -232,7 +232,9 @@ const StudentDashboard = () => {
                                     <div key={task.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                         <div>
                                             <h3 className="font-medium text-gray-900">{task.title}</h3>
-                                            <p className="text-sm text-gray-600">{task.category}</p>
+                                            {task.tags && task.tags.length > 0 && (
+                                                <p className="text-sm text-gray-600">{task.tags.join(', ')}</p>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-medium text-gray-900">

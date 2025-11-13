@@ -41,7 +41,9 @@ router.get('/events', [
                     s.id,
                     s.title,
                     s.description,
-                    s.session_date,
+                    s.scheduled_start,
+                    s.scheduled_end,
+                    CAST(s.scheduled_start AS DATE) as session_date,
                     CAST(s.scheduled_start AS TIME) as start_time,
                     CAST(s.scheduled_end AS TIME) as end_time,
                     s.duration_minutes,
@@ -49,7 +51,8 @@ router.get('/events', [
                     s.session_type,
                     s.meeting_link,
                     s.meeting_room as location,
-                    s.payment_amount as hourly_rate,
+                    s.hourly_rate,
+                    s.payment_amount,
                     s.created_at,
                     s.updated_at,
                     student.first_name as student_first_name, 
@@ -64,7 +67,7 @@ router.get('/events', [
                 JOIN users student ON s.student_id = student.id
                 JOIN users tutor ON s.tutor_id = tutor.id
                 LEFT JOIN subjects sub ON s.subject_id = sub.id
-                WHERE s.session_date IS NOT NULL
+                WHERE s.scheduled_start IS NOT NULL
             `;
 
             const sessionParams = [];
@@ -80,13 +83,13 @@ router.get('/events', [
             // Add date filters for sessions
             if (startDate) {
                 paramCount++;
-                sessionQuery += ` AND s.session_date >= $${paramCount}::date`;
+                sessionQuery += ` AND DATE(s.scheduled_start) >= $${paramCount}::date`;
                 sessionParams.push(new Date(startDate).toISOString().split('T')[0]);
             }
 
             if (endDate) {
                 paramCount++;
-                sessionQuery += ` AND s.session_date <= $${paramCount}::date`;
+                sessionQuery += ` AND DATE(s.scheduled_start) <= $${paramCount}::date`;
                 sessionParams.push(new Date(endDate).toISOString().split('T')[0]);
             }
 
@@ -97,22 +100,14 @@ router.get('/events', [
                 sessionParams.push(status);
             }
 
-            sessionQuery += ` ORDER BY s.session_date ASC, s.scheduled_start ASC`;
+            sessionQuery += ` ORDER BY s.scheduled_start ASC`;
 
             const sessionResult = await query(sessionQuery, sessionParams);
 
             // Format session events
             sessionResult.rows.forEach(session => {
-                // Combine date and time for start and end
-                const sessionDate = new Date(session.session_date);
-                const startTime = session.start_time.split(':');
-                const endTime = session.end_time.split(':');
-
-                const startDateTime = new Date(sessionDate);
-                startDateTime.setHours(parseInt(startTime[0]), parseInt(startTime[1]));
-
-                const endDateTime = new Date(sessionDate);
-                endDateTime.setHours(parseInt(endTime[0]), parseInt(endTime[1]));
+                const startDateTime = new Date(session.scheduled_start);
+                const endDateTime = new Date(session.scheduled_end);
 
                 events.push({
                     id: `session-${session.id}`,
@@ -120,7 +115,9 @@ router.get('/events', [
                     description: session.description,
                     start: startDateTime.toISOString(),
                     end: endDateTime.toISOString(),
-                    date: sessionDate.toISOString().split('T')[0],
+                    date: startDateTime.toISOString().split('T')[0],
+                    session_date: startDateTime.toISOString(),
+                    scheduled_start: startDateTime.toISOString(),
                     time: startDateTime.toLocaleTimeString('en-US', {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -131,6 +128,7 @@ router.get('/events', [
                     status: session.status,
                     location: session.session_type === 'online' ? 'Online' : (session.location || 'In-person'),
                     sessionType: session.session_type,
+                    session_type: session.session_type,
                     meetingLink: session.meeting_link,
                     hourlyRate: session.hourly_rate,
                     subject: session.subject_name,

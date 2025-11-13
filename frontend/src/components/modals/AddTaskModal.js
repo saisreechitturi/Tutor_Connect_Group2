@@ -8,7 +8,6 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        category: 'General Studies',
         priority: 'medium',
         dueDate: '',
         estimatedDuration: 60, // in minutes
@@ -16,20 +15,6 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
     });
 
     const [tagInput, setTagInput] = useState('');
-
-    const taskCategories = [
-        'General Studies',
-        'Mathematics',
-        'Science',
-        'English',
-        'History',
-        'Computer Science',
-        'Languages',
-        'Arts',
-        'Music',
-        'Sports',
-        'Other'
-    ];
 
     const priorityOptions = [
         { value: 'low', label: 'Low Priority', color: 'text-green-600' },
@@ -98,10 +83,9 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             const taskData = {
                 title: formData.title.trim(),
                 description: formData.description.trim(),
-                category: formData.category,
                 priority: formData.priority,
                 dueDate: formData.dueDate,
-                estimatedDuration: formData.estimatedDuration,
+                estimatedHours: formData.estimatedDuration / 60,
                 tags: formData.tags
             };
 
@@ -111,7 +95,6 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             setFormData({
                 title: '',
                 description: '',
-                category: 'General Studies',
                 priority: 'medium',
                 dueDate: '',
                 estimatedDuration: 60,
@@ -137,7 +120,6 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
         setFormData({
             title: '',
             description: '',
-            category: 'General Studies',
             priority: 'medium',
             dueDate: '',
             estimatedDuration: 60,
@@ -209,41 +191,23 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                         />
                     </div>
 
-                    {/* Category and Priority */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Category
-                            </label>
-                            <select
-                                className="input-field"
-                                value={formData.category}
-                                onChange={(e) => handleInputChange('category', e.target.value)}
-                                disabled={loading}
-                            >
-                                {taskCategories.map(category => (
-                                    <option key={category} value={category}>{category}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Priority
-                            </label>
-                            <select
-                                className="input-field"
-                                value={formData.priority}
-                                onChange={(e) => handleInputChange('priority', e.target.value)}
-                                disabled={loading}
-                            >
-                                {priorityOptions.map(priority => (
-                                    <option key={priority.value} value={priority.value}>
-                                        {priority.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    {/* Priority */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Priority
+                        </label>
+                        <select
+                            className="input-field"
+                            value={formData.priority}
+                            onChange={(e) => handleInputChange('priority', e.target.value)}
+                            disabled={loading}
+                        >
+                            {priorityOptions.map(priority => (
+                                <option key={priority.value} value={priority.value}>
+                                    {priority.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Due Date and Duration */}

@@ -329,9 +329,11 @@ const TaskManager = () => {
                                             {task.estimatedHours}h estimated
                                         </span>
 
-                                        <span className="text-sm text-gray-500">
-                                            {task.category}
-                                        </span>
+                                        {task.tags && task.tags.length > 0 && (
+                                            <span className="text-sm text-gray-500">
+                                                {task.tags.join(', ')}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {task.status !== 'completed' && task.progress > 0 && (

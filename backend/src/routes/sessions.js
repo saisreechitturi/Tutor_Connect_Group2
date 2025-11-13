@@ -60,9 +60,12 @@ router.get('/', [
         id: row.id,
         title: row.title,
         description: row.description,
-        scheduledAt: row.scheduled_at,
+        scheduledStart: row.scheduled_start,
+        scheduledEnd: row.scheduled_end,
+        sessionType: row.session_type,
         durationMinutes: row.duration_minutes,
-        rate: row.rate,
+        hourlyRate: row.hourly_rate,
+        paymentAmount: row.payment_amount,
         status: row.status,
         student: {
             id: row.student_id,
@@ -75,14 +78,8 @@ router.get('/', [
             avatarUrl: row.tutor_avatar
         },
         subject: row.subject_name,
-        ratings: {
-            student: row.student_rating,
-            tutor: row.tutor_rating
-        },
-        feedback: {
-            student: row.student_feedback,
-            tutor: row.tutor_feedback
-        },
+        meetingLink: row.meeting_link,
+        meetingRoom: row.meeting_room,
         sessionNotes: row.session_notes,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -98,9 +95,12 @@ router.post('/', [
     body('subjectId').optional().isInt({ min: 1 }),
     body('title').trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
-    body('scheduledAt').isISO8601(),
-    body('durationMinutes').isInt({ min: 15, max: 480 }),
-    body('rate').isFloat({ min: 0 })
+    body('sessionType').isIn(['online', 'in-person']),
+    body('scheduledStart').isISO8601(),
+    body('scheduledEnd').isISO8601(),
+    body('hourlyRate').isFloat({ min: 0 }),
+    body('meetingLink').optional().isLength({ max: 500 }),
+    body('locationAddress').optional().isLength({ max: 255 })
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -110,7 +110,7 @@ router.post('/', [
         });
     }
 
-    const { tutorId, subjectId, title, description, scheduledAt, durationMinutes, rate } = req.body;
+    const { tutorId, subjectId, title, description, sessionType, scheduledStart, scheduledEnd, hourlyRate, meetingLink, locationAddress } = req.body;
 
     // Verify tutor exists and is active
     const tutorCheck = await query(
@@ -126,7 +126,7 @@ router.post('/', [
     const conflictCheck = await query(`
     SELECT id FROM tutoring_sessions 
     WHERE tutor_id = $1 
-    AND status IN ('scheduled', 'in_progress')
+    AND status IN ('scheduled', 'in-progress')
     AND (
       (scheduled_start <= $2 AND scheduled_end > $2)
       OR
@@ -134,17 +134,33 @@ router.post('/', [
       OR
       (scheduled_start >= $2 AND scheduled_start < $3)
     )
-  `, [tutorId, scheduledAt, new Date(new Date(scheduledAt).getTime() + durationMinutes * 60000)]);
+  `, [tutorId, scheduledStart, scheduledEnd]);
 
     if (conflictCheck.rows.length > 0) {
         return res.status(400).json({ message: 'Tutor is not available at the requested time' });
     }
 
     const result = await query(`
-    INSERT INTO tutoring_sessions (student_id, tutor_id, subject_id, title, description, scheduled_start, scheduled_end, hourly_rate)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO tutoring_sessions (
+      student_id, tutor_id, subject_id, title, description, 
+      session_type, scheduled_start, scheduled_end, hourly_rate,
+      meeting_link, meeting_room
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
-  `, [req.user.id, tutorId, subjectId, title, description, scheduledAt, new Date(new Date(scheduledAt).getTime() + durationMinutes * 60000), rate]);
+  `, [
+        req.user.id,
+        tutorId,
+        subjectId,
+        title,
+        description,
+        sessionType,
+        scheduledStart,
+        scheduledEnd,
+        hourlyRate,
+        sessionType === 'online' ? meetingLink : null,
+        sessionType === 'in-person' ? locationAddress : null
+    ]);
 
     const session = result.rows[0];
 
@@ -154,13 +170,17 @@ router.post('/', [
             id: session.id,
             title: session.title,
             description: session.description,
-            scheduledAt: session.scheduled_at,
+            scheduledStart: session.scheduled_start,
+            scheduledEnd: session.scheduled_end,
+            sessionType: session.session_type,
             durationMinutes: session.duration_minutes,
-            rate: session.rate,
+            hourlyRate: session.hourly_rate,
             status: session.status,
             studentId: session.student_id,
             tutorId: session.tutor_id,
             subjectId: session.subject_id,
+            meetingLink: session.meeting_link,
+            meetingRoom: session.meeting_room,
             createdAt: session.created_at
         }
     });
@@ -190,9 +210,12 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
         id: row.id,
         title: row.title,
         description: row.description,
-        scheduledAt: row.scheduled_at,
+        scheduledStart: row.scheduled_start,
+        scheduledEnd: row.scheduled_end,
+        sessionType: row.session_type,
         durationMinutes: row.duration_minutes,
-        rate: row.rate,
+        hourlyRate: row.hourly_rate,
+        paymentAmount: row.payment_amount,
         status: row.status,
         student: {
             id: row.student_id,
@@ -205,14 +228,8 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             avatarUrl: row.tutor_avatar
         },
         subject: row.subject_name,
-        ratings: {
-            student: row.student_rating,
-            tutor: row.tutor_rating
-        },
-        feedback: {
-            student: row.student_feedback,
-            tutor: row.tutor_feedback
-        },
+        meetingLink: row.meeting_link,
+        meetingRoom: row.meeting_room,
         sessionNotes: row.session_notes,
         createdAt: row.created_at,
         updatedAt: row.updated_at

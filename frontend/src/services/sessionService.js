@@ -36,22 +36,20 @@ class SessionService {
     }
 
     // Create new tutoring session (align with backend contracts)
-    // Accepts { tutorId, subjectId, title, description, scheduledStart, scheduledEnd, rate }
+    // Accepts { tutorId, subjectId, title, description, sessionType, scheduledStart, scheduledEnd, hourlyRate, meetingLink, locationAddress }
     async createSession(sessionData) {
         try {
-            const { scheduledStart, scheduledEnd } = sessionData;
-            const start = new Date(scheduledStart);
-            const end = new Date(scheduledEnd);
-            const durationMinutes = Math.max(0, Math.round((end - start) / 60000));
-
             const payload = {
                 tutorId: sessionData.tutorId,
                 subjectId: sessionData.subjectId,
                 title: sessionData.title,
                 description: sessionData.description,
-                scheduledAt: start.toISOString(),
-                durationMinutes,
-                rate: sessionData.rate ?? sessionData.hourlyRate,
+                sessionType: sessionData.sessionType,
+                scheduledStart: sessionData.scheduledStart,
+                scheduledEnd: sessionData.scheduledEnd,
+                hourlyRate: sessionData.hourlyRate,
+                meetingLink: sessionData.meetingLink,
+                locationAddress: sessionData.locationAddress
             };
 
             return await apiClient.post('/sessions', payload);
@@ -166,16 +164,12 @@ class SessionService {
         }
     }
 
-    // Reschedule session (no dedicated endpoint; use update)
+    // Reschedule session (use scheduledStart/scheduledEnd)
     async rescheduleSession(sessionId, newStartTime, newEndTime) {
         try {
-            const start = new Date(newStartTime);
-            const end = new Date(newEndTime);
-            const durationMinutes = Math.max(0, Math.round((end - start) / 60000));
             return await apiClient.put(`/sessions/${sessionId}`, {
-                // Assuming backend supports these fields in generic update; if not, this will need backend support.
-                scheduledAt: start.toISOString(),
-                durationMinutes,
+                scheduledStart: new Date(newStartTime).toISOString(),
+                scheduledEnd: new Date(newEndTime).toISOString()
             });
         } catch (error) {
             console.error('[SessionService] Reschedule session failed:', error);

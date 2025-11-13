@@ -168,15 +168,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                             <p className="text-gray-700 text-sm">{task.estimatedHours || task.estimatedDuration || 'N/A'} hours</p>
                         </div>
 
-                        {/* Category */}
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                                <Tag className="h-4 w-4 mr-2" />
-                                Category
-                            </h3>
-                            <p className="text-gray-700 text-sm">{task.category}</p>
-                        </div>
-
                         {/* Tags */}
                         {task.tags && task.tags.length > 0 && (
                             <div>
@@ -217,8 +208,8 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                                             onClick={() => handleProgressUpdate(value)}
                                             disabled={loading}
                                             className={`px-3 py-1 text-xs rounded-full border transition-colors ${progress === value
-                                                    ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                                                ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
                                                 } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {value}%

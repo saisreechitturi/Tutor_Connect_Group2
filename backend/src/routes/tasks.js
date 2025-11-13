@@ -12,7 +12,6 @@ router.get('/', [
     authenticateToken,
     expressQuery('status').optional().isIn(['pending', 'in_progress', 'completed', 'cancelled']),
     expressQuery('priority').optional().isIn(['low', 'medium', 'high']),
-    expressQuery('category').optional().isString(),
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
 ], asyncHandler(async (req, res) => {
@@ -24,7 +23,7 @@ router.get('/', [
         });
     }
 
-    const { status, priority, category } = req.query;
+    const { status, priority } = req.query;
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
 
@@ -39,11 +38,6 @@ router.get('/', [
     if (priority) {
         queryText += ` AND priority = $${params.length + 1}`;
         params.push(priority);
-    }
-
-    if (category) {
-        queryText += ` AND category ILIKE $${params.length + 1}`;
-        params.push(`%${category}%`);
     }
 
     queryText += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -63,10 +57,9 @@ router.get('/', [
         id: row.id,
         title: row.title,
         description: row.description,
-        category: row.category,
         priority: row.priority,
         status: row.status,
-        progress: row.progress,
+        progress: row.progress_percentage,
         dueDate: row.due_date,
         estimatedHours: row.estimated_hours,
         actualHours: row.actual_hours,
@@ -83,8 +76,7 @@ router.post('/', [
     authenticateToken,
     body('title').trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
-    body('category').optional().isLength({ max: 100 }),
-    body('priority').optional().isIn(['low', 'medium', 'high']),
+    body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
     body('dueDate').optional().isISO8601(),
     body('estimatedHours').optional().isFloat({ min: 0 }),
     body('tags').optional().isArray()
@@ -97,13 +89,13 @@ router.post('/', [
         });
     }
 
-    const { title, description, category, priority, dueDate, estimatedHours, tags } = req.body;
+    const { title, description, priority, dueDate, estimatedHours, tags } = req.body;
 
     const result = await query(`
-    INSERT INTO tasks (user_id, title, description, category, priority, due_date, estimated_hours, tags)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO tasks (user_id, title, description, priority, due_date, estimated_hours, tags)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
-  `, [req.user.id, title, description, category, priority || 'medium', dueDate, estimatedHours, JSON.stringify(tags)]);
+  `, [req.user.id, title, description, priority || 'medium', dueDate, estimatedHours, tags]);
 
     const task = result.rows[0];
 
@@ -113,10 +105,9 @@ router.post('/', [
             id: task.id,
             title: task.title,
             description: task.description,
-            category: task.category,
             priority: task.priority,
             status: task.status,
-            progress: task.progress,
+            progress: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
             actualHours: task.actual_hours,
@@ -145,7 +136,6 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             id: task.id,
             title: task.title,
             description: task.description,
-            category: task.category,
             priority: task.priority,
             status: task.status,
             progress: task.progress,
@@ -164,8 +154,7 @@ router.put('/:id', [
     authenticateToken,
     body('title').optional().trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
-    body('category').optional().isLength({ max: 100 }),
-    body('priority').optional().isIn(['low', 'medium', 'high']),
+    body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
     body('status').optional().isIn(['pending', 'in_progress', 'completed', 'cancelled']),
     body('progress').optional().isInt({ min: 0, max: 100 }),
     body('dueDate').optional().isISO8601(),
@@ -181,7 +170,7 @@ router.put('/:id', [
         });
     }
 
-    const { title, description, category, priority, status, progress, dueDate, estimatedHours, actualHours, tags } = req.body;
+    const { title, description, priority, status, progress, dueDate, estimatedHours, actualHours, tags } = req.body;
 
     // Check if task exists and belongs to user
     const existingTask = await query(
@@ -197,17 +186,16 @@ router.put('/:id', [
     UPDATE tasks 
     SET title = COALESCE($1, title),
         description = COALESCE($2, description),
-        category = COALESCE($3, category),
-        priority = COALESCE($4, priority),
-        status = COALESCE($5, status),
-        progress = COALESCE($6, progress),
-        due_date = COALESCE($7, due_date),
-        estimated_hours = COALESCE($8, estimated_hours),
-        actual_hours = COALESCE($9, actual_hours),
-        tags = COALESCE($10, tags)
-    WHERE id = $11 AND user_id = $12
+        priority = COALESCE($3, priority),
+        status = COALESCE($4, status),
+        progress_percentage = COALESCE($5, progress_percentage),
+        due_date = COALESCE($6, due_date),
+        estimated_hours = COALESCE($7, estimated_hours),
+        actual_hours = COALESCE($8, actual_hours),
+        tags = COALESCE($9, tags)
+    WHERE id = $10 AND user_id = $11
     RETURNING *
-  `, [title, description, category, priority, status, progress, dueDate, estimatedHours, actualHours, JSON.stringify(tags), req.params.id, req.user.id]);
+  `, [title, description, priority, status, progress, dueDate, estimatedHours, actualHours, tags, req.params.id, req.user.id]);
 
     const task = result.rows[0];
 
@@ -217,10 +205,9 @@ router.put('/:id', [
             id: task.id,
             title: task.title,
             description: task.description,
-            category: task.category,
             priority: task.priority,
             status: task.status,
-            progress: task.progress,
+            progress: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
             actualHours: task.actual_hours,
