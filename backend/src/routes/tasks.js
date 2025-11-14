@@ -57,12 +57,13 @@ router.get('/', [
         id: row.id,
         title: row.title,
         description: row.description,
+        subject: row.subject,
         priority: row.priority,
         status: row.status,
         progress: row.progress_percentage,
+        progressPercentage: row.progress_percentage,
         dueDate: row.due_date,
         estimatedHours: row.estimated_hours,
-        actualHours: row.actual_hours,
         tags: row.tags,
         createdAt: row.created_at,
         updatedAt: row.updated_at
@@ -76,6 +77,7 @@ router.post('/', [
     authenticateToken,
     body('title').trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
+    body('subject').optional().trim().isLength({ max: 100 }),
     body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
     body('dueDate').optional().isISO8601(),
     body('estimatedHours').optional().isFloat({ min: 0 }),
@@ -89,13 +91,13 @@ router.post('/', [
         });
     }
 
-    const { title, description, priority, dueDate, estimatedHours, tags } = req.body;
+    const { title, description, subject, priority, dueDate, estimatedHours, tags } = req.body;
 
     const result = await query(`
-    INSERT INTO tasks (user_id, title, description, priority, due_date, estimated_hours, tags)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO tasks (user_id, title, description, subject, priority, due_date, estimated_hours, tags)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
-  `, [req.user.id, title, description, priority || 'medium', dueDate, estimatedHours, tags]);
+  `, [req.user.id, title, description, subject, priority || 'medium', dueDate, estimatedHours, tags]);
 
     const task = result.rows[0];
 
@@ -105,12 +107,13 @@ router.post('/', [
             id: task.id,
             title: task.title,
             description: task.description,
+            subject: task.subject,
             priority: task.priority,
             status: task.status,
             progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
-            actualHours: task.actual_hours,
             tags: task.tags,
             createdAt: task.created_at,
             updatedAt: task.updated_at
@@ -136,12 +139,13 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             id: task.id,
             title: task.title,
             description: task.description,
+            subject: task.subject,
             priority: task.priority,
             status: task.status,
             progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
-            actualHours: task.actual_hours,
             tags: task.tags,
             createdAt: task.created_at,
             updatedAt: task.updated_at
@@ -154,12 +158,13 @@ router.put('/:id', [
     authenticateToken,
     body('title').optional().trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
+    body('subject').optional().trim().isLength({ max: 100 }),
     body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
     body('status').optional().isIn(['pending', 'in_progress', 'completed', 'cancelled']),
     body('progress').optional().isInt({ min: 0, max: 100 }),
+    body('progressPercentage').optional().isInt({ min: 0, max: 100 }),
     body('dueDate').optional().isISO8601(),
     body('estimatedHours').optional().isFloat({ min: 0 }),
-    body('actualHours').optional().isFloat({ min: 0 }),
     body('tags').optional().isArray()
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
@@ -170,7 +175,8 @@ router.put('/:id', [
         });
     }
 
-    const { title, description, priority, status, progress, dueDate, estimatedHours, actualHours, tags } = req.body;
+    const { title, description, subject, priority, status, progress, progressPercentage, dueDate, estimatedHours, tags } = req.body;
+    const progressValue = progress || progressPercentage;
 
     // Check if task exists and belongs to user
     const existingTask = await query(
@@ -186,18 +192,18 @@ router.put('/:id', [
     UPDATE tasks 
     SET title = COALESCE($1, title),
         description = COALESCE($2, description),
-        priority = COALESCE($3, priority),
-        status = COALESCE($4, status),
-        progress_percentage = COALESCE($5, progress_percentage),
-        due_date = COALESCE($6, due_date),
-        estimated_hours = COALESCE($7, estimated_hours),
-        actual_hours = COALESCE($8, actual_hours),
+        subject = COALESCE($3, subject),
+        priority = COALESCE($4, priority),
+        status = COALESCE($5, status),
+        progress_percentage = COALESCE($6, progress_percentage),
+        due_date = COALESCE($7, due_date),
+        estimated_hours = COALESCE($8, estimated_hours),
         tags = COALESCE($9, tags),
-        completed_at = CASE WHEN COALESCE($4, status) = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+        completed_at = CASE WHEN COALESCE($5, status) = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = $10 AND user_id = $11
     RETURNING *
-  `, [title, description, priority, status, progress, dueDate, estimatedHours, actualHours, tags, req.params.id, req.user.id]);
+  `, [title, description, subject, priority, status, progressValue, dueDate, estimatedHours, tags, req.params.id, req.user.id]);
 
     const task = result.rows[0];
 
@@ -207,12 +213,13 @@ router.put('/:id', [
             id: task.id,
             title: task.title,
             description: task.description,
+            subject: task.subject,
             priority: task.priority,
             status: task.status,
             progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
-            actualHours: task.actual_hours,
             tags: task.tags,
             createdAt: task.created_at,
             updatedAt: task.updated_at
@@ -267,12 +274,13 @@ router.put('/:id/progress', [
             id: task.id,
             title: task.title,
             description: task.description,
+            subject: task.subject,
             priority: task.priority,
             status: task.status,
             progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
             dueDate: task.due_date,
             estimatedHours: task.estimated_hours,
-            actualHours: task.actual_hours,
             tags: task.tags,
             completedAt: task.completed_at,
             createdAt: task.created_at,

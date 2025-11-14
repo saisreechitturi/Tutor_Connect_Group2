@@ -24,8 +24,14 @@ const TaskManager = () => {
     };
 
     const handleTaskUpdated = (updatedTask) => {
+        // Normalize the updated task
+        const normalized = {
+            ...updatedTask,
+            progress: updatedTask.status === 'completed' ? 100 : (updatedTask.progress || 0),
+            progressPercentage: updatedTask.status === 'completed' ? 100 : (updatedTask.progressPercentage || 0)
+        };
         setUserTasks(prev => prev.map(task =>
-            task.id === updatedTask.id ? updatedTask : task
+            task.id === normalized.id ? normalized : task
         ));
     };
 
@@ -40,7 +46,13 @@ const TaskManager = () => {
                 setLoading(true);
                 setError(null);
                 const tasksData = await taskService.getTasks();
-                setUserTasks(tasksData);
+                // Normalize task data - ensure completed tasks show 100% progress
+                const normalizedTasks = tasksData.map(task => ({
+                    ...task,
+                    progress: task.status === 'completed' ? 100 : (task.progress || 0),
+                    progressPercentage: task.status === 'completed' ? 100 : (task.progressPercentage || 0)
+                }));
+                setUserTasks(normalizedTasks);
             } catch (err) {
                 console.error('Error fetching tasks:', err);
                 setError('Failed to load tasks. Please try again.');
@@ -144,32 +156,26 @@ const TaskManager = () => {
             } else if (task.status === 'in-progress') {
                 updateData.status = 'completed';
                 updateData.progress = 100;
+                updateData.progressPercentage = 100;
             } else {
                 updateData.status = 'pending';
                 updateData.progress = 0;
+                updateData.progressPercentage = 0;
             }
 
             // Update local state immediately for better UX
-            setUserTasks(prev => prev.map(t => {
-                if (t.id === taskId) {
-                    return { ...t, ...updateData };
-                }
-                return t;
-            }));
+            const updatedTask = { ...task, ...updateData };
+            setUserTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
 
             // Try to update on server
             try {
                 await taskService.updateTask(taskId, updateData);
                 // Clear any existing errors on success
                 setError(null);
+                setUpdateError(null);
             } catch (apiError) {
                 // Revert the optimistic update on API failure
-                setUserTasks(prev => prev.map(t => {
-                    if (t.id === taskId) {
-                        return task; // Revert to original task state
-                    }
-                    return t;
-                }));
+                setUserTasks(prev => prev.map(t => t.id === taskId ? task : t));
 
                 console.error('Failed to update task on server:', apiError);
                 setUpdateError('Failed to update task. Please check your internet connection and try again.');
@@ -343,8 +349,8 @@ const TaskManager = () => {
                             </div>
 
                             {/* Circular Progress Indicator */}
-                            {task.status !== 'completed' && task.progress > 0 ? (
-                                <div className="relative flex-shrink-0" title={`${task.progress}% complete`}>
+                            {(task.progress > 0 || task.progressPercentage > 0 || task.status === 'completed') ? (
+                                <div className="relative flex-shrink-0" title={`${task.status === 'completed' ? 100 : (task.progress || task.progressPercentage)}% complete`}>
                                     <svg className="w-12 h-12 transform -rotate-90">
                                         <circle
                                             cx="24"
@@ -363,18 +369,18 @@ const TaskManager = () => {
                                             strokeWidth="4"
                                             fill="none"
                                             strokeDasharray={`${2 * Math.PI * 20}`}
-                                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - task.progress / 100)}`}
-                                            className="text-blue-600 transition-all"
+                                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - (task.status === 'completed' ? 100 : (task.progress || task.progressPercentage)) / 100)}`}
+                                            className={`${task.status === 'completed' ? 'text-green-600' : 'text-blue-600'} transition-all`}
                                             strokeLinecap="round"
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-xs font-semibold text-gray-700">{task.progress}%</span>
+                                        {task.status === 'completed' ? (
+                                            <CheckSquare className="h-6 w-6 text-green-600" />
+                                        ) : (
+                                            <span className="text-xs font-semibold text-gray-700">{task.progress || task.progressPercentage}%</span>
+                                        )}
                                     </div>
-                                </div>
-                            ) : task.status === 'completed' ? (
-                                <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
-                                    <CheckSquare className="h-6 w-6 text-green-600" />
                                 </div>
                             ) : null}
                         </div>

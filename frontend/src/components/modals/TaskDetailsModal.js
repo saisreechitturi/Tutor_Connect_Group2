@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, Tag, FileText, AlertCircle, CheckSquare, Square } from 'lucide-react';
 import { taskService } from '../../services';
 
@@ -6,6 +6,13 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(task?.progress || task?.progressPercentage || 0);
+
+    // Update progress when task changes
+    useEffect(() => {
+        if (task) {
+            setProgress(task.progress || task.progressPercentage || 0);
+        }
+    }, [task?.id, task?.progress, task?.progressPercentage]);
 
     if (!isOpen || !task) return null;
 
@@ -42,21 +49,22 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             setError(null);
 
             let newStatus;
-            let newProgress = progress;
+            let newProgress;
 
-            if (task.status === 'pending') {
-                newStatus = 'in_progress';
-            } else if (task.status === 'in_progress') {
+            // If clicking "Mark as Complete", always go to completed
+            if (task.status !== 'completed') {
                 newStatus = 'completed';
                 newProgress = 100;
             } else {
+                // If already completed, revert to pending
                 newStatus = 'pending';
                 newProgress = 0;
             }
 
             const response = await taskService.updateTask(task.id, {
                 status: newStatus,
-                progress: newProgress
+                progress: newProgress,
+                progressPercentage: newProgress
             });
 
             const updatedTask = response.task || response;
@@ -155,6 +163,17 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
 
                     {/* Task Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Subject */}
+                        {task.subject && (
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
+                                    <Tag className="h-4 w-4 mr-2" />
+                                    Subject
+                                </h3>
+                                <p className="text-gray-700 text-sm">{task.subject}</p>
+                            </div>
+                        )}
+
                         {/* Due Date */}
                         <div>
                             <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center">

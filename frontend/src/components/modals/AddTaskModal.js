@@ -8,6 +8,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
+        subject: '',
         priority: 'medium',
         dueDate: '',
         estimatedDuration: 60, // in minutes
@@ -84,6 +85,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             const taskData = {
                 title: formData.title.trim(),
                 description: formData.description.trim(),
+                subject: formData.subject.trim(),
                 priority: formData.priority,
                 dueDate: formData.dueDate,
                 estimatedHours: formData.estimatedDuration / 60,
@@ -96,6 +98,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             setFormData({
                 title: '',
                 description: '',
+                subject: '',
                 priority: 'medium',
                 dueDate: '',
                 estimatedDuration: 60,
@@ -121,6 +124,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
         setFormData({
             title: '',
             description: '',
+            subject: '',
             priority: 'medium',
             dueDate: '',
             estimatedDuration: 60,
@@ -188,6 +192,21 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             placeholder="Describe the task in detail..."
                             value={formData.description}
                             onChange={(e) => handleInputChange('description', e.target.value)}
+                            disabled={loading}
+                        />
+                    </div>
+
+                    {/* Subject */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Subject
+                        </label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="e.g., Math, Physics, Programming..."
+                            value={formData.subject}
+                            onChange={(e) => handleInputChange('subject', e.target.value)}
                             disabled={loading}
                         />
                     </div>
