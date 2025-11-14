@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus, RefreshCw, AlertCircle, CheckSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { calendarService } from '../../services';
 import AddTaskModal from '../modals/AddTaskModal';
@@ -83,7 +83,10 @@ const Calendar = () => {
                     ...event,
                     type: event.type || (event.session_type ? 'session' : 'task'),
                     time: event.time || event.start_time || event.scheduled_time || '00:00',
-                    status: event.status || 'scheduled'
+                    status: event.status || 'scheduled',
+                    // Normalize progress for completed tasks
+                    progress: event.status === 'completed' ? 100 : (event.progress || event.progressPercentage || event.progress_percentage || 0),
+                    progressPercentage: event.status === 'completed' ? 100 : (event.progress || event.progressPercentage || event.progress_percentage || 0)
                 });
             });
 
@@ -151,17 +154,25 @@ const Calendar = () => {
                 id: taskId,
                 dueDate: event.dueDate || event.due_date || event.start,
                 estimatedHours: event.estimatedHours || event.estimated_hours,
-                progress: event.progress || event.progressPercentage || event.progress_percentage || 0
+                progress: event.status === 'completed' ? 100 : (event.progress || event.progressPercentage || event.progress_percentage || 0),
+                progressPercentage: event.status === 'completed' ? 100 : (event.progress || event.progressPercentage || event.progress_percentage || 0)
             });
             setShowTaskDetailsModal(true);
         }
     };
 
     const handleTaskUpdated = (updatedTask) => {
+        // Normalize the updated task
+        const normalized = {
+            ...updatedTask,
+            progress: updatedTask.status === 'completed' ? 100 : (updatedTask.progress || 0),
+            progressPercentage: updatedTask.status === 'completed' ? 100 : (updatedTask.progressPercentage || 0)
+        };
+
         // Update the task in calendar events
         setCalendarEvents(prev => prev.map(event =>
-            event.id === `task-${updatedTask.id}` || event.taskId === updatedTask.id
-                ? { ...event, ...updatedTask, type: 'task' }
+            event.id === `task-${normalized.id}` || event.taskId === normalized.id
+                ? { ...event, ...normalized, type: 'task' }
                 : event
         ));
 
@@ -664,20 +675,41 @@ const Calendar = () => {
                                                             {event.priority} priority
                                                         </p>
                                                     )}
-                                                    {/* Task progress bar */}
-                                                    {event.type === 'task' && (
-                                                        <div className="mt-2">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <span className="text-xs text-gray-600">Progress</span>
-                                                                <span className="text-xs font-medium text-gray-700">
-                                                                    {event.progress || event.progressPercentage || event.progress_percentage || 0}%
-                                                                </span>
-                                                            </div>
-                                                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                                                <div
-                                                                    className="bg-blue-600 h-1.5 rounded-full transition-all"
-                                                                    style={{ width: `${event.progress || event.progressPercentage || event.progress_percentage || 0}%` }}
-                                                                ></div>
+                                                    {/* Task progress indicator */}
+                                                    {event.type === 'task' && (event.progress > 0 || event.status === 'completed') && (
+                                                        <div className="mt-2 flex items-center gap-2">
+                                                            <span className="text-xs text-gray-600">Progress</span>
+                                                            <div className="relative flex-shrink-0" title={`${event.status === 'completed' ? 100 : (event.progress || 0)}% complete`}>
+                                                                <svg className="w-8 h-8 transform -rotate-90">
+                                                                    <circle
+                                                                        cx="16"
+                                                                        cy="16"
+                                                                        r="12"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="3"
+                                                                        fill="none"
+                                                                        className="text-gray-200"
+                                                                    />
+                                                                    <circle
+                                                                        cx="16"
+                                                                        cy="16"
+                                                                        r="12"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="3"
+                                                                        fill="none"
+                                                                        strokeDasharray={`${2 * Math.PI * 12}`}
+                                                                        strokeDashoffset={`${2 * Math.PI * 12 * (1 - (event.status === 'completed' ? 100 : (event.progress || 0)) / 100)}`}
+                                                                        className={`${event.status === 'completed' ? 'text-green-600' : 'text-blue-600'} transition-all`}
+                                                                        strokeLinecap="round"
+                                                                    />
+                                                                </svg>
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    {event.status === 'completed' ? (
+                                                                        <CheckSquare className="h-4 w-4 text-green-600" />
+                                                                    ) : (
+                                                                        <span className="text-[9px] font-semibold text-gray-700">{event.progress || 0}%</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
