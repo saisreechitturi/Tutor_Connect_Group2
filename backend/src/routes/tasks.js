@@ -43,14 +43,6 @@ router.get('/', [
     queryText += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
-    // Demo system: If user has no tasks, assign existing demo tasks to them
-    const existingTasksCheck = await query('SELECT COUNT(*) as count FROM tasks WHERE user_id = $1', [req.user.id]);
-    if (existingTasksCheck.rows[0].count === '0') {
-        // User has no tasks, reassign existing tasks to them for demo purposes
-        await query('UPDATE tasks SET user_id = $1 WHERE user_id != $1', [req.user.id]);
-        logger.info(`Reassigned demo tasks to user ${req.user.id}`);
-    }
-
     const result = await query(queryText, params);
 
     const tasks = result.rows.map(row => ({
