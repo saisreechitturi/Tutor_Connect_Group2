@@ -40,6 +40,17 @@ class TutorService {
         }
     }
 
+    // Get tutor details with subjects and availability
+    async getTutorDetails(tutorId) {
+        try {
+            const response = await apiClient.get(`/tutors/${tutorId}/details`);
+            return response;
+        } catch (error) {
+            console.error('[TutorService] Get tutor details failed:', error);
+            throw error;
+        }
+    }
+
     // Get tutor's subjects
     async getTutorSubjects(tutorId) {
         try {

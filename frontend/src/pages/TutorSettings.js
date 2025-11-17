@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, MapPin, Bell, Shield, CreditCard, DollarSign, Clock, Calendar, Save, Star, Award } from 'lucide-react';
+import { User, Bell, Shield, CreditCard, DollarSign, Save } from 'lucide-react';
 
 const TutorSettings = () => {
     const { user } = useAuth();
@@ -14,8 +14,6 @@ const TutorSettings = () => {
         location: user?.profile?.location || '',
         bio: user?.profile?.bio || '',
         avatar: user?.profile?.avatar || '',
-        title: 'Full-Stack Developer & Tutor',
-        specializations: ['JavaScript', 'React', 'Node.js', 'Full-Stack Development'],
         education: ['BS Computer Science, Stanford University'],
         certifications: ['AWS Certified Developer', 'Google Cloud Professional'],
         experience: '5+ years',
@@ -48,8 +46,6 @@ const TutorSettings = () => {
             saturday: { enabled: true, slots: [{ start: '10:00', end: '14:00' }] },
             sunday: { enabled: false, slots: [] }
         },
-        bufferTime: 15,
-        maxSessionsPerDay: 6,
         autoAcceptBookings: false
     });
     // Log availability for debugging
@@ -125,54 +121,6 @@ const TutorSettings = () => {
         { id: 'privacy', label: 'Privacy', icon: Shield },
         { id: 'payments', label: 'Payments', icon: CreditCard }
     ];
-
-    const TimeSlotManager = ({ day, slots, onUpdate }) => (
-        <div className="space-y-2">
-            {slots.map((slot, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                    <input
-                        type="time"
-                        value={slot.start}
-                        className="input-field text-sm py-1"
-                        onChange={(e) => {
-                            const newSlots = [...slots];
-                            newSlots[index].start = e.target.value;
-                            onUpdate(day, newSlots);
-                        }}
-                    />
-                    <span className="text-gray-500">to</span>
-                    <input
-                        type="time"
-                        value={slot.end}
-                        className="input-field text-sm py-1"
-                        onChange={(e) => {
-                            const newSlots = [...slots];
-                            newSlots[index].end = e.target.value;
-                            onUpdate(day, newSlots);
-                        }}
-                    />
-                    <button
-                        onClick={() => {
-                            const newSlots = slots.filter((_, i) => i !== index);
-                            onUpdate(day, newSlots);
-                        }}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                        Remove
-                    </button>
-                </div>
-            ))}
-            <button
-                onClick={() => {
-                    const newSlots = [...slots, { start: '09:00', end: '10:00' }];
-                    onUpdate(day, newSlots);
-                }}
-                className="text-primary-600 hover:text-primary-800 text-sm"
-            >
-                + Add Time Slot
-            </button>
-        </div>
-    );
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -266,16 +214,7 @@ const TutorSettings = () => {
                                             className="input-field"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Professional Title</label>
-                                        <input
-                                            type="text"
-                                            value={profileData.title}
-                                            onChange={(e) => handleInputChange('profile', 'title', e.target.value)}
-                                            className="input-field"
-                                            placeholder="e.g. Senior Software Engineer & Tutor"
-                                        />
-                                    </div>
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
                                         <select
@@ -299,16 +238,7 @@ const TutorSettings = () => {
                                             placeholder="Tell students about your background, teaching style, and expertise..."
                                         />
                                     </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Specializations</label>
-                                        <input
-                                            type="text"
-                                            value={profileData.specializations.join(', ')}
-                                            onChange={(e) => handleInputChange('profile', 'specializations', e.target.value.split(', '))}
-                                            className="input-field"
-                                            placeholder="JavaScript, React, Node.js..."
-                                        />
-                                    </div>
+
                                 </div>
 
                                 <div className="flex justify-end pt-4">

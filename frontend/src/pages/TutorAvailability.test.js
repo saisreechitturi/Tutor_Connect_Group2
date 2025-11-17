@@ -35,8 +35,6 @@ const mockAvailability = {
                 dayOfWeek: 1,
                 startTime: '09:00',
                 endTime: '17:00',
-                maxSessions: 3,
-                bufferMinutes: 15,
                 isAvailable: true
             },
             {
@@ -44,8 +42,7 @@ const mockAvailability = {
                 dayOfWeek: 3,
                 startTime: '10:00',
                 endTime: '16:00',
-                maxSessions: 2,
-                bufferMinutes: 15,
+
                 isAvailable: true
             }
         ],
@@ -55,9 +52,7 @@ const mockAvailability = {
                 date: '2024-01-15',
                 startTime: '09:00',
                 endTime: '12:00',
-                isAvailable: false,
-                maxSessions: 0,
-                bufferMinutes: 0
+                isAvailable: false
             }
         ]
     }
@@ -78,7 +73,7 @@ describe('TutorAvailability', () => {
     });
 
     it('should display loading state initially', () => {
-        availabilityService.getAvailability.mockImplementation(() => new Promise(() => {}));
+        availabilityService.getAvailability.mockImplementation(() => new Promise(() => { }));
 
         renderTutorAvailability();
 
@@ -158,7 +153,7 @@ describe('TutorAvailability', () => {
     it('should handle delete slot with confirmation', async () => {
         availabilityService.getAvailability.mockResolvedValue(mockAvailability);
         availabilityService.deleteSlot.mockResolvedValue({ message: 'Slot deleted successfully' });
-        
+
         // Mock window.confirm
         global.confirm = jest.fn(() => true);
 
@@ -184,7 +179,7 @@ describe('TutorAvailability', () => {
 
     it('should not delete slot if user cancels confirmation', async () => {
         availabilityService.getAvailability.mockResolvedValue(mockAvailability);
-        
+
         // Mock window.confirm to return false
         global.confirm = jest.fn(() => false);
 

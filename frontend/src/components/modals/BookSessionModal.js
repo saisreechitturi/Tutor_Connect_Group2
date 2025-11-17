@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, DollarSign, User, MapPin, Video, AlertCircle, CheckCircle } from 'lucide-react';
-import { sessionService, tutorService, subjectsService, availabilityService } from '../../services';
+import { X, Calendar, Clock, DollarSign, User, MapPin, Video, AlertCircle, CheckCircle, Book } from 'lucide-react';
+import { sessionService, tutorService, availabilityService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = null }) => {
@@ -10,13 +10,16 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     const [availableTutors, setAvailableTutors] = useState([]);
+    const [tutorDetails, setTutorDetails] = useState(null);
+    const [availableSlots, setAvailableSlots] = useState([]);
+    const [slotsLoading, setSlotsLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         tutorId: selectedTutor?.id || '',
         title: '',
         description: '',
-        subjectId: null,
-        sessionType: 'online', // 'online' or 'in-person'
+        subjectId: '',
+        sessionType: 'online',
         scheduledDate: '',
         scheduledTime: '',
         durationMinutes: 60,
@@ -38,46 +41,47 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         { value: 180, label: '3 hours' }
     ];
 
-    const [subjects, setSubjects] = useState([]);
-    const [slotsLoading, setSlotsLoading] = useState(false);
-    const [slotsError, setSlotsError] = useState(null);
-    const [availableSlots, setAvailableSlots] = useState([]);
-    const [slotsChecked, setSlotsChecked] = useState(false);
-
+    // Load tutors when modal opens (if no specific tutor selected)
     useEffect(() => {
         if (isOpen && !selectedTutor) {
             fetchTutors();
         }
     }, [isOpen, selectedTutor]);
 
+    // Load tutor details when tutor is selected
     useEffect(() => {
-        if (selectedTutor) {
+        if (formData.tutorId) {
+            fetchTutorDetails(formData.tutorId);
+        } else {
+            setTutorDetails(null);
+        }
+    }, [formData.tutorId]);
+
+    // Load available slots when date/duration changes
+    useEffect(() => {
+        if (formData.tutorId && formData.scheduledDate && formData.durationMinutes) {
+            fetchAvailableSlots();
+        } else {
+            setAvailableSlots([]);
+        }
+    }, [formData.tutorId, formData.scheduledDate, formData.durationMinutes]);
+
+    // Set initial data when modal opens with selected tutor
+    useEffect(() => {
+        if (selectedTutor && isOpen) {
             setFormData(prev => ({
                 ...prev,
                 tutorId: selectedTutor.id,
                 hourlyRate: selectedTutor.hourlyRate || 0
             }));
         }
-    }, [selectedTutor]);
-
-    useEffect(() => {
-        const loadSubjects = async () => {
-            try {
-                const res = await subjectsService.list({ active: true, limit: 100 });
-                setSubjects(res.subjects || []);
-            } catch (err) {
-                console.warn('Failed to load subjects list', err);
-                setSubjects([]);
-            }
-        };
-        if (isOpen) loadSubjects();
-    }, [isOpen]);
+    }, [selectedTutor, isOpen]);
 
     const fetchTutors = async () => {
         try {
             setTutorsLoading(true);
-            const tutorsData = await tutorService.getTutors();
-            setAvailableTutors(tutorsData || []);
+            const response = await tutorService.getTutors();
+            setAvailableTutors(response || []);
         } catch (err) {
             console.error('Error fetching tutors:', err);
             setError('Failed to load tutors. Please try again.');
@@ -86,35 +90,43 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         }
     };
 
-    const handleCheckAvailability = async () => {
-        setSlotsError(null);
-        setSlotsChecked(false);
-        setAvailableSlots([]);
+    const fetchTutorDetails = async (tutorId) => {
+        try {
+            const response = await tutorService.getTutorDetails(tutorId);
+            setTutorDetails(response);
 
-        if (!formData.tutorId) {
-            setSlotsError('Please select a tutor first');
-            return;
+            // Update hourly rate from tutor details
+            if (response.tutor?.hourlyRate) {
+                setFormData(prev => ({
+                    ...prev,
+                    hourlyRate: response.tutor.hourlyRate
+                }));
+            }
+        } catch (err) {
+            console.error('Error fetching tutor details:', err);
+            setError('Failed to load tutor details. Please try again.');
         }
-        if (!formData.scheduledDate) {
-            setSlotsError('Please select a date to check availability');
-            return;
-        }
+    };
 
+    const fetchAvailableSlots = async () => {
         try {
             setSlotsLoading(true);
-            const res = await availabilityService.getAvailableTimeSlots(
-                formData.tutorId,
-                { date: formData.scheduledDate, duration: formData.durationMinutes }
-            );
-            const slots = res.availableSlots || [];
-            setAvailableSlots(slots);
-            setSlotsChecked(true);
-            if (slots.length === 0) {
-                setSlotsError('No available slots for the selected date and duration');
+            setError(null);
+
+            const response = await availabilityService.getAvailableTimeSlots(formData.tutorId, {
+                date: formData.scheduledDate,
+                duration: formData.durationMinutes
+            });
+
+            setAvailableSlots(response.availableSlots || []);
+
+            if (response.availableSlots?.length === 0) {
+                setError('No available slots for the selected date and duration. Please try a different date.');
             }
-        } catch (e) {
-            console.error('Failed to check availability', e);
-            setSlotsError(e.message || 'Failed to check availability');
+        } catch (err) {
+            console.error('Error fetching available slots:', err);
+            setError('Failed to check availability. Please try again.');
+            setAvailableSlots([]);
         } finally {
             setSlotsLoading(false);
         }
@@ -126,15 +138,12 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             [field]: value
         }));
 
-        // Update hourly rate when tutor changes
-        if (field === 'tutorId') {
-            const selectedTutorData = availableTutors.find(t => t.id === parseInt(value));
-            if (selectedTutorData) {
-                setFormData(prev => ({
-                    ...prev,
-                    hourlyRate: selectedTutorData.hourlyRate || 0
-                }));
-            }
+        // Clear selected time when date or duration changes
+        if (field === 'scheduledDate' || field === 'durationMinutes') {
+            setFormData(prev => ({
+                ...prev,
+                scheduledTime: ''
+            }));
         }
 
         // Clear error when user starts typing
@@ -151,12 +160,16 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             setError('Session title is required');
             return false;
         }
+        if (!formData.subjectId) {
+            setError('Please select a subject');
+            return false;
+        }
         if (!formData.scheduledDate) {
             setError('Please select a date');
             return false;
         }
         if (!formData.scheduledTime) {
-            setError('Please select a time');
+            setError('Please select a time slot');
             return false;
         }
 
@@ -199,7 +212,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
             const sessionData = {
                 tutorId: parseInt(formData.tutorId),
-                subjectId: formData.subjectId || null,
+                subjectId: parseInt(formData.subjectId),
                 title: formData.title.trim(),
                 description: formData.description.trim(),
                 sessionType: formData.sessionType,
@@ -214,16 +227,18 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
             setSuccess(true);
 
-            // Global toast for success
+            // Show success toast
             try {
                 window.dispatchEvent(new CustomEvent('toast', {
                     detail: {
                         type: 'success',
-                        title: 'Session booked',
-                        message: `Your session "${formData.title.trim()}" was booked successfully.`
+                        title: 'Session booked successfully!',
+                        message: `Your session "${formData.title.trim()}" has been scheduled.`
                     }
                 }));
-            } catch { }
+            } catch (toastError) {
+                console.warn('Failed to show toast:', toastError);
+            }
 
             // Notify parent component
             if (onSessionBooked) {
@@ -237,9 +252,9 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
         } catch (err) {
             console.error('Error booking session:', err);
-            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+            const msg = (err?.message || '').toLowerCase();
             if (msg.includes('conflict') || msg.includes('not available') || msg.includes('overlap')) {
-                setError('Tutor is not available at the requested time');
+                setError('The selected time slot is no longer available. Please choose a different time.');
             } else {
                 setError(err.message || 'Failed to book session. Please try again.');
             }
@@ -253,7 +268,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             tutorId: selectedTutor?.id || '',
             title: '',
             description: '',
-            subjectId: null,
+            subjectId: '',
             sessionType: 'online',
             scheduledDate: '',
             scheduledTime: '',
@@ -264,389 +279,354 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         });
         setError(null);
         setSuccess(false);
+        setTutorDetails(null);
+        setAvailableSlots([]);
         onClose();
     };
 
-    const getMinDateTime = () => {
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
-    };
-
-    const getMinTime = () => {
-        const selectedDate = new Date(formData.scheduledDate);
+    const getMinDate = () => {
         const today = new Date();
-
-        // If selected date is today, minimum time should be current time + 2 hours
-        if (selectedDate.toDateString() === today.toDateString()) {
-            const minTime = new Date(today.getTime() + 2 * 60 * 60 * 1000);
-            return minTime.toTimeString().slice(0, 5);
-        }
-
-        return '00:00';
+        return today.toISOString().split('T')[0];
     };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                        <Calendar className="h-5 w-5 mr-2 text-primary-600" />
-                        Book a Session
+                        <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                        Book a Tutoring Session
                     </h2>
                     <button
                         onClick={handleClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-400 hover:text-gray-600 p-1 rounded"
                         disabled={loading}
                     >
-                        <X className="h-6 w-6" />
+                        <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                {/* Success Message */}
-                {success && (
-                    <div className="mx-6 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                        <span className="text-green-700 text-sm">Session booked successfully! You will receive a confirmation email shortly.</span>
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                    <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center">
-                        <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-                        <span className="text-red-700 text-sm">{error}</span>
-                    </div>
-                )}
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {!user && (
-                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                            Please sign in to book a session. You can still explore tutors and their availability.
-                        </div>
-                    )}
-                    {/* Tutor Selection */}
-                    {!selectedTutor && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                <User className="h-4 w-4 mr-1" />
-                                Select Tutor *
-                            </label>
-                            {tutorsLoading ? (
-                                <div className="input-field flex items-center">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
-                                    Loading tutors...
-                                </div>
-                            ) : (
-                                <select
-                                    className="input-field"
-                                    value={formData.tutorId}
-                                    onChange={(e) => handleInputChange('tutorId', e.target.value)}
-                                    required
-                                    disabled={loading}
-                                >
-                                    <option value="">Choose a tutor...</option>
-                                    {availableTutors.map(tutor => (
-                                        <option key={tutor.id} value={tutor.id}>
-                                            {tutor.firstName} {tutor.lastName} - ${tutor.hourlyRate}/hour
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Selected Tutor Info */}
-                    {selectedTutor && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-medium text-gray-900 mb-2">Selected Tutor</h3>
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
-                                    {selectedTutor.firstName?.[0]}{selectedTutor.lastName?.[0]}
-                                </div>
-                                <div>
-                                    <p className="font-medium">{selectedTutor.firstName} {selectedTutor.lastName}</p>
-                                    <p className="text-sm text-gray-600">${selectedTutor.hourlyRate}/hour</p>
-                                </div>
+                {/* Content */}
+                <div className="p-6">
+                    {success && (
+                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+                            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                            <div>
+                                <p className="text-green-800 font-medium">Session booked successfully!</p>
+                                <p className="text-green-700 text-sm">You will receive a confirmation email shortly.</p>
                             </div>
                         </div>
                     )}
 
-                    {/* Session Title and Subject */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Session Title *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                className="input-field"
-                                placeholder="e.g., Math Tutoring Session"
-                                value={formData.title}
-                                onChange={(e) => handleInputChange('title', e.target.value)}
-                                disabled={loading}
-                            />
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+                            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+                            <p className="text-red-800">{error}</p>
                         </div>
+                    )}
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Subject
-                            </label>
-                            <select
-                                className="input-field"
-                                value={formData.subjectId ?? ''}
-                                onChange={(e) => handleInputChange('subjectId', e.target.value ? parseInt(e.target.value) : null)}
-                                disabled={loading}
-                            >
-                                <option value="">Select a subject...</option>
-                                {subjects.map(subject => (
-                                    <option key={subject.id} value={subject.id}>{subject.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Left Column */}
+                            <div className="space-y-6">
+                                {/* Tutor Selection */}
+                                {!selectedTutor && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Select Tutor *
+                                        </label>
+                                        {tutorsLoading ? (
+                                            <div className="p-3 text-gray-500 text-center">Loading tutors...</div>
+                                        ) : (
+                                            <select
+                                                value={formData.tutorId}
+                                                onChange={(e) => handleInputChange('tutorId', e.target.value)}
+                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                required
+                                            >
+                                                <option value="">Choose a tutor...</option>
+                                                {availableTutors.map(tutor => (
+                                                    <option key={tutor.id} value={tutor.id}>
+                                                        {tutor.name} - ${tutor.hourlyRate}/hr ({tutor.rating}⭐)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* Description */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Description
-                        </label>
-                        <textarea
-                            className="input-field"
-                            rows="3"
-                            placeholder="Describe what you'd like to work on during this session..."
-                            value={formData.description}
-                            onChange={(e) => handleInputChange('description', e.target.value)}
-                            disabled={loading}
-                        />
-                    </div>
+                                {/* Selected Tutor Info */}
+                                {(selectedTutor || tutorDetails) && (
+                                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <div className="flex items-center mb-2">
+                                            <User className="h-5 w-5 text-blue-600 mr-2" />
+                                            <h3 className="font-medium text-blue-900">
+                                                {selectedTutor?.name || tutorDetails?.tutor?.name}
+                                            </h3>
+                                        </div>
+                                        <p className="text-sm text-blue-700 mb-2">
+                                            ${selectedTutor?.hourlyRate || tutorDetails?.tutor?.hourlyRate}/hr •
+                                            {selectedTutor?.rating || tutorDetails?.tutor?.rating}⭐ •
+                                            {selectedTutor?.totalSessions || tutorDetails?.tutor?.totalSessions} sessions
+                                        </p>
+                                        {(selectedTutor?.bio || tutorDetails?.tutor?.bio) && (
+                                            <p className="text-sm text-blue-600">
+                                                {selectedTutor?.bio || tutorDetails?.tutor?.bio}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* Session Type */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Session Type *
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                            {sessionTypes.map(type => {
-                                const Icon = type.icon;
-                                return (
-                                    <button
-                                        key={type.value}
-                                        type="button"
-                                        onClick={() => handleInputChange('sessionType', type.value)}
-                                        className={`p-3 border rounded-lg flex items-center justify-center transition-colors ${formData.sessionType === type.value
-                                            ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                            : 'border-gray-300 hover:border-gray-400'
-                                            }`}
-                                        disabled={loading}
+                                {/* Subject Selection */}
+                                {tutorDetails?.subjects && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Subject *
+                                        </label>
+                                        <select
+                                            value={formData.subjectId}
+                                            onChange={(e) => handleInputChange('subjectId', e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            required
+                                        >
+                                            <option value="">Choose a subject...</option>
+                                            {tutorDetails.subjects.map(subject => (
+                                                <option key={subject.id} value={subject.id}>
+                                                    {subject.name} ({subject.proficiency})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* Session Title */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Session Title *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.title}
+                                        onChange={(e) => handleInputChange('title', e.target.value)}
+                                        placeholder="e.g., Algebra Review Session"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        required
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => handleInputChange('description', e.target.value)}
+                                        placeholder="Describe what you'd like to focus on in this session..."
+                                        rows={3}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                {/* Session Type */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Session Type *
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {sessionTypes.map(type => {
+                                            const Icon = type.icon;
+                                            return (
+                                                <button
+                                                    key={type.value}
+                                                    type="button"
+                                                    onClick={() => handleInputChange('sessionType', type.value)}
+                                                    className={`p-3 rounded-lg border-2 transition-colors flex items-center justify-center ${formData.sessionType === type.value
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                            : 'border-gray-300 hover:border-gray-400'
+                                                        }`}
+                                                >
+                                                    <Icon className="h-4 w-4 mr-2" />
+                                                    {type.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Online Session - Meeting Link */}
+                                {formData.sessionType === 'online' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Meeting Link *
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={formData.meetingLink}
+                                            onChange={(e) => handleInputChange('meetingLink', e.target.value)}
+                                            placeholder="https://zoom.us/j/123456789 or Google Meet link"
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            required
+                                        />
+                                    </div>
+                                )}
+
+                                {/* In-Person Session - Location */}
+                                {formData.sessionType === 'in-person' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Meeting Location *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.locationAddress}
+                                            onChange={(e) => handleInputChange('locationAddress', e.target.value)}
+                                            placeholder="Library, coffee shop, campus building, etc."
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            required
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Column */}
+                            <div className="space-y-6">
+                                {/* Duration */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Duration *
+                                    </label>
+                                    <select
+                                        value={formData.durationMinutes}
+                                        onChange={(e) => handleInputChange('durationMinutes', parseInt(e.target.value))}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        required
                                     >
-                                        <Icon className="h-4 w-4 mr-2" />
-                                        {type.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                                        {durationOptions.map(option => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                    {/* Meeting Link (for online sessions) */}
-                    {formData.sessionType === 'online' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Meeting Link *
-                            </label>
-                            <input
-                                type="url"
-                                required
-                                className="input-field"
-                                placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-                                value={formData.meetingLink}
-                                onChange={(e) => handleInputChange('meetingLink', e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                    )}
+                                {/* Date */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Date *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={formData.scheduledDate}
+                                        onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
+                                        min={getMinDate()}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        required
+                                    />
+                                </div>
 
-                    {/* Location (for in-person sessions) */}
-                    {formData.sessionType === 'in-person' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Location Address *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                className="input-field"
-                                placeholder="Enter the meeting location address..."
-                                value={formData.locationAddress}
-                                onChange={(e) => handleInputChange('locationAddress', e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                    )}
+                                {/* Available Time Slots */}
+                                {formData.scheduledDate && formData.tutorId && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Available Time Slots *
+                                        </label>
+                                        {slotsLoading ? (
+                                            <div className="p-4 text-center text-gray-500">
+                                                <Clock className="h-5 w-5 mx-auto mb-2 animate-spin" />
+                                                Checking availability...
+                                            </div>
+                                        ) : availableSlots.length > 0 ? (
+                                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                                                {availableSlots.map((slot, index) => (
+                                                    <button
+                                                        key={index}
+                                                        type="button"
+                                                        onClick={() => handleInputChange('scheduledTime', slot.startTime)}
+                                                        className={`p-2 text-sm rounded border-2 transition-colors ${formData.scheduledTime === slot.startTime
+                                                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                                : 'border-gray-300 hover:border-gray-400'
+                                                            }`}
+                                                    >
+                                                        {slot.startTime}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 text-center text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                                                No available slots for selected date and duration
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* Date and Time */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                <Calendar className="h-4 w-4 mr-1" />
-                                Date *
-                            </label>
-                            <input
-                                type="date"
-                                required
-                                className="input-field"
-                                value={formData.scheduledDate}
-                                onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
-                                min={getMinDateTime()}
-                                disabled={loading}
-                            />
+                                {/* Cost Summary */}
+                                {formData.hourlyRate > 0 && (
+                                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                                        <div className="flex items-center mb-2">
+                                            <DollarSign className="h-5 w-5 text-gray-600 mr-2" />
+                                            <h3 className="font-medium text-gray-900">Cost Summary</h3>
+                                        </div>
+                                        <div className="space-y-1 text-sm text-gray-600">
+                                            <div className="flex justify-between">
+                                                <span>Duration:</span>
+                                                <span>{formData.durationMinutes} minutes</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Hourly Rate:</span>
+                                                <span>${formData.hourlyRate}/hr</span>
+                                            </div>
+                                            <div className="flex justify-between font-medium text-gray-900 pt-2 border-t">
+                                                <span>Total Cost:</span>
+                                                <span>${calculateTotalCost()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                <Clock className="h-4 w-4 mr-1" />
-                                Time *
-                            </label>
-                            <input
-                                type="time"
-                                required
-                                className="input-field"
-                                value={formData.scheduledTime}
-                                onChange={(e) => handleInputChange('scheduledTime', e.target.value)}
-                                min={getMinTime()}
-                                disabled={loading}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Availability Checker */}
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-medium text-gray-900">Check Availability</h3>
+                        {/* Submit Button */}
+                        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
                             <button
                                 type="button"
-                                onClick={handleCheckAvailability}
-                                className="btn-outline text-sm"
-                                disabled={slotsLoading || !formData.tutorId || !formData.scheduledDate}
+                                onClick={handleClose}
+                                className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                disabled={loading}
                             >
-                                {slotsLoading ? 'Checking…' : 'Check availability'}
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading || success}
+                                className={`px-6 py-2 rounded-lg transition-colors flex items-center ${loading || success
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    } text-white`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Clock className="h-4 w-4 mr-2 animate-spin" />
+                                        Booking...
+                                    </>
+                                ) : success ? (
+                                    <>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Booked!
+                                    </>
+                                ) : (
+                                    <>
+                                        <Book className="h-4 w-4 mr-2" />
+                                        Book Session
+                                    </>
+                                )}
                             </button>
                         </div>
-                        {slotsError && (
-                            <div className="text-sm text-red-600 mb-2">{slotsError}</div>
-                        )}
-                        {slotsChecked && !slotsError && availableSlots.length === 0 && (
-                            <div className="text-sm text-gray-600">No available slots found for this date.</div>
-                        )}
-                        {availableSlots.length > 0 && (
-                            <div>
-                                <p className="text-sm text-gray-600 mb-2">Select a suggested time slot:</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {availableSlots.map((slot, idx) => (
-                                        <button
-                                            key={`${slot.date}-${slot.startTime}-${idx}`}
-                                            type="button"
-                                            onClick={() => {
-                                                // ensure date aligns with slot date
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    scheduledDate: slot.date,
-                                                    scheduledTime: slot.startTime
-                                                }));
-                                            }}
-                                            className="px-3 py-1.5 rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-50 text-sm"
-                                        >
-                                            {slot.startTime} - {slot.endTime}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Duration */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Duration *
-                        </label>
-                        <select
-                            className="input-field"
-                            value={formData.durationMinutes}
-                            onChange={(e) => handleInputChange('durationMinutes', parseInt(e.target.value))}
-                            disabled={loading}
-                        >
-                            {durationOptions.map(option => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Cost Summary */}
-                    {formData.hourlyRate > 0 && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                Cost Summary
-                            </h3>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Hourly Rate:</span>
-                                    <span>${formData.hourlyRate}/hour</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Duration:</span>
-                                    <span>{formData.durationMinutes} minutes</span>
-                                </div>
-                                <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                                    <span>Total Cost:</span>
-                                    <span>${calculateTotalCost()}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Submit Buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="btn-secondary"
-                            disabled={loading}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn-primary flex items-center"
-                            disabled={loading || success || !user}
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Booking...
-                                </>
-                            ) : success ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Booked!
-                                </>
-                            ) : (
-                                <>
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    Book Session
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

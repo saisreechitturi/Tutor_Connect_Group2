@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Plus, Edit2, Trash2, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import { availabilityService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { DAY_OF_WEEK_MIN, DAY_OF_WEEK_MAX } from '../constants/schema';
@@ -8,9 +8,7 @@ const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 const TutorAvailability = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('weekly');
-    const [recurringSlots, setRecurringSlots] = useState([]);
-    const [specificSlots, setSpecificSlots] = useState([]);
+    const [availabilitySlots, setAvailabilitySlots] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -29,8 +27,7 @@ const TutorAvailability = () => {
             const data = await availabilityService.getAvailability(user.id, {
                 includeBooked: false
             });
-            setRecurringSlots(data.availability?.recurringSlots || []);
-            setSpecificSlots(data.availability?.specificSlots || []);
+            setAvailabilitySlots(data.availability?.recurringSlots || []);
         } catch (err) {
             console.error('Failed to load availability', err);
             setError(err.message || 'Failed to load availability');
@@ -116,8 +113,8 @@ const TutorAvailability = () => {
                     <button
                         onClick={() => setActiveTab('weekly')}
                         className={`${activeTab === 'weekly'
-                                ? 'border-primary-600 text-primary-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-primary-600 text-primary-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         <Clock className="h-5 w-5 inline-block mr-2" />
@@ -126,8 +123,8 @@ const TutorAvailability = () => {
                     <button
                         onClick={() => setActiveTab('specific')}
                         className={`${activeTab === 'specific'
-                                ? 'border-primary-600 text-primary-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-primary-600 text-primary-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
                         <CalendarIcon className="h-5 w-5 inline-block mr-2" />
@@ -165,7 +162,7 @@ const TutorAvailability = () => {
                     ) : (
                         <div className="space-y-4">
                             {DAYS_OF_WEEK.map((day, index) => {
-                                const daySlots = recurringSlots.filter(slot => slot.dayOfWeek === index);
+                                const daySlots = availabilitySlots.filter(slot => slot.dayOfWeek === index);
                                 if (daySlots.length === 0) return null;
 
                                 return (
@@ -184,8 +181,7 @@ const TutorAvailability = () => {
                                                                 {slot.startTime} - {slot.endTime}
                                                             </p>
                                                             <p className="text-sm text-gray-500">
-                                                                Max {slot.maxSessions} session{slot.maxSessions > 1 ? 's' : ''} •
-                                                                {slot.bufferMinutes}min buffer
+                                                                Available for tutoring sessions
                                                             </p>
                                                         </div>
                                                     </div>
@@ -301,7 +297,6 @@ const TutorAvailability = () => {
                     onSave={handleSaveSlot}
                     slot={editingSlot}
                     tutorId={user.id}
-                    isWeekly={activeTab === 'weekly'}
                 />
             )}
         </div>
@@ -309,15 +304,11 @@ const TutorAvailability = () => {
 };
 
 // Slot Modal Component
-const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
+const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId }) => {
     const [formData, setFormData] = useState({
         dayOfWeek: slot?.dayOfWeek ?? 1,
-        date: slot?.date || '',
         startTime: slot?.startTime || '09:00',
-        endTime: slot?.endTime || '10:00',
-        maxSessions: slot?.maxSessions || 1,
-        bufferMinutes: slot?.bufferMinutes || 15,
-        isAvailable: slot?.isAvailable ?? true
+        endTime: slot?.endTime || '10:00'
     });
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState(null);
@@ -332,13 +323,8 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
             return;
         }
 
-        if (isWeekly && (formData.dayOfWeek < DAY_OF_WEEK_MIN || formData.dayOfWeek > DAY_OF_WEEK_MAX)) {
+        if (formData.dayOfWeek < DAY_OF_WEEK_MIN || formData.dayOfWeek > DAY_OF_WEEK_MAX) {
             setValidationError(`Day of week must be between ${DAY_OF_WEEK_MIN} and ${DAY_OF_WEEK_MAX}`);
-            return;
-        }
-
-        if (!isWeekly && !formData.date) {
-            setValidationError('Date is required for specific overrides');
             return;
         }
 
@@ -349,31 +335,15 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
                 // Update existing slot
                 await availabilityService.updateSlot(tutorId, slot.id, {
                     startTime: formData.startTime,
-                    endTime: formData.endTime,
-                    maxSessions: formData.maxSessions,
-                    bufferMinutes: formData.bufferMinutes,
-                    ...(slot.date && { isAvailable: formData.isAvailable })
+                    endTime: formData.endTime
                 });
             } else {
                 // Create new slot
-                if (isWeekly) {
-                    await availabilityService.createRecurringSlot(tutorId, {
-                        dayOfWeek: formData.dayOfWeek,
-                        startTime: formData.startTime,
-                        endTime: formData.endTime,
-                        maxSessions: formData.maxSessions,
-                        bufferMinutes: formData.bufferMinutes
-                    });
-                } else {
-                    await availabilityService.createSpecificSlot(tutorId, {
-                        date: formData.date,
-                        startTime: formData.startTime,
-                        endTime: formData.endTime,
-                        isAvailable: formData.isAvailable,
-                        maxSessions: formData.maxSessions,
-                        bufferMinutes: formData.bufferMinutes
-                    });
-                }
+                await availabilityService.createRecurringSlot(tutorId, {
+                    dayOfWeek: formData.dayOfWeek,
+                    startTime: formData.startTime,
+                    endTime: formData.endTime
+                });
             }
 
             onSave();
@@ -390,7 +360,7 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg max-w-md w-full mx-4 p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    {slot ? 'Edit' : 'Add'} {isWeekly ? 'Weekly' : 'Specific Date'} Availability
+                    {slot ? 'Edit' : 'Add'} Weekly Availability
                 </h2>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -400,37 +370,21 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
                         </div>
                     )}
 
-                    {isWeekly ? (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Day of Week
-                            </label>
-                            <select
-                                value={formData.dayOfWeek}
-                                onChange={(e) => setFormData({ ...formData, dayOfWeek: parseInt(e.target.value) })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                disabled={!!slot}
-                            >
-                                {DAYS_OF_WEEK.map((day, index) => (
-                                    <option key={index} value={index}>{day}</option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Date
-                            </label>
-                            <input
-                                type="date"
-                                value={formData.date}
-                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                disabled={!!slot}
-                                required
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Day of Week
+                        </label>
+                        <select
+                            value={formData.dayOfWeek}
+                            onChange={(e) => setFormData({ ...formData, dayOfWeek: parseInt(e.target.value) })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            disabled={!!slot}
+                        >
+                            {DAYS_OF_WEEK.map((day, index) => (
+                                <option key={index} value={index}>{day}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -473,37 +427,7 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly }) => {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Max Sessions
-                            </label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={formData.maxSessions}
-                                onChange={(e) => setFormData({ ...formData, maxSessions: parseInt(e.target.value) })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Buffer (min)
-                            </label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="60"
-                                step="5"
-                                value={formData.bufferMinutes}
-                                onChange={(e) => setFormData({ ...formData, bufferMinutes: parseInt(e.target.value) })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                required
-                            />
-                        </div>
-                    </div>
+
 
                     <div className="flex space-x-3 pt-4">
                         <button

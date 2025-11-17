@@ -19,8 +19,7 @@ describe('availabilityService', () => {
                             dayOfWeek: 1,
                             startTime: '09:00',
                             endTime: '17:00',
-                            maxSessions: 3,
-                            bufferMinutes: 15
+
                         }
                     ],
                     specificSlots: []
@@ -57,9 +56,7 @@ describe('availabilityService', () => {
                     id: 'slot-123',
                     dayOfWeek: 1,
                     startTime: '09:00',
-                    endTime: '10:00',
-                    maxSessions: 1,
-                    bufferMinutes: 15
+                    endTime: '10:00'
                 }
             };
 
@@ -69,9 +66,7 @@ describe('availabilityService', () => {
             const slotData = {
                 dayOfWeek: 1,
                 startTime: '09:00',
-                endTime: '10:00',
-                maxSessions: 1,
-                bufferMinutes: 15
+                endTime: '10:00'
             };
 
             const result = await availabilityService.createRecurringSlot(tutorId, slotData);
@@ -101,13 +96,11 @@ describe('availabilityService', () => {
             const mockResponse = {
                 message: 'Specific availability created successfully',
                 slot: {
-                    id: 'slot-456',
+                    id: 'slot-123',
                     date: '2024-01-15',
                     startTime: '10:00',
                     endTime: '11:00',
-                    isAvailable: true,
-                    maxSessions: 1,
-                    bufferMinutes: 15
+                    isAvailable: true
                 }
             };
 
@@ -118,9 +111,7 @@ describe('availabilityService', () => {
                 date: '2024-01-15',
                 startTime: '10:00',
                 endTime: '11:00',
-                isAvailable: true,
-                maxSessions: 1,
-                bufferMinutes: 15
+                isAvailable: true
             };
 
             const result = await availabilityService.createSpecificSlot(tutorId, slotData);

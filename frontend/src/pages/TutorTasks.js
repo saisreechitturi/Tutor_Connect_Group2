@@ -2,100 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, Clock, CheckCircle, AlertCircle, User, BookOpen, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { taskService } from '../services';
-
-// Mock data for tasks
-const mockTasks = [
-    {
-        id: 1,
-        title: 'Prepare Calculus Lesson Plan',
-        description: 'Create a comprehensive lesson plan for derivatives including practice problems and examples.',
-        student: {
-            id: 1,
-            name: 'Alex Thompson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        },
-        subject: 'Mathematics',
-        type: 'preparation',
-        priority: 'high',
-        status: 'pending',
-        dueDate: '2025-10-05',
-        estimatedTime: 2,
-        notes: 'Focus on real-world applications of derivatives.',
-        createdAt: '2025-09-28',
-        tutorId: 1
-    },
-    {
-        id: 2,
-        title: 'Review Taylor\'s Chemistry Assignment',
-        description: 'Review and provide feedback on the molecular bonding assignment submitted by Taylor.',
-        student: {
-            id: 2,
-            name: 'Taylor Brown',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-        },
-        subject: 'Chemistry',
-        type: 'grading',
-        priority: 'medium',
-        status: 'in-progress',
-        dueDate: '2025-10-02',
-        estimatedTime: 1.5,
-        notes: 'Pay attention to ionic vs covalent bond explanations.',
-        createdAt: '2025-09-27',
-        tutorId: 1
-    },
-    {
-        id: 3,
-        title: 'Follow-up on Programming Concepts',
-        description: 'Check Jamie\'s understanding of object-oriented programming concepts after last session.',
-        student: {
-            id: 3,
-            name: 'Jamie Wilson',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
-        },
-        subject: 'Computer Science',
-        type: 'follow-up',
-        priority: 'low',
-        status: 'completed',
-        dueDate: '2025-09-30',
-        estimatedTime: 0.5,
-        notes: 'Student showed good understanding of inheritance and polymorphism.',
-        createdAt: '2025-09-25',
-        tutorId: 1
-    },
-    {
-        id: 4,
-        title: 'Grade Physics Lab Report',
-        description: 'Evaluate the motion dynamics lab report and provide detailed feedback.',
-        student: {
-            id: 1,
-            name: 'Alex Thompson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        },
-        subject: 'Physics',
-        type: 'grading',
-        priority: 'high',
-        status: 'pending',
-        dueDate: '2025-10-03',
-        estimatedTime: 2.5,
-        notes: 'Focus on experimental methodology and data analysis.',
-        createdAt: '2025-09-29',
-        tutorId: 1
-    }
-];
+import AddTaskModal from '../components/modals/AddTaskModal';
+import TaskDetailsModal from '../components/modals/TaskDetailsModal';
 
 const TutorTasks = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [selectedTask, setSelectedTask] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
 
     useEffect(() => {
         fetchTasks();
-    }, [user?.id]);
+    }, [user]);
 
     const fetchTasks = async () => {
         if (!user?.id) return;
@@ -104,16 +27,13 @@ const TutorTasks = () => {
             setLoading(true);
             setError(null);
 
-            // Try to fetch from taskService, fall back to mock data
-            try {
-                const tasksData = await taskService.getUserTasks(user.id);
-                setTasks(tasksData || mockTasks);
-            } catch (apiError) {
-                console.warn('Task service not available, using mock data:', apiError);
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setTasks(mockTasks);
-            }
+            // Fetch tasks from the API with tutor-specific filtering
+            const tasksData = await taskService.getTasks({
+                // Filter tasks relevant to tutors
+                role: 'tutor'
+            });
+
+            setTasks(tasksData || []);
         } catch (err) {
             console.error('Error fetching tasks:', err);
             setError('Failed to load tasks. Please try again.');
@@ -121,6 +41,46 @@ const TutorTasks = () => {
             setLoading(false);
         }
     };
+
+    const handleAddTask = () => {
+        setShowAddModal(true);
+    };
+
+    const handleTaskAdded = (newTask) => {
+        setTasks(prev => [newTask, ...prev]);
+        setShowAddModal(false);
+    };
+
+    const handleTaskClick = (task) => {
+        setSelectedTask(task);
+        setShowDetailsModal(true);
+    };
+
+    const handleTaskUpdated = (updatedTask) => {
+        setTasks(prev => prev.map(task =>
+            task.id === updatedTask.id ? updatedTask : task
+        ));
+        setShowDetailsModal(false);
+    };
+
+    const handleTaskDeleted = (taskId) => {
+        setTasks(prev => prev.filter(task => task.id !== taskId));
+        setShowDetailsModal(false);
+    };
+
+    const handleStatusChange = async (taskId, newStatus) => {
+        try {
+            const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
+            setTasks(prev => prev.map(task =>
+                task.id === taskId ? { ...task, status: newStatus } : task
+            ));
+        } catch (err) {
+            console.error('Error updating task status:', err);
+            // Show error toast or notification
+        }
+    };
+
+
 
     if (loading) {
         return (
@@ -198,18 +158,6 @@ const TutorTasks = () => {
         }
     };
 
-    const updateTaskStatus = (taskId, newStatus) => {
-        setTasks(prev => prev.map(task =>
-            task.id === taskId ? { ...task, status: newStatus } : task
-        ));
-    };
-
-    const deleteTask = (taskId) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            setTasks(prev => prev.filter(task => task.id !== taskId));
-        }
-    };
-
     const TaskCard = ({ task }) => (
         <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
@@ -256,29 +204,38 @@ const TutorTasks = () => {
                 <div className="flex items-center space-x-2">
                     {task.status === 'pending' && (
                         <button
-                            onClick={() => updateTaskStatus(task.id, 'in-progress')}
+                            onClick={() => handleStatusChange(task.id, 'in_progress')}
                             className="text-blue-600 hover:text-blue-800 text-xs font-medium"
                         >
                             Start
                         </button>
                     )}
-                    {task.status === 'in-progress' && (
+                    {task.status === 'in_progress' && (
                         <button
-                            onClick={() => updateTaskStatus(task.id, 'completed')}
+                            onClick={() => handleStatusChange(task.id, 'completed')}
                             className="text-green-600 hover:text-green-800 text-xs font-medium"
                         >
                             Complete
                         </button>
                     )}
                     <button
-                        onClick={() => setSelectedTask(task)}
+                        onClick={() => handleTaskClick(task)}
                         className="text-gray-400 hover:text-gray-600"
                         title="Edit task"
                     >
                         <Edit className="h-4 w-4" />
                     </button>
                     <button
-                        onClick={() => deleteTask(task.id)}
+                        onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this task?')) {
+                                try {
+                                    await taskService.deleteTask(task.id);
+                                    handleTaskDeleted(task.id);
+                                } catch (err) {
+                                    console.error('Error deleting task:', err);
+                                }
+                            }
+                        }}
                         className="text-red-400 hover:text-red-600"
                         title="Delete task"
                     >
@@ -295,186 +252,9 @@ const TutorTasks = () => {
         </div>
     );
 
-    const CreateTaskModal = () => {
-        const [formData, setFormData] = useState({
-            title: '',
-            description: '',
-            studentId: '',
-            subject: '',
-            priority: 'medium',
-            type: 'preparation',
-            estimatedTime: 1,
-            dueDate: '',
-            notes: ''
-        });
 
-        const handleSubmit = (e) => {
-            e.preventDefault();
-            const newTask = {
-                id: Date.now(), // Simple ID generation for demo
-                ...formData,
-                student: mockTasks.find(t => t.student.id.toString() === formData.studentId)?.student || {
-                    id: 1,
-                    name: 'Selected Student',
-                    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-                },
-                status: 'pending',
-                createdAt: new Date().toISOString().split('T')[0],
-                tutorId: user?.id || 1
-            };
-            setTasks(prev => [...prev, newTask]);
-            setShowCreateModal(false);
-            setFormData({
-                title: '',
-                description: '',
-                studentId: '',
-                subject: '',
-                priority: 'medium',
-                type: 'preparation',
-                estimatedTime: 1,
-                dueDate: '',
-                notes: ''
-            });
-        };
 
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                    <form onSubmit={handleSubmit}>
-                        <div className="p-6 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-900">Create New Task</h2>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title</label>
-                                <input
-                                    type="text"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="Enter task title..."
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                                <textarea
-                                    rows={3}
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="Describe the task..."
-                                    required
-                                ></textarea>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
-                                    <select
-                                        value={formData.studentId}
-                                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                        required
-                                    >
-                                        <option value="">Select a student...</option>
-                                        <option value="1">Alex Thompson</option>
-                                        <option value="2">Taylor Brown</option>
-                                        <option value="3">Jamie Wilson</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                                    <input
-                                        type="text"
-                                        value={formData.subject}
-                                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                        placeholder="e.g. JavaScript, React..."
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                                    <select
-                                        value={formData.priority}
-                                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    >
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                                    <select
-                                        value={formData.type}
-                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    >
-                                        <option value="preparation">Preparation</option>
-                                        <option value="review">Review</option>
-                                        <option value="grading">Grading</option>
-                                        <option value="follow-up">Follow-up</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Time (hours)</label>
-                                    <input
-                                        type="number"
-                                        step="0.5"
-                                        value={formData.estimatedTime}
-                                        onChange={(e) => setFormData({ ...formData, estimatedTime: parseFloat(e.target.value) })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                        placeholder="1.5"
-                                        min="0.5"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                                <input
-                                    type="date"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                                <textarea
-                                    rows={2}
-                                    value={formData.notes}
-                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="Additional notes..."
-                                ></textarea>
-                            </div>
-                        </div>
-                        <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowCreateModal(false)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                            >
-                                Create Task
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        );
-    };
+
 
     // Edit Task Modal
     const EditTaskModal = ({ task, onClose }) => {
@@ -615,6 +395,7 @@ const TutorTasks = () => {
         );
     };
 
+    // Main component logic and calculations
     const taskCounts = {
         all: tasks.length,
         pending: tasks.filter(t => t.status === 'pending').length,
@@ -622,6 +403,7 @@ const TutorTasks = () => {
         completed: tasks.filter(t => t.status === 'completed').length
     };
 
+    // Main component render
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -630,7 +412,7 @@ const TutorTasks = () => {
                     <p className="text-gray-600 mt-1">Manage your tutoring tasks and assignments</p>
                 </div>
                 <button
-                    onClick={() => setShowCreateModal(true)}
+                    onClick={() => setShowAddModal(true)}
                     className="btn-primary flex items-center space-x-2"
                 >
                     <Plus className="h-4 w-4" />
@@ -741,7 +523,7 @@ const TutorTasks = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
                     <p className="text-gray-500 mb-4">Try adjusting your search or filter criteria.</p>
                     <button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => setShowAddModal(true)}
                         className="btn-primary"
                     >
                         Create Your First Task
@@ -749,14 +531,41 @@ const TutorTasks = () => {
                 </div>
             )}
 
-            {/* Create Task Modal */}
-            {showCreateModal && <CreateTaskModal />}
+            {/* Add Task Modal */}
+            {showAddModal && (
+                <AddTaskModal
+                    isOpen={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    onTaskAdded={handleTaskAdded}
+                />
+            )}
 
             {/* Edit Task Modal */}
             {selectedTask && (
                 <EditTaskModal
                     task={selectedTask}
                     onClose={() => setSelectedTask(null)}
+                />
+            )}
+            {/* Add Task Modal */}
+            {showAddModal && (
+                <AddTaskModal
+                    isOpen={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    onTaskAdded={handleTaskAdded}
+                    user={user}
+                />
+            )}
+
+            {/* Task Details Modal */}
+            {showDetailsModal && selectedTask && (
+                <TaskDetailsModal
+                    isOpen={showDetailsModal}
+                    onClose={() => setShowDetailsModal(false)}
+                    task={selectedTask}
+                    onTaskUpdated={handleTaskUpdated}
+                    onTaskDeleted={handleTaskDeleted}
+                    user={user}
                 />
             )}
         </div>

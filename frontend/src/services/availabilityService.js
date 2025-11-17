@@ -36,6 +36,33 @@ class AvailabilityService {
     }
 
     /**
+     * Get available time slots for a specific date
+     * @param {string} tutorId - The tutor's user ID
+     * @param {object} params - Query parameters (date, duration)
+     * @returns {Promise} Available time slots
+     */
+    async getAvailableTimeSlots(tutorId, params = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (params.date) {
+                queryParams.append('date', params.date);
+            }
+            if (params.duration) {
+                queryParams.append('duration', params.duration);
+            }
+
+            const queryString = queryParams.toString();
+            const endpoint = `/availability/${tutorId}/slots${queryString ? `?${queryString}` : ''}`;
+
+            return await apiClient.get(endpoint);
+        } catch (error) {
+            console.error('Error fetching available time slots:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Create new availability slot
      * @param {string} tutorId - The tutor's user ID
      * @param {object} slotData - Slot data (day_of_week, start_time, end_time, etc.)
@@ -43,7 +70,7 @@ class AvailabilityService {
      */
     async createRecurringSlot(tutorId, slotData) {
         try {
-            // slotData: { dayOfWeek, startTime, endTime, maxSessions?, bufferMinutes? }
+            // slotData: { dayOfWeek, startTime, endTime }
             return await apiClient.post(`/availability/${tutorId}/recurring`, slotData);
         } catch (error) {
             console.error('Error creating recurring availability slot:', error);
@@ -51,19 +78,7 @@ class AvailabilityService {
         }
     }
 
-    /**
-     * Create specific-date availability override
-     * @param {string} tutorId
-     * @param {{date:string, startTime:string, endTime:string, isAvailable:boolean, maxSessions?:number, bufferMinutes?:number}} slotData
-     */
-    async createSpecificSlot(tutorId, slotData) {
-        try {
-            return await apiClient.post(`/availability/${tutorId}/specific`, slotData);
-        } catch (error) {
-            console.error('Error creating specific availability slot:', error);
-            throw error;
-        }
-    }
+
 
     /**
      * Update availability slot
@@ -114,35 +129,7 @@ class AvailabilityService {
         }
     }
 
-    /**
-     * Get available time slots for booking
-     * @param {string} tutorId - The tutor's user ID
-     * @param {object} params - Query parameters (date, duration)
-     * @returns {Promise} Available time slots
-     */
-    async getAvailableTimeSlots(tutorId, params = {}) {
-        try {
-            const queryParams = new URLSearchParams();
 
-            if (params.date) {
-                queryParams.append('date', params.date);
-            }
-            if (params.weekStart) {
-                queryParams.append('weekStart', params.weekStart);
-            }
-            if (params.duration) {
-                queryParams.append('duration', params.duration);
-            }
-
-            const queryString = queryParams.toString();
-            const endpoint = `/availability/${tutorId}/bookable${queryString ? `?${queryString}` : ''}`;
-
-            return await apiClient.get(endpoint);
-        } catch (error) {
-            console.error('Error fetching available time slots:', error);
-            throw error;
-        }
-    }
 
     // Backward-compatible alias: createSlot -> createRecurringSlot
     async createSlot(tutorId, slotData) {

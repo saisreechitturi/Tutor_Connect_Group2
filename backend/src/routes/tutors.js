@@ -98,6 +98,69 @@ router.get('/', [
     res.json({ tutors });
 }));
 
+// Get tutor details with subjects and availability
+router.get('/:tutorId/details', asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+
+    // Get tutor basic info
+    const tutorResult = await query(`
+        SELECT u.id, u.first_name, u.last_name, u.profile_picture_url, u.bio,
+               tp.hourly_rate, tp.years_of_experience, tp.rating, tp.total_sessions,
+               tp.languages_spoken, tp.education_background, tp.is_verified
+        FROM users u
+        JOIN tutor_profiles tp ON u.id = tp.user_id
+        WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true
+    `, [tutorId]);
+
+    if (tutorResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor not found' });
+    }
+
+    const tutor = tutorResult.rows[0];
+
+    // Get tutor subjects
+    const subjectsResult = await query(`
+        SELECT s.id, s.name, ts.proficiency_level
+        FROM tutor_subjects ts
+        JOIN subjects s ON ts.subject_id = s.id
+        WHERE ts.tutor_id = $1 AND s.is_active = true
+        ORDER BY s.name
+    `, [tutorId]);
+
+    // Get availability slots
+    const availabilityResult = await query(`
+        SELECT *
+        FROM tutor_availability_slots
+        WHERE tutor_id = $1 AND is_available = true
+        ORDER BY day_of_week, start_time
+    `, [tutorId]);
+
+    res.json({
+        tutor: {
+            id: tutor.id,
+            name: `${tutor.first_name} ${tutor.last_name}`,
+            firstName: tutor.first_name,
+            lastName: tutor.last_name,
+            profileImageUrl: tutor.profile_picture_url,
+            bio: tutor.bio,
+            hourlyRate: tutor.hourly_rate,
+            experienceYears: tutor.years_of_experience,
+            rating: tutor.rating,
+            totalSessions: tutor.total_sessions,
+            languages: tutor.languages_spoken,
+            education: tutor.education_background,
+            isVerified: tutor.is_verified,
+            isAvailable: true
+        },
+        subjects: subjectsResult.rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            proficiency: row.proficiency_level
+        })),
+        availability: availabilityResult.rows
+    });
+}));
+
 // Get specific tutor profile
 router.get('/:id', asyncHandler(async (req, res) => {
     const result = await query(`

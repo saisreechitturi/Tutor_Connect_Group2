@@ -35,18 +35,7 @@ router.get('/:tutorId', [
         ORDER BY day_of_week, start_time
     `, [tutorId]);
 
-    // Get specific date overrides
-    let specificSlots = [];
-    if (date) {
-        const specificResult = await query(`
-            SELECT *
-            FROM tutor_availability_slots
-            WHERE tutor_id = $1 
-            AND specific_date = $2
-            ORDER BY start_time
-        `, [tutorId, date]);
-        specificSlots = specificResult.rows;
-    }
+
 
     // Get existing bookings to check availability
     let bookings = [];
@@ -86,19 +75,9 @@ router.get('/:tutorId', [
             dayOfWeek: slot.day_of_week,
             startTime: slot.start_time,
             endTime: slot.end_time,
-            maxSessions: slot.max_sessions,
-            bufferMinutes: slot.buffer_minutes,
             isAvailable: slot.is_available
         })),
-        specificSlots: specificSlots.map(slot => ({
-            id: slot.id,
-            date: slot.specific_date,
-            startTime: slot.start_time,
-            endTime: slot.end_time,
-            maxSessions: slot.max_sessions,
-            bufferMinutes: slot.buffer_minutes,
-            isAvailable: slot.is_available
-        }))
+
     };
 
     if (includeBooked) {
@@ -115,14 +94,11 @@ router.get('/:tutorId', [
     res.json({ availability });
 }));
 
-// Add/Update recurring availability slot
-router.post('/:tutorId/recurring', [
+// Get available time slots for a specific date
+router.get('/:tutorId/slots', [
     authenticateToken,
-    body('dayOfWeek').isInt({ min: 0, max: 6 }).withMessage('Day of week must be 0-6 (0=Sunday)'),
-    body('startTime').isTime().withMessage('Start time must be in HH:MM format'),
-    body('endTime').isTime().withMessage('End time must be in HH:MM format'),
-    body('maxSessions').optional().isInt({ min: 1 }).withMessage('Max sessions must be a positive integer'),
-    body('bufferMinutes').optional().isInt({ min: 0 }).withMessage('Buffer minutes must be non-negative')
+    expressQuery('date').isISO8601().withMessage('Date is required and must be valid'),
+    expressQuery('duration').optional().isInt({ min: 15, max: 480 }).withMessage('Duration must be between 15-480 minutes')
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -133,7 +109,89 @@ router.post('/:tutorId/recurring', [
     }
 
     const { tutorId } = req.params;
-    const { dayOfWeek, startTime, endTime, maxSessions = 1, bufferMinutes = 15 } = req.body;
+    const { date, duration = 60 } = req.query;
+
+    const targetDate = new Date(date);
+    const dayOfWeek = targetDate.getDay();
+
+    // Get tutor's recurring availability for this day
+    const availabilitySlots = await query(`
+        SELECT * FROM tutor_availability_slots
+        WHERE tutor_id = $1 
+        AND day_of_week = $2 
+        AND is_available = true
+        AND is_recurring = true
+        ORDER BY start_time
+    `, [tutorId, dayOfWeek]);
+
+    // Get existing bookings for this date
+    const existingBookings = await query(`
+        SELECT scheduled_start, scheduled_end
+        FROM tutoring_sessions
+        WHERE tutor_id = $1 
+        AND DATE(scheduled_start) = $2
+        AND status NOT IN ('cancelled', 'rejected')
+    `, [tutorId, date]);
+
+    // Generate available time slots
+    const availableSlots = [];
+    const durationMs = parseInt(duration) * 60 * 1000;
+
+    for (const slot of availabilitySlots.rows) {
+        const slotStart = new Date(`${date}T${slot.start_time}`);
+        const slotEnd = new Date(`${date}T${slot.end_time}`);
+
+        // Generate 15-minute intervals within the slot
+        let currentTime = new Date(slotStart);
+
+        while (currentTime.getTime() + durationMs <= slotEnd.getTime()) {
+            const slotEndTime = new Date(currentTime.getTime() + durationMs);
+
+            // Check if this time slot conflicts with existing bookings
+            const hasConflict = existingBookings.rows.some(booking => {
+                const bookingStart = new Date(booking.scheduled_start);
+                const bookingEnd = new Date(booking.scheduled_end);
+
+                return !(slotEndTime <= bookingStart || currentTime >= bookingEnd);
+            });
+
+            if (!hasConflict && currentTime > new Date()) {
+                availableSlots.push({
+                    startTime: currentTime.toTimeString().slice(0, 5),
+                    endTime: slotEndTime.toTimeString().slice(0, 5),
+                    duration: parseInt(duration)
+                });
+            }
+
+            // Move to next 15-minute interval
+            currentTime = new Date(currentTime.getTime() + 15 * 60 * 1000);
+        }
+    }
+
+    res.json({
+        date,
+        tutorId,
+        availableSlots: availableSlots.sort((a, b) => a.startTime.localeCompare(b.startTime))
+    });
+}));
+
+// Add/Update recurring availability slot
+router.post('/:tutorId/recurring', [
+    authenticateToken,
+    body('dayOfWeek').isInt({ min: 0, max: 6 }).withMessage('Day of week must be 0-6 (0=Sunday)'),
+    body('startTime').isTime().withMessage('Start time must be in HH:MM format'),
+    body('endTime').isTime().withMessage('End time must be in HH:MM format')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { tutorId } = req.params;
+    const { dayOfWeek, startTime, endTime } = req.body;
 
     // Check authorization
     if (req.user.role !== 'admin' && req.user.id !== tutorId) {
@@ -165,10 +223,10 @@ router.post('/:tutorId/recurring', [
     // Create new availability slot
     const result = await query(`
         INSERT INTO tutor_availability_slots 
-        (tutor_id, day_of_week, start_time, end_time, is_recurring, max_sessions, buffer_minutes)
-        VALUES ($1, $2, $3, $4, true, $5, $6)
+        (tutor_id, day_of_week, start_time, end_time, is_recurring)
+        VALUES ($1, $2, $3, $4, true)
         RETURNING *
-    `, [tutorId, dayOfWeek, startTime, endTime, maxSessions, bufferMinutes]);
+    `, [tutorId, dayOfWeek, startTime, endTime]);
 
     const slot = result.rows[0];
     logger.info(`Recurring availability slot created for tutor ${tutorId}: Day ${dayOfWeek}, ${startTime}-${endTime}`);
@@ -179,105 +237,19 @@ router.post('/:tutorId/recurring', [
             id: slot.id,
             dayOfWeek: slot.day_of_week,
             startTime: slot.start_time,
-            endTime: slot.end_time,
-            maxSessions: slot.max_sessions,
-            bufferMinutes: slot.buffer_minutes
+            endTime: slot.end_time
         }
     });
 }));
 
-// Add specific date availability override
-router.post('/:tutorId/specific', [
-    authenticateToken,
-    body('date').isISO8601().withMessage('Date must be a valid ISO date'),
-    body('startTime').isTime().withMessage('Start time must be in HH:MM format'),
-    body('endTime').isTime().withMessage('End time must be in HH:MM format'),
-    body('isAvailable').isBoolean().withMessage('Is available must be a boolean'),
-    body('maxSessions').optional().isInt({ min: 1 }).withMessage('Max sessions must be a positive integer'),
-    body('bufferMinutes').optional().isInt({ min: 0 }).withMessage('Buffer minutes must be non-negative')
-], asyncHandler(async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            message: 'Validation failed',
-            errors: errors.array()
-        });
-    }
 
-    const { tutorId } = req.params;
-    const { date, startTime, endTime, isAvailable, maxSessions = 1, bufferMinutes = 15 } = req.body;
-
-    // Check authorization
-    if (req.user.role !== 'admin' && req.user.id !== tutorId) {
-        return res.status(403).json({ message: 'Access denied' });
-    }
-
-    // Validate time range if available
-    if (isAvailable && startTime >= endTime) {
-        return res.status(400).json({ message: 'Start time must be before end time' });
-    }
-
-    // Check for existing specific date slot
-    const existingSlot = await query(`
-        SELECT id FROM tutor_availability_slots
-        WHERE tutor_id = $1 AND specific_date = $2
-        AND start_time = $3 AND end_time = $4
-    `, [tutorId, date, startTime, endTime]);
-
-    if (existingSlot.rows.length > 0) {
-        // Update existing slot
-        await query(`
-            UPDATE tutor_availability_slots
-            SET is_available = $1, max_sessions = $2, buffer_minutes = $3, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
-        `, [isAvailable, maxSessions, bufferMinutes, existingSlot.rows[0].id]);
-
-        logger.info(`Specific availability updated for tutor ${tutorId} on ${date}`);
-        res.json({ message: 'Availability updated successfully' });
-    } else {
-        // Create new specific slot
-        const result = await query(`
-            INSERT INTO tutor_availability_slots 
-            (tutor_id, day_of_week, start_time, end_time, specific_date, is_recurring, is_available, max_sessions, buffer_minutes)
-            VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8)
-            RETURNING *
-        `, [
-            tutorId,
-            new Date(date).getDay(),
-            startTime,
-            endTime,
-            date,
-            isAvailable,
-            maxSessions,
-            bufferMinutes
-        ]);
-
-        const slot = result.rows[0];
-        logger.info(`Specific availability created for tutor ${tutorId} on ${date}: ${startTime}-${endTime}`);
-
-        res.status(201).json({
-            message: 'Specific availability created successfully',
-            slot: {
-                id: slot.id,
-                date: slot.specific_date,
-                startTime: slot.start_time,
-                endTime: slot.end_time,
-                isAvailable: slot.is_available,
-                maxSessions: slot.max_sessions,
-                bufferMinutes: slot.buffer_minutes
-            }
-        });
-    }
-}));
 
 // Update availability slot
 router.put('/:tutorId/slots/:slotId', [
     authenticateToken,
     body('startTime').optional().isTime().withMessage('Start time must be in HH:MM format'),
     body('endTime').optional().isTime().withMessage('End time must be in HH:MM format'),
-    body('isAvailable').optional().isBoolean().withMessage('Is available must be a boolean'),
-    body('maxSessions').optional().isInt({ min: 1 }).withMessage('Max sessions must be a positive integer'),
-    body('bufferMinutes').optional().isInt({ min: 0 }).withMessage('Buffer minutes must be non-negative')
+    body('isAvailable').optional().isBoolean().withMessage('Is available must be a boolean')
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -288,7 +260,7 @@ router.put('/:tutorId/slots/:slotId', [
     }
 
     const { tutorId, slotId } = req.params;
-    const { startTime, endTime, isAvailable, maxSessions, bufferMinutes } = req.body;
+    const { startTime, endTime, isAvailable } = req.body;
 
     // Check authorization
     if (req.user.role !== 'admin' && req.user.id !== tutorId) {
@@ -321,14 +293,8 @@ router.put('/:tutorId/slots/:slotId', [
         updates.push(`is_available = $${params.length + 1}`);
         params.push(isAvailable);
     }
-    if (maxSessions !== undefined) {
-        updates.push(`max_sessions = $${params.length + 1}`);
-        params.push(maxSessions);
-    }
-    if (bufferMinutes !== undefined) {
-        updates.push(`buffer_minutes = $${params.length + 1}`);
-        params.push(bufferMinutes);
-    }
+
+
 
     if (updates.length === 0) {
         return res.status(400).json({ message: 'No valid fields to update' });
@@ -455,7 +421,7 @@ router.get('/:tutorId/bookable', [
 
         // Get availability for this date
         const availability = await query(`
-            SELECT start_time, end_time, max_sessions, buffer_minutes
+            SELECT start_time, end_time
             FROM tutor_availability_slots
             WHERE tutor_id = $1
             AND (
@@ -478,7 +444,6 @@ router.get('/:tutorId/bookable', [
             const slotStart = new Date(`${targetDate}T${slot.start_time}`);
             const slotEnd = new Date(`${targetDate}T${slot.end_time}`);
             const sessionDuration = parseInt(duration);
-            const bufferMinutes = slot.buffer_minutes || 15;
 
             let currentTime = new Date(slotStart);
 
@@ -509,8 +474,8 @@ router.get('/:tutorId/bookable', [
                     });
                 }
 
-                // Move to next possible slot (with buffer)
-                currentTime = new Date(currentTime.getTime() + ((sessionDuration + bufferMinutes) * 60000));
+                // Move to next 15-minute slot
+                currentTime = new Date(currentTime.getTime() + (15 * 60000));
             }
         }
     }
