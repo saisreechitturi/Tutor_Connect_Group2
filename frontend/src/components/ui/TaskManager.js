@@ -33,11 +33,6 @@ const TaskManager = () => {
         setUserTasks(prev => prev.map(task =>
             task.id === normalized.id ? normalized : task
         ));
-
-        // Also update the selected task if it's the same task being updated
-        if (selectedTask && selectedTask.id === normalized.id) {
-            setSelectedTask(normalized);
-        }
     };
 
     const handleTaskClick = (task) => {
@@ -154,48 +149,30 @@ const TaskManager = () => {
             const task = userTasks.find(t => t.id === taskId);
             if (!task) return;
 
-            // Use the same logic as TaskDetailsModal - toggle between completed and pending
-            let newStatus;
-            let newProgress;
-
-            // If clicking checkbox, toggle between completed and pending (like "Mark as Complete" button)
-            if (task.status !== 'completed') {
-                newStatus = 'completed';
-                newProgress = 100;
+            // Optimistically update UI first
+            let updateData = {};
+            if (task.status === 'pending') {
+                updateData.status = 'in-progress';
+            } else if (task.status === 'in-progress') {
+                updateData.status = 'completed';
+                updateData.progress = 100;
+                updateData.progressPercentage = 100;
             } else {
-                // If already completed, revert to pending
-                newStatus = 'pending';
-                newProgress = 0;
+                updateData.status = 'pending';
+                updateData.progress = 0;
+                updateData.progressPercentage = 0;
             }
 
-            const updateData = {
-                status: newStatus,
-                progress: newProgress,
-                progressPercentage: newProgress
-            };
-
             // Update local state immediately for better UX
-            const updatedTask = {
-                ...task,
-                ...updateData,
-                completedAt: newStatus === 'completed' ? new Date().toISOString() : null
-            };
+            const updatedTask = { ...task, ...updateData };
             setUserTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
 
             // Try to update on server
             try {
-                const response = await taskService.updateTask(taskId, updateData);
-                // Clear any existing errors on success  
+                await taskService.updateTask(taskId, updateData);
+                // Clear any existing errors on success
                 setError(null);
                 setUpdateError(null);
-
-                // Update with server response if available
-                const serverTask = response.task || response;
-                if (serverTask) {
-                    setUserTasks(prev => prev.map(t =>
-                        t.id === taskId ? { ...updatedTask, ...serverTask } : t
-                    ));
-                }
             } catch (apiError) {
                 // Revert the optimistic update on API failure
                 setUserTasks(prev => prev.map(t => t.id === taskId ? task : t));

@@ -42,6 +42,10 @@ const TutorTasks = () => {
         }
     };
 
+    const handleAddTask = () => {
+        setShowAddModal(true);
+    };
+
     const handleTaskAdded = (newTask) => {
         setTasks(prev => [newTask, ...prev]);
         setShowAddModal(false);
@@ -56,12 +60,6 @@ const TutorTasks = () => {
         setTasks(prev => prev.map(task =>
             task.id === updatedTask.id ? updatedTask : task
         ));
-
-        // Also update the selected task if it's the same task being updated
-        if (selectedTask && selectedTask.id === updatedTask.id) {
-            setSelectedTask(updatedTask);
-        }
-
         setShowDetailsModal(false);
     };
 
@@ -72,7 +70,7 @@ const TutorTasks = () => {
 
     const handleStatusChange = async (taskId, newStatus) => {
         try {
-            await taskService.updateTask(taskId, { status: newStatus });
+            const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
             setTasks(prev => prev.map(task =>
                 task.id === taskId ? { ...task, status: newStatus } : task
             ));

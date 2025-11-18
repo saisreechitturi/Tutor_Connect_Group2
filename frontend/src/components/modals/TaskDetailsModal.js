@@ -21,7 +21,8 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             setLoading(true);
             setError(null);
 
-            await taskService.updateTaskProgress(task.id, newProgress);
+            const response = await taskService.updateTaskProgress(task.id, newProgress);
+            const updatedTask = response.task || response;
 
             setProgress(newProgress);
 
@@ -60,12 +61,13 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                 newProgress = 0;
             }
 
-            await taskService.updateTask(task.id, {
+            const response = await taskService.updateTask(task.id, {
                 status: newStatus,
                 progress: newProgress,
                 progressPercentage: newProgress
             });
 
+            const updatedTask = response.task || response;
             setProgress(newProgress);
 
             if (onTaskUpdated) {

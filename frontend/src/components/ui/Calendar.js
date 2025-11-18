@@ -19,6 +19,7 @@ const Calendar = () => {
     const [showBookSessionModal, setShowBookSessionModal] = useState(false);
     const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     // Fetch calendar data with error handling and fallback
     const fetchCalendarData = useCallback(async (showLoadingState = true) => {
@@ -91,6 +92,7 @@ const Calendar = () => {
 
             setCalendarEvents(events);
             setEventsByDate(eventsGrouped);
+            setRetryCount(0); // Reset retry count on success
         } catch (err) {
             console.error('Error fetching calendar data:', err);
 
@@ -174,11 +176,6 @@ const Calendar = () => {
                 : event
         ));
 
-        // Also update the selected task if it's the same task being updated
-        if (selectedTask && selectedTask.id === normalized.id) {
-            setSelectedTask(normalized);
-        }
-
         // Refresh calendar to get latest data
         fetchCalendarData(false);
     };
@@ -251,6 +248,9 @@ const Calendar = () => {
             console.error('Error refreshing calendar after session booked:', err);
         }
     };
+
+    // Get user events (all events are already filtered by the user context in API calls)
+    const userEvents = calendarEvents;
 
     // Navigation handlers
     const goToPreviousMonth = () => {
@@ -346,6 +346,7 @@ const Calendar = () => {
 
     // Retry function for error recovery
     const handleRetry = () => {
+        setRetryCount(prev => prev + 1);
         fetchCalendarData();
     };
 
@@ -355,6 +356,7 @@ const Calendar = () => {
         const month = currentDate.getMonth();
 
         const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
         const startDate = new Date(firstDay);
 
         // Start from Sunday
