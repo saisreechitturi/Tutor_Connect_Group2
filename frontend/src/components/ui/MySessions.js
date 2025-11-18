@@ -409,7 +409,7 @@ const MySessions = () => {
                                                     </button>
                                                 </>
                                             )}
-                                            {session.status === 'completed' && !session.rating && (
+                                            {session.status === 'completed' && session.canReview && (
                                                 <button
                                                     className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors"
                                                     onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
@@ -467,9 +467,13 @@ const MySessions = () => {
                     isOpen={showReviewModal}
                     onClose={() => { setShowReviewModal(false); setReviewSession(null); }}
                     session={reviewSession}
-                    onSubmitted={({ rating }) => {
-                        // Optimistically update the session rating so the Rate button disappears
-                        setSessions(prev => prev.map(s => s.id === reviewSession.id ? { ...s, rating } : s));
+                    onSubmitted={({ rating, reviewText, isPublic }) => {
+                        // Optimistically update the session so the Rate button disappears
+                        setSessions(prev => prev.map(s => 
+                            s.id === reviewSession.id 
+                                ? { ...s, rating, canReview: false, hasReview: true }
+                                : s
+                        ));
                     }}
                 />
             )}
