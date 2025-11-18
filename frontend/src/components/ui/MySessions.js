@@ -7,12 +7,111 @@ import ReviewSessionModal from '../modals/ReviewSessionModal';
 const MySessions = () => {
     const { user } = useAuth();
     const [filter, setFilter] = useState('all');
-    const [showBookingModal, setShowBookingModal] = useState(false);
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [reviewSession, setReviewSession] = useState(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+
+    // Utility functions for date/time formatting
+    const formatDate = (dateString) => {
+        if (!dateString) return 'Invalid Date';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return 'Invalid Date';
+        }
+    };
+
+    const formatTimeRange = (startString, endString) => {
+        if (!startString || !endString) return 'Invalid Time';
+        try {
+            const start = new Date(startString);
+            const end = new Date(endString);
+            const startTime = start.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const endTime = end.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            return `${startTime} - ${endTime}`;
+        } catch (error) {
+            console.error('Error formatting time range:', error);
+            return 'Invalid Time';
+        }
+    };
+
+    // Session action handlers
+    const handleJoinSession = (session) => {
+        if (session.sessionType === 'online') {
+            if (session.meetingLink) {
+                window.open(session.meetingLink, '_blank');
+            } else {
+                alert('Meeting link will be provided closer to the session time.');
+            }
+        } else {
+            alert(`Session Location: ${session.meetingRoom || 'Location details will be provided by your tutor.'}`);
+        }
+    };
+
+    const handleCancel = async (session) => {
+        if (actionLoading) return;
+
+        const confirmCancel = window.confirm(
+            `Are you sure you want to cancel the session "${session.title}"? This action cannot be undone.`
+        );
+
+        if (confirmCancel) {
+            try {
+                setActionLoading(true);
+
+                // Check if user can cancel (tutors can cancel directly, students who booked can cancel)
+                if ((user.role === 'tutor' && session.tutor.id === user.id) ||
+                    (user.role === 'student' && session.student.id === user.id)) {
+                    await sessionService.cancelSession(session.id);
+
+                    // Update the sessions list to reflect the cancellation
+                    setSessions(prev => prev.map(s =>
+                        s.id === session.id ? { ...s, status: 'cancelled' } : s
+                    ));
+
+                    alert('Session cancelled successfully.');
+                } else {
+                    // For students, show message about contacting tutor
+                    alert('Please contact your tutor to cancel this session. Tutors have the ability to manage session status.');
+                }
+            } catch (error) {
+                console.error('Error cancelling session:', error);
+                if (error.message?.includes('403') || error.message?.includes('unauthorized')) {
+                    alert('You do not have permission to cancel this session. Please contact your tutor.');
+                } else {
+                    alert('Failed to cancel session. Please try again.');
+                }
+            } finally {
+                setActionLoading(false);
+            }
+        }
+    };
+
+    const handleBookAgain = (_session) => {
+        if (user.role === 'student') {
+            // For now, redirect to browse tutors page
+            // In future, could open booking modal with pre-filled tutor data
+            window.location.href = '/browse-tutors';
+        }
+    };
 
     useEffect(() => {
         const fetchSessions = async () => {
@@ -113,11 +212,17 @@ const MySessions = () => {
                                 </span>
                             </button>
                             <button
-                                onClick={() => setShowBookingModal(true)}
+                                onClick={() => {
+                                    if (user.role === 'student') {
+                                        window.location.href = '/browse-tutors';
+                                    } else {
+                                        window.location.href = '/tutor-availability';
+                                    }
+                                }}
                                 className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
-                                {user.role === 'student' ? 'Book Session' : 'Add Availability'}
+                                {user.role === 'student' ? 'Book Session' : 'Set Availability'}
                             </button>
                         </div>
                     </div>
@@ -178,7 +283,10 @@ const MySessions = () => {
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between mb-2">
-                                                <h3 className="text-lg font-semibold text-gray-900">{session.subject}</h3>
+                                                <h3 className="text-lg font-semibold text-gray-900">{session.title || session.subject}</h3>
+                                                {session.subject && (
+                                                    <p className="text-sm text-gray-600">{session.subject}</p>
+                                                )}
                                                 <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(session.status)}`}>
                                                     {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                                                 </span>
@@ -187,22 +295,69 @@ const MySessions = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                                                 <div className="flex items-center">
                                                     <Calendar className="h-4 w-4 mr-2" />
-                                                    <span>{new Date(session.scheduledDate).toLocaleDateString()}</span>
+                                                    <span>{formatDate(session.scheduledStart)}</span>
                                                 </div>
                                                 <div className="flex items-center">
                                                     <Clock className="h-4 w-4 mr-2" />
-                                                    <span>{session.scheduledTime} ({session.duration} min)</span>
+                                                    <span>{formatTimeRange(session.scheduledStart, session.scheduledEnd)} ({session.durationMinutes} min)</span>
                                                 </div>
                                                 <div className="flex items-center">
                                                     <MapPin className="h-4 w-4 mr-2" />
-                                                    <span>{session.type === 'online' ? 'Online' : 'In-person'}</span>
+                                                    <span>
+                                                        {session.sessionType === 'online' ? (
+                                                            session.meetingLink ? (
+                                                                <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline flex items-center">
+                                                                    <span className="mr-1">🔗</span> Join Online Meeting
+                                                                </a>
+                                                            ) : (
+                                                                <span className="text-orange-600">Online (Link will be provided)</span>
+                                                            )
+                                                        ) : (
+                                                            <span className="flex items-center">
+                                                                <span className="mr-1">📍</span>
+                                                                {session.locationAddress || 'In-person location TBD'}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {session.notes && (
+                                            {/* Participant Information */}
+                                            <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600">
+                                                {user.role === 'student' ? (
+                                                    session.tutor && session.tutor.name && (
+                                                        <div className="flex items-center">
+                                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                                                <span className="text-xs font-medium text-blue-600">
+                                                                    {session.tutor.name.charAt(0)}
+                                                                </span>
+                                                            </div>
+                                                            <span>Tutor: {session.tutor.name}</span>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    session.student && session.student.name && (
+                                                        <div className="flex items-center">
+                                                            <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                                                                <span className="text-xs font-medium text-green-600">
+                                                                    {session.student.name.charAt(0)}
+                                                                </span>
+                                                            </div>
+                                                            <span>Student: {session.student.name}</span>
+                                                        </div>
+                                                    )
+                                                )}
+                                                {session.hourlyRate && (
+                                                    <div className="flex items-center">
+                                                        <span className="font-medium">${session.hourlyRate}/hr</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {(session.description || session.sessionNotes) && (
                                                 <div className="mt-3 p-3 bg-white rounded border">
                                                     <p className="text-sm text-gray-700">
-                                                        <strong>Notes:</strong> {session.notes}
+                                                        <strong>Description:</strong> {session.description || session.sessionNotes}
                                                     </p>
                                                 </div>
                                             )}
@@ -227,14 +382,30 @@ const MySessions = () => {
                                         <div className="ml-4 flex flex-col space-y-2">
                                             {session.status === 'scheduled' && (
                                                 <>
-                                                    <button className="bg-primary-600 text-white px-4 py-2 rounded text-sm hover:bg-primary-700 transition-colors">
-                                                        Join Session
-                                                    </button>
-                                                    <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">
-                                                        Reschedule
-                                                    </button>
-                                                    <button className="border border-red-300 text-red-700 px-4 py-2 rounded text-sm hover:bg-red-50 transition-colors">
-                                                        Cancel
+                                                    {session.sessionType === 'online' && session.meetingLink ? (
+                                                        <a
+                                                            href={session.meetingLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="bg-primary-600 text-white px-4 py-2 rounded text-sm hover:bg-primary-700 transition-colors text-center inline-block"
+                                                        >
+                                                            Join Session
+                                                        </a>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleJoinSession(session)}
+                                                            className="bg-primary-600 text-white px-4 py-2 rounded text-sm hover:bg-primary-700 transition-colors"
+                                                            title={session.sessionType === 'online' ? 'Get meeting link information' : 'View session location details'}
+                                                        >
+                                                            {session.sessionType === 'online' ? 'Get Meeting Link' : 'View Location'}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleCancel(session)}
+                                                        disabled={actionLoading}
+                                                        className="border border-red-300 text-red-700 px-4 py-2 rounded text-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {actionLoading ? 'Cancelling...' : 'Cancel'}
                                                     </button>
                                                 </>
                                             )}
@@ -246,8 +417,11 @@ const MySessions = () => {
                                                     Rate Session
                                                 </button>
                                             )}
-                                            {session.status === 'completed' && (
-                                                <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">
+                                            {session.status === 'completed' && user.role === 'student' && (
+                                                <button
+                                                    onClick={() => handleBookAgain(session)}
+                                                    className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors"
+                                                >
                                                     Book Again
                                                 </button>
                                             )}
@@ -268,7 +442,13 @@ const MySessions = () => {
                                     }
                                 </p>
                                 <button
-                                    onClick={() => setShowBookingModal(true)}
+                                    onClick={() => {
+                                        if (user.role === 'student') {
+                                            window.location.href = '/browse-tutors';
+                                        } else {
+                                            window.location.href = '/tutor-availability';
+                                        }
+                                    }}
                                     className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
                                 >
                                     {user.role === 'student' ? 'Find Tutors' : 'Set Availability'}
@@ -279,25 +459,7 @@ const MySessions = () => {
                 </div>
             </div>
 
-            {/* Booking Modal (placeholder) */}
-            {showBookingModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                        <h2 className="text-xl font-bold mb-4">
-                            {user.role === 'student' ? 'Book a Session' : 'Set Availability'}
-                        </h2>
-                        <p className="text-gray-600 mb-6">
-                            This feature will be implemented in the next phase of development.
-                        </p>
-                        <button
-                            onClick={() => setShowBookingModal(false)}
-                            className="w-full bg-primary-600 text-white py-2 rounded-lg hover:bg-primary-700 transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
+
 
             {/* Review Modal */}
             {showReviewModal && reviewSession && (

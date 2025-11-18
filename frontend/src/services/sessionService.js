@@ -164,18 +164,6 @@ class SessionService {
         }
     }
 
-    // Reschedule session (use scheduledStart/scheduledEnd)
-    async rescheduleSession(sessionId, newStartTime, newEndTime) {
-        try {
-            return await apiClient.put(`/sessions/${sessionId}`, {
-                scheduledStart: new Date(newStartTime).toISOString(),
-                scheduledEnd: new Date(newEndTime).toISOString()
-            });
-        } catch (error) {
-            console.error('[SessionService] Reschedule session failed:', error);
-            throw error;
-        }
-    }
 }
 
 // Create and export singleton instance
