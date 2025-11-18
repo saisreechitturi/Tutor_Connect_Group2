@@ -1,4 +1,4 @@
-# TutorConnect
+# TutorConnect 
 
 A comprehensive tutoring platform connecting students with expert tutors, featuring AI-powered study assistance, task management, and real-time communication.
 
