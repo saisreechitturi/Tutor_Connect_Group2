@@ -45,8 +45,8 @@ BEGIN
         )
         VALUES (
             NEW.tutor_id,
-            EXTRACT(YEAR FROM NEW.session_date),
-            EXTRACT(MONTH FROM NEW.session_date),
+            EXTRACT(YEAR FROM NEW.scheduled_start),
+            EXTRACT(MONTH FROM NEW.scheduled_start),
             1, 1,
             COALESCE(NEW.payment_amount, 0),
             NEW.duration_minutes / 60.0
@@ -233,21 +233,14 @@ CREATE TABLE IF NOT EXISTS public.tutoring_sessions (
     session_type character varying(20) NOT NULL,
     scheduled_start timestamp with time zone NOT NULL,
     scheduled_end timestamp with time zone NOT NULL,
-    actual_start timestamp with time zone,
-    actual_end timestamp with time zone,
     status character varying(20) DEFAULT 'scheduled'::character varying,
     hourly_rate numeric(10,2) NOT NULL,
     payment_amount numeric(10,2),
     session_notes text,
-    homework_assigned text,
-    materials_used text[],
     meeting_link character varying(500),
     meeting_room character varying(255),
-    cancellation_reason text,
-    cancelled_by uuid,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    session_date timestamp with time zone,
     duration_minutes integer GENERATED ALWAYS AS (EXTRACT(epoch FROM (scheduled_end - scheduled_start)) / 60) STORED,
     CONSTRAINT tutoring_sessions_pkey PRIMARY KEY (id),
     CONSTRAINT tutoring_sessions_session_type_check CHECK (((session_type)::text = ANY ((ARRAY['online'::character varying, 'in_person'::character varying])::text[]))),
@@ -651,12 +644,12 @@ COPY public.tutor_subjects (id, tutor_id, subject_id, proficiency_level, created
 -- Data for Name: tutoring_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.tutoring_sessions (id, student_id, tutor_id, subject_id, title, description, session_type, scheduled_start, scheduled_end, actual_start, actual_end, status, hourly_rate, total_amount, session_notes, homework_assigned, meeting_link, location_address, cancellation_reason, cancelled_by, cancelled_at, created_at, updated_at) FROM stdin;
-d393f36b-866b-484c-9307-85ad9c8aa0f0	1b760852-694e-41a9-afd6-37f0d42216d7	2cebaa54-380c-4e71-8455-66cfb40fdb40	5300be37-5643-4372-98c7-3c468655c838	JavaScript Fundamentals	\N	online	2025-01-05 10:00:00-06	2025-01-05 11:00:00-06	\N	\N	scheduled	50.00	50.00	\N	\N	\N	\N	\N	\N	\N	2025-09-28 18:00:42.160461-05	2025-09-28 18:00:42.160461-05
-47e95bea-b70c-492f-8cc0-59210068d511	1b760852-694e-41a9-afd6-37f0d42216d7	2cebaa54-380c-4e71-8455-66cfb40fdb40	5300be37-5643-4372-98c7-3c468655c838	React Components	\N	online	2025-01-03 14:00:00-06	2025-01-03 15:30:00-06	\N	\N	completed	50.00	75.00	\N	\N	\N	\N	\N	\N	\N	2025-09-28 18:00:42.166763-05	2025-09-28 18:00:42.166763-05
-aa4a0465-0805-4927-882c-e87c23b0cba6	27bd24b5-2677-4320-a1b1-8adf09ef7464	80812a35-7730-4408-978b-6778c5c8135e	5300be37-5643-4372-98c7-3c468655c838	Calculus Practice Session	Review of derivatives and integrals, practice problems for upcoming exam	online	2025-10-01 12:58:03.769849-05	2025-10-01 13:58:03.769849-05	\N	\N	scheduled	45.00	45.00	\N	\N	\N	\N	\N	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
-1215610e-35a0-43f1-850c-403657018918	27bd24b5-2677-4320-a1b1-8adf09ef7464	919affe9-c8f0-45b5-aaf4-0cbe1f213c65	886240f2-186d-4f7c-8a6a-89b41d11adca	Physics Problem Solving	Work through mechanics problems, focus on forces and motion	online	2025-10-02 12:58:03.769849-05	2025-10-02 14:28:03.769849-05	\N	\N	scheduled	55.00	82.50	\N	\N	\N	\N	\N	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
-ec3ecda2-b570-49f1-9fa6-dc41dfc7c78f	7088f167-1cd0-48db-8f36-26e6cf16417c	6f28afdd-9211-49cf-9bef-18216f5a667f	b59cf17e-6bdf-4de9-b775-7a55609eb1c6	JavaScript Fundamentals	Introduction to JavaScript, variables, functions, and DOM manipulation	online	2025-09-28 12:58:03.769849-05	2025-09-28 13:58:03.769849-05	2025-09-28 12:58:03.769849-05	2025-09-28 13:58:03.769849-05	completed	50.00	50.00	Great progress! Student understood concepts well. Recommended practicing DOM manipulation exercises.	\N	\N	\N	\N	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
+COPY public.tutoring_sessions (id, student_id, tutor_id, subject_id, title, description, session_type, scheduled_start, scheduled_end, status, hourly_rate, total_amount, session_notes, meeting_link, location_address, created_at, updated_at) FROM stdin;
+d393f36b-866b-484c-9307-85ad9c8aa0f0	1b760852-694e-41a9-afd6-37f0d42216d7	2cebaa54-380c-4e71-8455-66cfb40fdb40	5300be37-5643-4372-98c7-3c468655c838	JavaScript Fundamentals	\N	online	2025-01-05 10:00:00-06	2025-01-05 11:00:00-06	scheduled	50.00	50.00	\N	\N	\N	2025-09-28 18:00:42.160461-05	2025-09-28 18:00:42.160461-05
+47e95bea-b70c-492f-8cc0-59210068d511	1b760852-694e-41a9-afd6-37f0d42216d7	2cebaa54-380c-4e71-8455-66cfb40fdb40	5300be37-5643-4372-98c7-3c468655c838	React Components	\N	online	2025-01-03 14:00:00-06	2025-01-03 15:30:00-06	completed	50.00	75.00	\N	\N	\N	2025-09-28 18:00:42.166763-05	2025-09-28 18:00:42.166763-05
+aa4a0465-0805-4927-882c-e87c23b0cba6	27bd24b5-2677-4320-a1b1-8adf09ef7464	80812a35-7730-4408-978b-6778c5c8135e	5300be37-5643-4372-98c7-3c468655c838	Calculus Practice Session	Review of derivatives and integrals, practice problems for upcoming exam	online	2025-10-01 12:58:03.769849-05	2025-10-01 13:58:03.769849-05	scheduled	45.00	45.00	\N	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
+1215610e-35a0-43f1-850c-403657018918	27bd24b5-2677-4320-a1b1-8adf09ef7464	919affe9-c8f0-45b5-aaf4-0cbe1f213c65	886240f2-186d-4f7c-8a6a-89b41d11adca	Physics Problem Solving	Work through mechanics problems, focus on forces and motion	online	2025-10-02 12:58:03.769849-05	2025-10-02 14:28:03.769849-05	scheduled	55.00	82.50	\N	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
+ec3ecda2-b570-49f1-9fa6-dc41dfc7c78f	7088f167-1cd0-48db-8f36-26e6cf16417c	6f28afdd-9211-49cf-9bef-18216f5a667f	b59cf17e-6bdf-4de9-b775-7a55609eb1c6	JavaScript Fundamentals	Introduction to JavaScript, variables, functions, and DOM manipulation	online	2025-09-28 12:58:03.769849-05	2025-09-28 13:58:03.769849-05	completed	50.00	50.00	Great progress! Student understood concepts well. Recommended practicing DOM manipulation exercises.	\N	\N	2025-09-29 12:58:03.769849-05	2025-09-29 12:58:03.769849-05
 \.
 
 

@@ -277,9 +277,16 @@ router.put('/:id', [
     let params = [];
     let paramCount = 0;
 
-    if (status && (isTutor || req.user.role === 'admin')) {
-        updateFields.push(`status = $${++paramCount}`);
-        params.push(status);
+    if (status) {
+        // Allow tutors and admins to update to any status
+        // Allow students to mark sessions as completed only
+        if (isTutor || req.user.role === 'admin') {
+            updateFields.push(`status = $${++paramCount}`);
+            params.push(status);
+        } else if (isStudent && status === 'completed') {
+            updateFields.push(`status = $${++paramCount}`);
+            params.push(status);
+        }
     }
 
     if (studentRating && isStudent) {

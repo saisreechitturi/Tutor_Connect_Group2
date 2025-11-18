@@ -105,7 +105,7 @@ class SessionService {
 
     // Reviews are handled by reviewService; keep a thin helper if needed
     async addSessionReview() {
-        throw new Error('Use reviewService.create({ sessionId, revieweeId, rating, reviewText, isPublic })');
+        throw new Error('Use reviewService.create({ sessionId, revieweeId, rating, comment, wouldRecommend })');
     }
 
     // Get upcoming sessions

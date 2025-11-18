@@ -44,7 +44,7 @@ class ReviewService {
 
     /**
      * Create a review for a session (auth required)
-     * @param {{sessionId:string, revieweeId:string, rating:number, reviewText?:string, isPublic?:boolean}} payload
+     * @param {{sessionId:string, revieweeId:string, rating:number, comment?:string, wouldRecommend?:boolean}} payload
      * @returns {Promise<{message:string, review: object}>}
      */
     async create(payload) {
@@ -54,7 +54,7 @@ class ReviewService {
     /**
      * Update a review (owner/admin)
      * @param {string} id
-     * @param {{rating?:number, reviewText?:string, isPublic?:boolean}} payload
+     * @param {{rating?:number, comment?:string, wouldRecommend?:boolean}} payload
      * @returns {Promise<{message:string, review: object}>}
      */
     async update(id, payload) {

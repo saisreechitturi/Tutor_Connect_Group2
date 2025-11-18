@@ -12,13 +12,12 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
 
     const result = await query(`
-        SELECT sr.id, sr.rating, sr.review_text, sr.is_public, sr.created_at,
+        SELECT sr.id, sr.rating, sr.comment, sr.reviewer_type, sr.would_recommend, sr.created_at,
                reviewer.first_name as reviewer_first_name,
                reviewer.last_name as reviewer_last_name,
                reviewer.profile_picture_url as reviewer_avatar,
                reviewee.first_name as reviewee_first_name,
-               reviewee.last_name as reviewee_last_name,
-               reviewee.role as reviewee_role
+               reviewee.last_name as reviewee_last_name
         FROM session_reviews sr
         JOIN users reviewer ON sr.reviewer_id = reviewer.id
         JOIN users reviewee ON sr.reviewee_id = reviewee.id
@@ -29,8 +28,9 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
     const reviews = result.rows.map(row => ({
         id: row.id,
         rating: row.rating,
-        reviewText: row.review_text,
-        isPublic: row.is_public,
+        comment: row.comment,
+        reviewerType: row.reviewer_type,
+        wouldRecommend: row.would_recommend,
         createdAt: row.created_at,
         reviewer: {
             firstName: row.reviewer_first_name,
@@ -39,8 +39,7 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
         },
         reviewee: {
             firstName: row.reviewee_first_name,
-            lastName: row.reviewee_last_name,
-            role: row.reviewee_role
+            lastName: row.reviewee_last_name
         }
     }));
 
@@ -64,16 +63,16 @@ router.get('/tutor/:tutorId', [
     const { limit = 10, offset = 0 } = req.query;
 
     const result = await query(`
-        SELECT sr.id, sr.rating, sr.review_text, sr.created_at,
+        SELECT sr.id, sr.rating, sr.comment, sr.would_recommend, sr.created_at,
                student.first_name as student_first_name,
                student.last_name as student_last_name,
                student.profile_picture_url as student_avatar,
-               s.session_date, sub.name as subject_name
+               s.scheduled_start, sub.name as subject_name
         FROM session_reviews sr
         JOIN users student ON sr.reviewer_id = student.id
         JOIN tutoring_sessions s ON sr.session_id = s.id
         LEFT JOIN subjects sub ON s.subject_id = sub.id
-        WHERE sr.reviewee_id = $1 AND sr.is_public = true
+        WHERE sr.reviewee_id = $1 AND sr.reviewer_type = 'student'
         ORDER BY sr.created_at DESC
         LIMIT $2 OFFSET $3
     `, [tutorId, limit, offset]);
@@ -82,15 +81,16 @@ router.get('/tutor/:tutorId', [
     const countResult = await query(`
         SELECT COUNT(*) as count
         FROM session_reviews sr
-        WHERE sr.reviewee_id = $1 AND sr.is_public = true
+        WHERE sr.reviewee_id = $1 AND sr.reviewer_type = 'student'
     `, [tutorId]);
 
     const reviews = result.rows.map(row => ({
         id: row.id,
         rating: row.rating,
-        reviewText: row.review_text,
+        comment: row.comment,
+        wouldRecommend: row.would_recommend,
         createdAt: row.created_at,
-        sessionDate: row.session_date,
+        sessionDate: row.scheduled_start,
         subjectName: row.subject_name,
         student: {
             firstName: row.student_first_name,
@@ -135,11 +135,11 @@ router.get('/student/:studentId', [
     }
 
     const result = await query(`
-        SELECT sr.id, sr.rating, sr.review_text, sr.is_public, sr.created_at,
+        SELECT sr.id, sr.rating, sr.comment, sr.would_recommend, sr.created_at,
                tutor.first_name as tutor_first_name,
                tutor.last_name as tutor_last_name,
                tutor.profile_picture_url as tutor_avatar,
-               s.session_date, sub.name as subject_name
+               s.scheduled_start, sub.name as subject_name
         FROM session_reviews sr
         JOIN users tutor ON sr.reviewee_id = tutor.id
         JOIN tutoring_sessions s ON sr.session_id = s.id
@@ -159,10 +159,10 @@ router.get('/student/:studentId', [
     const reviews = result.rows.map(row => ({
         id: row.id,
         rating: row.rating,
-        reviewText: row.review_text,
-        isPublic: row.is_public,
+        comment: row.comment,
+        wouldRecommend: row.would_recommend,
         createdAt: row.created_at,
-        sessionDate: row.session_date,
+        sessionDate: row.scheduled_start,
         subjectName: row.subject_name,
         tutor: {
             firstName: row.tutor_first_name,
@@ -190,8 +190,8 @@ router.post('/', [
     body('sessionId').isUUID().withMessage('Valid session ID is required'),
     body('revieweeId').isUUID().withMessage('Valid reviewee ID is required'),
     body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
-    body('reviewText').optional().isString().isLength({ max: 1000 }).withMessage('Review text must be max 1000 characters'),
-    body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean')
+    body('comment').optional().isString().isLength({ max: 1000 }).withMessage('Comment must be max 1000 characters'),
+    body('wouldRecommend').optional().isBoolean().withMessage('wouldRecommend must be a boolean')
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -201,12 +201,12 @@ router.post('/', [
         });
     }
 
-    const { sessionId, revieweeId, rating, reviewText, isPublic = true } = req.body;
+    const { sessionId, revieweeId, rating, comment, wouldRecommend } = req.body;
     const reviewerId = req.user.id;
 
     // Check if session exists and user was part of it
     const sessionCheck = await query(`
-        SELECT id, student_id, tutor_id, status
+        SELECT id, student_id, tutor_id, status, scheduled_end
         FROM tutoring_sessions
         WHERE id = $1 AND (student_id = $2 OR tutor_id = $2)
     `, [sessionId, reviewerId]);
@@ -217,9 +217,18 @@ router.post('/', [
 
     const session = sessionCheck.rows[0];
 
-    // Check if session is completed
-    if (session.status !== 'completed') {
+    // Check if session is completed or finished (based on time)
+    const now = new Date();
+    const sessionEnd = new Date(session.scheduled_end);
+    const isSessionFinished = session.status === 'completed' || session.status === 'cancelled' || now > sessionEnd;
+
+    if (!isSessionFinished) {
         return res.status(400).json({ message: 'Can only review completed sessions' });
+    }
+
+    // Don't allow reviews for cancelled sessions
+    if (session.status === 'cancelled') {
+        return res.status(400).json({ message: 'Cannot review cancelled sessions' });
     }
 
     // Verify reviewee is the other participant
@@ -238,12 +247,15 @@ router.post('/', [
         return res.status(409).json({ message: 'Review already exists for this session' });
     }
 
+    // Determine reviewer type
+    const reviewerType = session.student_id === reviewerId ? 'student' : 'tutor';
+
     // Create the review
     const result = await query(`
-        INSERT INTO session_reviews (session_id, reviewer_id, reviewee_id, rating, review_text, is_public)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, rating, review_text, is_public, created_at
-    `, [sessionId, reviewerId, revieweeId, rating, reviewText || null, isPublic]);
+        INSERT INTO session_reviews (session_id, reviewer_id, reviewer_type, rating, comment, would_recommend, reviewee_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, rating, comment, would_recommend, created_at
+    `, [sessionId, reviewerId, reviewerType, rating, comment || null, wouldRecommend, revieweeId]);
 
     const review = result.rows[0];
 
@@ -254,7 +266,7 @@ router.post('/', [
             SET rating = (
                 SELECT ROUND(AVG(rating)::numeric, 2)
                 FROM session_reviews
-                WHERE reviewee_id = $1
+                WHERE reviewee_id = $1 AND reviewer_type = 'student'
             )
             WHERE user_id = $1
         `, [revieweeId]);
@@ -267,8 +279,8 @@ router.post('/', [
         review: {
             id: review.id,
             rating: review.rating,
-            reviewText: review.review_text,
-            isPublic: review.is_public,
+            comment: review.comment,
+            wouldRecommend: review.would_recommend,
             createdAt: review.created_at
         }
     });
@@ -278,8 +290,8 @@ router.post('/', [
 router.put('/:id', [
     authenticateToken,
     body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
-    body('reviewText').optional().isString().isLength({ max: 1000 }).withMessage('Review text must be max 1000 characters'),
-    body('isPublic').optional().isBoolean().withMessage('isPublic must be a boolean')
+    body('comment').optional().isString().isLength({ max: 1000 }).withMessage('Comment must be max 1000 characters'),
+    body('wouldRecommend').optional().isBoolean().withMessage('wouldRecommend must be a boolean')
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -290,11 +302,11 @@ router.put('/:id', [
     }
 
     const { id } = req.params;
-    const { rating, reviewText, isPublic } = req.body;
+    const { rating, comment, wouldRecommend } = req.body;
 
     // Check if review exists and user owns it
     const reviewCheck = await query(`
-        SELECT id, reviewer_id, reviewee_id, session_id
+        SELECT id, reviewer_id, session_id
         FROM session_reviews
         WHERE id = $1
     `, [id]);
@@ -318,13 +330,13 @@ router.put('/:id', [
         updates.push(`rating = $${params.length + 1}`);
         params.push(rating);
     }
-    if (reviewText !== undefined) {
-        updates.push(`review_text = $${params.length + 1}`);
-        params.push(reviewText);
+    if (comment !== undefined) {
+        updates.push(`comment = $${params.length + 1}`);
+        params.push(comment);
     }
-    if (isPublic !== undefined) {
-        updates.push(`is_public = $${params.length + 1}`);
-        params.push(isPublic);
+    if (wouldRecommend !== undefined) {
+        updates.push(`would_recommend = $${params.length + 1}`);
+        params.push(wouldRecommend);
     }
 
     if (updates.length === 0) {
@@ -333,26 +345,39 @@ router.put('/:id', [
 
     params.push(id); // Add ID for WHERE clause
 
+    // Add updated_at to the update
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
     const result = await query(`
         UPDATE session_reviews
         SET ${updates.join(', ')}
         WHERE id = $${params.length}
-        RETURNING id, rating, review_text, is_public, created_at
+        RETURNING id, rating, comment, would_recommend, created_at, updated_at
     `, params);
 
     const updatedReview = result.rows[0];
 
     // Update tutor's average rating if rating changed
     if (rating !== undefined) {
-        await query(`
-            UPDATE tutor_profiles
-            SET rating = (
-                SELECT ROUND(AVG(rating)::numeric, 2)
-                FROM session_reviews
-                WHERE reviewee_id = $1
-            )
-            WHERE user_id = $1
-        `, [review.reviewee_id]);
+        // Get the reviewee from the review to check if it's a tutor
+        const revieweeResult = await query(`
+            SELECT sr.reviewee_id, u.role FROM session_reviews sr
+            JOIN users u ON sr.reviewee_id = u.id
+            WHERE sr.id = $1
+        `, [id]);
+
+        if (revieweeResult.rows.length > 0 && revieweeResult.rows[0].role === 'tutor') {
+            const tutorId = revieweeResult.rows[0].reviewee_id;
+            await query(`
+                UPDATE tutor_profiles
+                SET rating = (
+                    SELECT ROUND(AVG(rating)::numeric, 2)
+                    FROM session_reviews
+                    WHERE reviewee_id = $1 AND reviewer_type = 'student'
+                )
+                WHERE user_id = $1
+            `, [tutorId]);
+        }
     }
 
     logger.info(`Review ${id} updated by user ${req.user.id}`);
@@ -362,9 +387,10 @@ router.put('/:id', [
         review: {
             id: updatedReview.id,
             rating: updatedReview.rating,
-            reviewText: updatedReview.review_text,
-            isPublic: updatedReview.is_public,
-            createdAt: updatedReview.created_at
+            comment: updatedReview.comment,
+            wouldRecommend: updatedReview.would_recommend,
+            createdAt: updatedReview.created_at,
+            updatedAt: updatedReview.updated_at
         }
     });
 }));
@@ -377,9 +403,9 @@ router.delete('/:id', [
 
     // Check if review exists and user owns it
     const reviewCheck = await query(`
-        SELECT id, reviewer_id, reviewee_id
-        FROM session_reviews
-        WHERE id = $1
+        SELECT sr.id, sr.reviewer_id, sr.session_id, sr.reviewee_id
+        FROM session_reviews sr
+        WHERE sr.id = $1
     `, [id]);
 
     if (reviewCheck.rows.length === 0) {
@@ -397,15 +423,24 @@ router.delete('/:id', [
     await query('DELETE FROM session_reviews WHERE id = $1', [id]);
 
     // Update tutor's average rating
-    await query(`
-        UPDATE tutor_profiles
-        SET rating = COALESCE((
-            SELECT ROUND(AVG(rating)::numeric, 2)
-            FROM session_reviews
-            WHERE reviewee_id = $1
-        ), 0)
-        WHERE user_id = $1
-    `, [review.reviewee_id]);
+    const revieweeResult = await query(`
+        SELECT u.role FROM users u WHERE u.id = (
+            SELECT reviewee_id FROM session_reviews WHERE id = $1
+        )
+    `, [id]);
+
+    if (revieweeResult.rows.length > 0 && revieweeResult.rows[0].role === 'tutor') {
+        const tutorId = review.reviewee_id;
+        await query(`
+            UPDATE tutor_profiles
+            SET rating = COALESCE((
+                SELECT ROUND(AVG(rating)::numeric, 2)
+                FROM session_reviews
+                WHERE reviewee_id = $1 AND reviewer_type = 'student'
+            ), 0)
+            WHERE user_id = $1
+        `, [tutorId]);
+    }
 
     logger.info(`Review ${id} deleted by user ${req.user.id}`);
 

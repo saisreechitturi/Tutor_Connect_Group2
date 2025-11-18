@@ -13,6 +13,7 @@ const MySessions = () => {
     const [error, setError] = useState(null);
     const [reviewSession, setReviewSession] = useState(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
+    const [completingSession, setCompletingSession] = useState(null);
 
     // Helper function to check if session is finished based on end time
     const isSessionFinished = (session) => {
@@ -231,6 +232,37 @@ const MySessions = () => {
         // For now, just show the booking modal or navigate to tutor profile
         console.log('Book again with:', session.tutor?.name);
         alert(`Booking another session with ${session.tutor?.name}. This will redirect to the tutor's profile.`);
+    };
+
+    // Handle marking session as completed
+    const handleMarkComplete = async (sessionId) => {
+        try {
+            setCompletingSession(sessionId);
+            await sessionService.updateSession(sessionId, { status: 'completed' });
+
+            // Show success message
+            try {
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: { type: 'success', title: 'Session marked as completed' }
+                }));
+            } catch { }
+
+            // Update session in local state
+            setSessions(prev => prev.map(session =>
+                session.id === sessionId
+                    ? { ...session, status: 'completed', actualStatus: 'completed' }
+                    : session
+            ));
+        } catch (error) {
+            console.error('Error marking session as complete:', error);
+            try {
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: { type: 'error', title: 'Failed to mark session as completed' }
+                }));
+            } catch { }
+        } finally {
+            setCompletingSession(null);
+        }
     };
 
     return (
@@ -456,13 +488,24 @@ const MySessions = () => {
                                                 )}
 
                                                 {/* Finished session actions - needs review */}
-                                                {session.actualStatus === 'finished' && user.role === 'student' && !session.rating && (
-                                                    <button
-                                                        className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors"
-                                                        onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
-                                                    >
-                                                        Leave Review
-                                                    </button>
+                                                {session.actualStatus === 'finished' && user.role === 'student' && (
+                                                    <div className="flex flex-col space-y-2">
+                                                        <button
+                                                            className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                                            onClick={() => handleMarkComplete(session.id)}
+                                                            disabled={completingSession === session.id}
+                                                        >
+                                                            {completingSession === session.id ? 'Marking Complete...' : 'Mark as Complete'}
+                                                        </button>
+                                                        {!session.rating && (
+                                                            <button
+                                                                className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors"
+                                                                onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
+                                                            >
+                                                                Leave Review
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
 
                                                 {/* Completed session actions */}
@@ -542,14 +585,14 @@ const MySessions = () => {
                     isOpen={showReviewModal}
                     onClose={() => { setShowReviewModal(false); setReviewSession(null); }}
                     session={reviewSession}
-                    onSubmitted={({ rating, reviewText }) => {
+                    onSubmitted={({ rating, comment }) => {
                         // Update the session with review data and mark as completed
                         setSessions(prev => prev.map(s =>
                             s.id === reviewSession.id
                                 ? {
                                     ...s,
                                     rating,
-                                    reviewText,
+                                    comment,
                                     status: 'completed',
                                     actualStatus: 'completed'
                                 }

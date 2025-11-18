@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { X, Star } from 'lucide-react';
 import { reviewService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
 const ReviewSessionModal = ({ isOpen, onClose, session, onSubmitted }) => {
+    const { user } = useAuth();
     const [rating, setRating] = useState(5);
     const [text, setText] = useState('');
+    const [wouldRecommend, setWouldRecommend] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
 
@@ -15,17 +18,34 @@ const ReviewSessionModal = ({ isOpen, onClose, session, onSubmitted }) => {
         setError(null);
         try {
             setSubmitting(true);
+
+            // Determine who we're reviewing based on who the current user is NOT
+            // If current user is the student, we review the tutor
+            // If current user is the tutor, we review the student
+            let revieweeId;
+            if (user.id === session.student?.id) {
+                // Current user is the student, so review the tutor
+                revieweeId = session.tutor?.id;
+            } else if (user.id === session.tutor?.id) {
+                // Current user is the tutor, so review the student
+                revieweeId = session.student?.id;
+            }
+
+            if (!revieweeId) {
+                throw new Error('Could not determine who to review');
+            }
+
             await reviewService.create({
                 sessionId: session.id,
-                revieweeId: session.tutorId || session.tutor?.id,
+                revieweeId: revieweeId,
                 rating,
-                reviewText: text,
-                isPublic: true,
+                comment: text || null,
+                wouldRecommend: wouldRecommend,
             });
             try {
                 window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', title: 'Review submitted' } }));
             } catch { }
-            onSubmitted?.({ rating, reviewText: text });
+            onSubmitted?.({ rating, comment: text });
             onClose();
         } catch (e) {
             setError(e.message || 'Failed to submit review');
@@ -68,6 +88,19 @@ const ReviewSessionModal = ({ isOpen, onClose, session, onSubmitted }) => {
                             className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             placeholder="What went well? What could be improved?"
                         />
+                    </div>
+                    <div>
+                        <label className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                checked={wouldRecommend}
+                                onChange={(e) => setWouldRecommend(e.target.checked)}
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                                I would recommend this {user.id === session.student?.id ? 'tutor' : 'student'} to others
+                            </span>
+                        </label>
                     </div>
                     <div className="flex justify-end space-x-2 pt-2 border-t">
                         <button type="button" onClick={onClose} className="btn-secondary" disabled={submitting}>Cancel</button>

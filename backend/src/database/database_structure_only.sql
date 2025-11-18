@@ -33,8 +33,8 @@ BEGIN
         )
         VALUES (
             NEW.tutor_id,
-            EXTRACT(YEAR FROM NEW.session_date),
-            EXTRACT(MONTH FROM NEW.session_date),
+            EXTRACT(YEAR FROM NEW.scheduled_start),
+            EXTRACT(MONTH FROM NEW.scheduled_start),
             1, 1,
             COALESCE(NEW.payment_amount, 0),
             NEW.duration_minutes / 60.0
@@ -167,21 +167,14 @@ CREATE TABLE tutoring_sessions (
     session_type VARCHAR(20) NOT NULL CHECK (session_type IN ('online', 'in-person')),
     scheduled_start TIMESTAMP WITH TIME ZONE NOT NULL,
     scheduled_end TIMESTAMP WITH TIME ZONE NOT NULL,
-    actual_start TIMESTAMP WITH TIME ZONE,
-    actual_end TIMESTAMP WITH TIME ZONE,
     status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in-progress', 'completed', 'cancelled', 'no-show')),
     hourly_rate DECIMAL(10,2) NOT NULL,
     payment_amount DECIMAL(10,2),
     session_notes TEXT,
-    homework_assigned TEXT,
-    materials_used TEXT[],
     meeting_link VARCHAR(500),
     meeting_room VARCHAR(255),
-    cancellation_reason TEXT,
-    cancelled_by UUID,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    session_date TIMESTAMP WITH TIME ZONE,
     duration_minutes INTEGER GENERATED ALWAYS AS (EXTRACT(epoch FROM (scheduled_end - scheduled_start)) / 60) STORED
 );
 

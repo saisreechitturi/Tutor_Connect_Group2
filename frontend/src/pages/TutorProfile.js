@@ -10,7 +10,7 @@ const TutorProfile = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showBookingModal, setShowBookingModal] = useState(false);
-    
+
     // Reviews state
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -42,7 +42,7 @@ const TutorProfile = () => {
     useEffect(() => {
         const loadReviews = async () => {
             if (!id) return;
-            
+
             try {
                 setReviewsLoading(true);
                 setReviewsError(null);
@@ -205,7 +205,7 @@ const TutorProfile = () => {
                     {/* Reviews Section */}
                     <div className="mt-6 border-t border-gray-200 pt-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <MessageSquare className="h-5 w-5 mr-2 text-primary-600" /> 
+                            <MessageSquare className="h-5 w-5 mr-2 text-primary-600" />
                             Student Reviews
                             {reviewsPagination.total > 0 && (
                                 <span className="ml-2 text-sm font-normal text-gray-500">
@@ -251,16 +251,16 @@ const TutorProfile = () => {
                         {!reviewsLoading && !reviewsError && reviews.length > 0 && (
                             <div className="space-y-4">
                                 {reviews.map((review) => (
-                                    <div 
-                                        key={review.id} 
+                                    <div
+                                        key={review.id}
                                         className="bg-gray-50 rounded-lg p-4 border border-gray-200"
                                     >
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex items-center space-x-3">
                                                 <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white text-sm font-medium">
                                                     {review.student?.avatar ? (
-                                                        <img 
-                                                            src={review.student.avatar} 
+                                                        <img
+                                                            src={review.student.avatar}
                                                             alt={`${review.student.firstName} ${review.student.lastName}`}
                                                             className="w-10 h-10 rounded-full object-cover"
                                                         />
@@ -287,20 +287,19 @@ const TutorProfile = () => {
                                             </div>
                                             <div className="flex items-center">
                                                 {[...Array(5)].map((_, i) => (
-                                                    <Star 
-                                                        key={i} 
-                                                        className={`h-4 w-4 ${
-                                                            i < review.rating 
-                                                                ? 'text-yellow-400 fill-current' 
+                                                    <Star
+                                                        key={i}
+                                                        className={`h-4 w-4 ${i < review.rating
+                                                                ? 'text-yellow-400 fill-current'
                                                                 : 'text-gray-300'
-                                                        }`}
+                                                            }`}
                                                     />
                                                 ))}
                                             </div>
                                         </div>
-                                        {review.reviewText && (
+                                        {review.comment && (
                                             <p className="text-gray-700 text-sm mt-2 whitespace-pre-line">
-                                                {review.reviewText}
+                                                {review.comment}
                                             </p>
                                         )}
                                     </div>

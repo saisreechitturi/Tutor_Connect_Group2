@@ -188,11 +188,10 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Get recent reviews (if any)
     const reviewsResult = await query(`
-    SELECT sr.rating, sr.review_text, u.first_name
+    SELECT sr.rating, sr.comment, u.first_name
     FROM session_reviews sr
-    JOIN tutoring_sessions ts ON sr.session_id = ts.id
     JOIN users u ON sr.reviewer_id = u.id
-    WHERE ts.tutor_id = $1 AND sr.is_public = true
+    WHERE sr.reviewee_id = $1 AND sr.reviewer_type = 'student'
     ORDER BY sr.created_at DESC
     LIMIT 5
   `, [req.params.id]);
@@ -220,7 +219,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
             })),
             reviews: reviewsResult.rows.map(row => ({
                 rating: row.rating,
-                feedback: row.review_text,
+                feedback: row.comment,
                 studentName: row.first_name
             }))
         }
