@@ -13,6 +13,7 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
 
     const result = await query(`
         SELECT sr.id, sr.rating, sr.comment, sr.reviewer_type, sr.would_recommend, sr.created_at,
+               sr.reviewer_id, sr.reviewee_id,
                reviewer.first_name as reviewer_first_name,
                reviewer.last_name as reviewer_last_name,
                reviewer.profile_picture_url as reviewer_avatar,
@@ -30,6 +31,8 @@ router.get('/session/:sessionId', asyncHandler(async (req, res) => {
         rating: row.rating,
         comment: row.comment,
         reviewerType: row.reviewer_type,
+        reviewerId: row.reviewer_id,
+        revieweeId: row.reviewee_id,
         wouldRecommend: row.would_recommend,
         createdAt: row.created_at,
         reviewer: {

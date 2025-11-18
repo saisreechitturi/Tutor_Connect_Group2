@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, MapPin, Star, Filter, Plus, Video, User, AlertCircle } from 'lucide-react';
-import { sessionService } from '../../services';
+import { sessionService, reviewService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import ReviewSessionModal from '../modals/ReviewSessionModal';
 
@@ -14,6 +14,7 @@ const MySessions = () => {
     const [reviewSession, setReviewSession] = useState(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [completingSession, setCompletingSession] = useState(null);
+    const [sessionReviews, setSessionReviews] = useState({});
 
     // Helper function to check if session is finished based on end time
     const isSessionFinished = (session) => {
@@ -37,6 +38,64 @@ const MySessions = () => {
         }
 
         return session.status;
+    };
+
+    // Function to fetch reviews for sessions
+    const fetchSessionReviews = async (sessions) => {
+        const reviews = {};
+
+        // Only fetch reviews for completed/finished sessions where user is a student
+        const completedSessions = sessions.filter(session =>
+            (session.actualStatus === 'completed' || session.actualStatus === 'finished') &&
+            user.role === 'student'
+        );
+
+        for (const session of completedSessions) {
+            try {
+                const response = await reviewService.getBySession(session.id);
+                console.log(`Reviews for session ${session.id}:`, response);
+
+                // Handle different response formats
+                const reviewsArray = response.reviews || response || [];
+
+                // Find review created by current user (student)
+                const userReview = reviewsArray.find(review => {
+                    // Check if this review was created by the current user
+                    const isStudentReview = review.reviewerType === 'student' || review.reviewer_type === 'student';
+                    const isCurrentUserReview = review.reviewerId === user.id ||
+                        review.reviewer_id === user.id ||
+                        (review.student_id && review.student_id === user.id);
+                    return isStudentReview && isCurrentUserReview;
+                });
+
+                if (userReview) {
+                    console.log(`Found user review for session ${session.id}:`, userReview);
+                    reviews[session.id] = userReview;
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch review for session ${session.id}:`, error);
+            }
+        }
+
+        console.log('All session reviews:', reviews);
+        setSessionReviews(reviews);
+    };
+
+    // Helper function to check if user can leave a review for a session
+    const canLeaveReview = (session) => {
+        // User must be a student
+        if (user.role !== 'student') return false;
+
+        // Session must be completed or finished
+        if (session.actualStatus !== 'completed' && session.actualStatus !== 'finished') return false;
+
+        // User must not have already left a review
+        if (sessionReviews[session.id]) return false;
+
+        // Session must not already have a rating (legacy check)
+        if (session.rating) return false;
+
+        return true;
     };
 
     useEffect(() => {
@@ -116,6 +175,9 @@ const MySessions = () => {
                 }));
 
                 setSessions(processedSessions);
+
+                // Fetch reviews for completed sessions
+                await fetchSessionReviews(processedSessions);
             } catch (err) {
                 console.error('Error fetching sessions:', err);
                 setError('Failed to load sessions. Please try again.');
@@ -491,10 +553,37 @@ const MySessions = () => {
                                                         >
                                                             {completingSession === session.id ? 'Marking Complete...' : 'Mark as Complete'}
                                                         </button>
-                                                        {!session.rating && (
+                                                        {sessionReviews[session.id] ? (
+                                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-w-sm">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <div className="flex items-center">
+                                                                        {[...Array(5)].map((_, i) => (
+                                                                            <Star
+                                                                                key={i}
+                                                                                className={`h-4 w-4 ${i < sessionReviews[session.id].rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                    <span className="text-sm font-medium text-green-800">Your Review</span>
+                                                                </div>
+                                                                {sessionReviews[session.id].comment && (
+                                                                    <p className="text-sm text-green-700 italic">"{sessionReviews[session.id].comment}"</p>
+                                                                )}
+                                                                {(sessionReviews[session.id].wouldRecommend !== null || sessionReviews[session.id].would_recommend !== null) && (
+                                                                    <p className="text-xs text-green-600 mt-1">
+                                                                        {(sessionReviews[session.id].wouldRecommend ?? sessionReviews[session.id].would_recommend) ? '✓ Would recommend' : '✗ Would not recommend'}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : canLeaveReview(session) && (
                                                             <button
                                                                 className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600 transition-colors"
-                                                                onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
+                                                                onClick={() => {
+                                                                    if (!sessionReviews[session.id]) {
+                                                                        setReviewSession(session);
+                                                                        setShowReviewModal(true);
+                                                                    }
+                                                                }}
                                                             >
                                                                 Leave Review
                                                             </button>
@@ -503,13 +592,42 @@ const MySessions = () => {
                                                 )}
 
                                                 {/* Completed session actions */}
-                                                {session.actualStatus === 'completed' && user.role === 'student' && !session.rating && (
-                                                    <button
-                                                        className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600 transition-colors"
-                                                        onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
-                                                    >
-                                                        Leave Review
-                                                    </button>
+                                                {session.actualStatus === 'completed' && user.role === 'student' && (
+                                                    sessionReviews[session.id] ? (
+                                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-w-sm">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="flex items-center">
+                                                                    {[...Array(5)].map((_, i) => (
+                                                                        <Star
+                                                                            key={i}
+                                                                            className={`h-4 w-4 ${i < sessionReviews[session.id].rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-sm font-medium text-green-800">Your Review</span>
+                                                            </div>
+                                                            {sessionReviews[session.id].comment && (
+                                                                <p className="text-sm text-green-700 italic">"{sessionReviews[session.id].comment}"</p>
+                                                            )}
+                                                            {(sessionReviews[session.id].wouldRecommend !== null || sessionReviews[session.id].would_recommend !== null) && (
+                                                                <p className="text-xs text-green-600 mt-1">
+                                                                    {(sessionReviews[session.id].wouldRecommend ?? sessionReviews[session.id].would_recommend) ? '✓ Would recommend' : '✗ Would not recommend'}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    ) : canLeaveReview(session) && (
+                                                        <button
+                                                            className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600 transition-colors"
+                                                            onClick={() => {
+                                                                if (!sessionReviews[session.id]) {
+                                                                    setReviewSession(session);
+                                                                    setShowReviewModal(true);
+                                                                }
+                                                            }}
+                                                        >
+                                                            Leave Review
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </div>
@@ -569,7 +687,7 @@ const MySessions = () => {
                     isOpen={showReviewModal}
                     onClose={() => { setShowReviewModal(false); setReviewSession(null); }}
                     session={reviewSession}
-                    onSubmitted={({ rating, comment }) => {
+                    onSubmitted={async ({ rating, comment, wouldRecommend }) => {
                         // Update the session with review data and mark as completed
                         setSessions(prev => prev.map(s =>
                             s.id === reviewSession.id
@@ -582,8 +700,32 @@ const MySessions = () => {
                                 }
                                 : s
                         ));
+
+                        // Add the new review to sessionReviews immediately for quick UI update
+                        setSessionReviews(prev => ({
+                            ...prev,
+                            [reviewSession.id]: {
+                                rating,
+                                comment,
+                                wouldRecommend: wouldRecommend,
+                                would_recommend: wouldRecommend,
+                                sessionId: reviewSession.id,
+                                session_id: reviewSession.id,
+                                reviewerType: 'student',
+                                reviewer_type: 'student',
+                                reviewerId: user.id,
+                                reviewer_id: user.id
+                            }
+                        }));
+
+                        // Close modal first
                         setShowReviewModal(false);
                         setReviewSession(null);
+
+                        // Then refresh review data from server to ensure consistency
+                        setTimeout(() => {
+                            fetchSessionReviews(sessions.filter(s => s.id === reviewSession.id));
+                        }, 1000);
                     }}
                 />
             )}
