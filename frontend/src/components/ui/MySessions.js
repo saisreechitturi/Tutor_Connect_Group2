@@ -228,12 +228,6 @@ const MySessions = () => {
         }
     };
 
-    const handleBookAgain = (session) => {
-        // For now, just show the booking modal or navigate to tutor profile
-        console.log('Book again with:', session.tutor?.name);
-        alert(`Booking another session with ${session.tutor?.name}. This will redirect to the tutor's profile.`);
-    };
-
     // Handle marking session as completed
     const handleMarkComplete = async (sessionId) => {
         try {
@@ -515,16 +509,6 @@ const MySessions = () => {
                                                         onClick={() => { setReviewSession(session); setShowReviewModal(true); }}
                                                     >
                                                         Leave Review
-                                                    </button>
-                                                )}
-
-                                                {/* Book again option for completed sessions */}
-                                                {(session.actualStatus === 'completed' || session.actualStatus === 'finished') && user.role === 'student' && (
-                                                    <button
-                                                        onClick={() => handleBookAgain(session)}
-                                                        className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors"
-                                                    >
-                                                        Book Again
                                                     </button>
                                                 )}
                                             </div>
