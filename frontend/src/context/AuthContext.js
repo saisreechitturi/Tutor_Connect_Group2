@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
                     setUser(JSON.parse(savedUser));
                 }
 
-                // Verify token with backend
+                // Verify token with backend and get complete user data
                 try {
                     const userData = await authService.getCurrentUser();
                     setUser(userData);

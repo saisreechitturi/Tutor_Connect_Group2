@@ -15,7 +15,9 @@ router.post('/register', [
     body('password').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/),
     body('firstName').trim().isLength({ min: 1, max: 100 }),
     body('lastName').trim().isLength({ min: 1, max: 100 }),
-    body('role').isIn(['student', 'tutor'])
+    body('role').isIn(['student', 'tutor']),
+    body('dateOfBirth').optional().isISO8601().toDate(),
+    body('address').optional().trim().isLength({ max: 500 })
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -25,7 +27,7 @@ router.post('/register', [
         });
     }
 
-    const { email, password, firstName, lastName, role, phone } = req.body;
+    const { email, password, firstName, lastName, role, phone, dateOfBirth, address, pincode } = req.body;
 
     // Check if user already exists
     const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
@@ -39,10 +41,10 @@ router.post('/register', [
 
     // Create user
     const result = await query(`
-    INSERT INTO users (email, password_hash, role, first_name, last_name, phone)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING id, email, role, first_name, last_name, phone, created_at
-  `, [email, passwordHash, role, firstName, lastName, phone]);
+    INSERT INTO users (email, password_hash, role, first_name, last_name, phone, date_of_birth, address, pincode)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING id, email, role, first_name, last_name, phone, date_of_birth, address, pincode, created_at
+  `, [email, passwordHash, role, firstName, lastName, phone, dateOfBirth, address, pincode]);
 
     const user = result.rows[0];
 
@@ -71,7 +73,10 @@ router.post('/register', [
             firstName: user.first_name,
             lastName: user.last_name,
             role: user.role,
-            phone: user.phone
+            phone: user.phone,
+            dateOfBirth: user.date_of_birth,
+            address: user.address,
+            pincode: user.pincode
         },
         token
     });

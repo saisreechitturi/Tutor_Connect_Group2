@@ -276,10 +276,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     sender_id uuid NOT NULL,
     recipient_id uuid NOT NULL,
-    subject character varying(255),
     content text NOT NULL,
-    is_read boolean DEFAULT false,
-    parent_message_id uuid,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT messages_pkey PRIMARY KEY (id)
@@ -288,19 +285,18 @@ CREATE TABLE IF NOT EXISTS public.messages (
 -- Payments table
 CREATE TABLE IF NOT EXISTS public.payments (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    session_id uuid NOT NULL,
+    session_id uuid,
     payer_id uuid NOT NULL,
+    recipient_id uuid NOT NULL,
     amount numeric(10,2) NOT NULL,
-    payment_method character varying(50) NOT NULL,
-    payment_status character varying(20) DEFAULT 'pending'::character varying,
-    transaction_id character varying(255),
-    processed_at timestamp with time zone,
-    refunded_at timestamp with time zone,
-    refund_amount numeric(10,2),
+    currency character varying(3) DEFAULT 'USD',
+    payment_method character varying(50) DEFAULT 'mock',
+    status character varying(20) DEFAULT 'completed',
+    description text DEFAULT 'Mock payment',
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT payments_pkey PRIMARY KEY (id),
-    CONSTRAINT payments_payment_status_check CHECK (((payment_status)::text = ANY ((ARRAY['pending'::character varying, 'completed'::character varying, 'failed'::character varying, 'refunded'::character varying])::text[])))
+    CONSTRAINT payments_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'completed'::character varying, 'failed'::character varying])::text[])))
 );
 
 -- Notifications table

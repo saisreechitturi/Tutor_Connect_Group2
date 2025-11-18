@@ -38,8 +38,8 @@ router.get('/search', [
 // Get user profile
 router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async (req, res) => {
     const result = await query(`
-    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.profile_picture_url, 
-           u.bio, u.location, u.timezone, u.status, u.created_at,
+    SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.date_of_birth, u.address, u.pincode,
+           u.profile_picture_url, u.bio, u.location, u.timezone, u.status, u.created_at,
            tp.title, tp.hourly_rate, tp.years_of_experience, tp.education_background, tp.certifications,
            tp.languages_spoken, tp.specializations, tp.rating, tp.total_sessions, tp.total_earnings
     FROM users u
@@ -61,6 +61,9 @@ router.get('/:id', authenticateToken, requireOwnership('id'), asyncHandler(async
             lastName: user.last_name,
             role: user.role,
             phone: user.phone,
+            dateOfBirth: user.date_of_birth,
+            address: user.address,
+            pincode: user.pincode,
             avatarUrl: user.profile_picture_url,
             bio: user.bio,
             location: user.location,
@@ -92,6 +95,9 @@ router.put('/:id', [
     body('firstName').optional().trim().isLength({ min: 1, max: 100 }),
     body('lastName').optional().trim().isLength({ min: 1, max: 100 }),
     body('phone').optional().isMobilePhone(),
+    body('dateOfBirth').optional().isISO8601().withMessage('Date of birth must be a valid date'),
+    body('address').optional().isLength({ max: 500 }).withMessage('Address must be less than 500 characters'),
+    body('pincode').optional().isLength({ min: 3, max: 20 }).withMessage('Pincode must be between 3 and 20 characters'),
     body('bio').optional().isLength({ max: 1000 }),
     body('location').optional().isLength({ max: 255 }),
     body('timezone').optional().isLength({ max: 50 })
@@ -104,7 +110,7 @@ router.put('/:id', [
         });
     }
 
-    const { firstName, lastName, phone, bio, location, timezone, avatarUrl } = req.body;
+    const { firstName, lastName, phone, dateOfBirth, address, pincode, bio, location, timezone, avatarUrl } = req.body;
 
     // Update user basic info
     const userUpdateResult = await query(`
@@ -112,13 +118,16 @@ router.put('/:id', [
     SET first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
         phone = COALESCE($3, phone),
-        bio = COALESCE($4, bio),
-        location = COALESCE($5, location),
-        timezone = COALESCE($6, timezone),
-        profile_picture_url = COALESCE($7, profile_picture_url)
-    WHERE id = $8
+        date_of_birth = COALESCE($4, date_of_birth),
+        address = COALESCE($5, address),
+        pincode = COALESCE($6, pincode),
+        bio = COALESCE($7, bio),
+        location = COALESCE($8, location),
+        timezone = COALESCE($9, timezone),
+        profile_picture_url = COALESCE($10, profile_picture_url)
+    WHERE id = $11
     RETURNING *
-  `, [firstName, lastName, phone, bio, location, timezone, avatarUrl, req.params.id]);
+  `, [firstName, lastName, phone, dateOfBirth, address, pincode, bio, location, timezone, avatarUrl, req.params.id]);
 
     if (userUpdateResult.rows.length === 0) {
         return res.status(404).json({ message: 'User not found' });

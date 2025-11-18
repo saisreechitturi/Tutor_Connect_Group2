@@ -11,6 +11,9 @@ class AuthService {
                 lastName: userData.lastName,
                 role: userData.role || 'student',
                 phone: userData.phone,
+                dateOfBirth: userData.dateOfBirth,
+                address: userData.address,
+                pincode: userData.pincode,
             });
 
             // Store token if registration includes login

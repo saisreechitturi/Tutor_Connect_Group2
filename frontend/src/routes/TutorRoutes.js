@@ -9,7 +9,6 @@ import TutorAnalytics from '../pages/TutorAnalytics';
 import TutorAvailability from '../pages/TutorAvailability';
 import TutorSettings from '../pages/TutorSettings';
 import TutorTasks from '../pages/TutorTasks';
-import Notifications from '../pages/Notifications';
 
 const TutorRoutes = () => {
     return (
@@ -23,7 +22,6 @@ const TutorRoutes = () => {
                 <Route path="tasks" element={<TutorTasks />} />
                 <Route path="calendar" element={<TutorCalendar />} />
                 <Route path="messages" element={<TutorMessages />} />
-                <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<TutorSettings />} />
             </Routes>
         </DashboardLayout>

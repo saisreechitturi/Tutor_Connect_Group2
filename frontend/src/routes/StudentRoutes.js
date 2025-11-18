@@ -8,7 +8,6 @@ import Calendar from '../components/ui/Calendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
 import StudentSettings from '../pages/StudentSettings';
-import Notifications from '../pages/Notifications';
 
 const StudentRoutes = () => {
     return (
@@ -20,7 +19,6 @@ const StudentRoutes = () => {
                 <Route path="tasks" element={<TaskManager />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="messages" element={<Messages />} />
-                <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<StudentSettings />} />
             </Routes>
         </DashboardLayout>

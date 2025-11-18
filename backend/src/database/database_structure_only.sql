@@ -82,6 +82,8 @@ CREATE TABLE users (
     last_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     date_of_birth DATE,
+    address TEXT,
+    pincode VARCHAR(20),
     role VARCHAR(20) NOT NULL CHECK (role IN ('student', 'tutor', 'admin')),
     profile_picture_url TEXT,
     bio TEXT,
@@ -91,20 +93,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- User addresses table
-CREATE TABLE user_addresses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    address_line1 VARCHAR(255) NOT NULL,
-    address_line2 VARCHAR(255),
-    city VARCHAR(100) NOT NULL,
-    state VARCHAR(100) NOT NULL,
-    postal_code VARCHAR(20) NOT NULL,
-    country VARCHAR(100) NOT NULL,
-    is_primary BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+-- User addresses table removed - address is now stored directly in users table
 
 -- Subjects table
 CREATE TABLE subjects (
@@ -214,15 +203,13 @@ CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    subject VARCHAR(255),
-    message_text TEXT NOT NULL,
+    content TEXT NOT NULL,
     message_type VARCHAR(50) CHECK (message_type IN ('direct', 'session', 'system', 'announcement')) DEFAULT 'direct',
-    parent_message_id UUID REFERENCES messages(id),
-    is_read BOOLEAN DEFAULT false,
     read_at TIMESTAMP WITH TIME ZONE,
     attachments TEXT[],
     priority VARCHAR(20) CHECK (priority IN ('low', 'normal', 'high', 'urgent')) DEFAULT 'normal',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Payments table
@@ -233,46 +220,15 @@ CREATE TABLE payments (
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL,
     currency VARCHAR(3) DEFAULT 'USD',
-    payment_method VARCHAR(50),
-    payment_provider VARCHAR(50),
-    transaction_id VARCHAR(255) UNIQUE,
-    status VARCHAR(20) CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'refunded', 'cancelled')) DEFAULT 'pending',
-    description TEXT,
-    platform_fee DECIMAL(10,2),
-    net_amount DECIMAL(10,2),
-    processed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Notifications table
-CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    notification_type VARCHAR(50) CHECK (notification_type IN ('session', 'payment', 'message', 'system', 'reminder')) NOT NULL,
-    is_read BOOLEAN DEFAULT false,
-    action_url VARCHAR(500),
-    expires_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- User preferences table
-CREATE TABLE user_preferences (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    email_notifications BOOLEAN DEFAULT true,
-    sms_notifications BOOLEAN DEFAULT false,
-    push_notifications BOOLEAN DEFAULT true,
-    session_reminders BOOLEAN DEFAULT true,
-    marketing_emails BOOLEAN DEFAULT false,
-    privacy_settings JSONB,
-    timezone VARCHAR(50) DEFAULT 'UTC',
-    language VARCHAR(10) DEFAULT 'en',
-    theme VARCHAR(20) DEFAULT 'light',
+    payment_method VARCHAR(50) DEFAULT 'mock',
+    status VARCHAR(20) CHECK (status IN ('pending', 'completed', 'failed')) DEFAULT 'completed',
+    description TEXT DEFAULT 'Mock payment',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Notifications table removed - not needed for simplified profile-only settings
+-- User preferences table removed - profile settings are now stored directly in users table
 
 -- Settings table (for system configuration)
 CREATE TABLE settings (
@@ -422,15 +378,14 @@ CREATE INDEX idx_sessions_status ON tutoring_sessions(status);
 
 CREATE INDEX idx_messages_sender_id ON messages(sender_id);
 CREATE INDEX idx_messages_recipient_id ON messages(recipient_id);
-CREATE INDEX idx_messages_is_read ON messages(is_read);
 CREATE INDEX idx_messages_created_at ON messages(created_at);
+CREATE INDEX idx_messages_sender_recipient ON messages(sender_id, recipient_id);
 
 CREATE INDEX idx_payments_session_id ON payments(session_id);
 CREATE INDEX idx_payments_payer_id ON payments(payer_id);
 CREATE INDEX idx_payments_status ON payments(status);
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+
 
 CREATE INDEX idx_settings_key ON settings(key);
 CREATE INDEX idx_settings_category ON settings(category);
@@ -474,9 +429,7 @@ CREATE TRIGGER update_sessions_updated_at
     BEFORE UPDATE ON tutoring_sessions 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_preferences_updated_at 
-    BEFORE UPDATE ON user_preferences 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 
 CREATE TRIGGER update_settings_updated_at 
     BEFORE UPDATE ON settings 
@@ -525,7 +478,7 @@ COMMENT ON TABLE student_profiles IS 'Extended information for students';
 COMMENT ON TABLE tutoring_sessions IS 'Scheduled and completed tutoring sessions';
 COMMENT ON TABLE messages IS 'Internal messaging system';
 COMMENT ON TABLE payments IS 'Payment processing and history';
-COMMENT ON TABLE notifications IS 'User notifications and alerts';
+
 COMMENT ON TABLE settings IS 'System configuration settings';
 COMMENT ON TABLE password_reset_tokens IS 'Secure password reset tokens with expiration';
 COMMENT ON TABLE tasks IS 'Student tasks and assignments with progress tracking';

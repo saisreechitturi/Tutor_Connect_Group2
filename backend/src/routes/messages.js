@@ -12,11 +12,11 @@ const router = express.Router();
 router.get('/', [
     authenticateToken,
     expressQuery('type').optional().isIn(['sent', 'received']),
+    // Legacy parameters for backward compatibility (ignored)
     expressQuery('unread').optional().isBoolean(),
+    expressQuery('isRead').optional().isIn(['true', 'false']),
     // New style filters used by frontend messageService
     expressQuery('conversationWith').optional().isString(),
-    // accept true/false strings to avoid 400s
-    expressQuery('isRead').optional().isIn(['true', 'false']),
     expressQuery('sessionId').optional().isString(),
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
@@ -29,7 +29,7 @@ router.get('/', [
         });
     }
 
-    const { type, unread } = req.query;
+    const { type } = req.query;
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
     let queryText = `
@@ -51,19 +51,10 @@ router.get('/', [
         queryText += ` AND m.recipient_id = $1`;
     }
 
-    if (unread === 'true') {
-        queryText += ` AND m.is_read = false AND m.recipient_id = $1`;
-    }
-
     // New style filters
     if (req.query.conversationWith) {
         queryText += ` AND ( (m.sender_id = $1 AND m.recipient_id = $${params.length + 1}) OR (m.sender_id = $${params.length + 1} AND m.recipient_id = $1) )`;
         params.push(req.query.conversationWith);
-    }
-    if (req.query.isRead !== undefined) {
-        const isReadBool = `${req.query.isRead}` === 'true';
-        queryText += ` AND m.is_read = $${params.length + 1}`;
-        params.push(isReadBool);
     }
     if (req.query.sessionId) {
         queryText += ` AND m.session_id = $${params.length + 1}`;
@@ -77,9 +68,7 @@ router.get('/', [
 
     const messages = result.rows.map(row => ({
         id: row.id,
-        subject: row.subject,
         content: row.content,
-        isRead: row.is_read,
         sender: {
             id: row.sender_id,
             name: `${row.sender_first_name} ${row.sender_last_name}`,
@@ -104,7 +93,6 @@ router.get('/', [
 router.post('/', [
     authenticateToken,
     body('recipientId').isString().trim().notEmpty(),
-    body('subject').optional().trim().isLength({ min: 1, max: 255 }),
     body('content').optional().trim().isLength({ min: 1, max: 2000 }),
     body('messageText').optional().trim().isLength({ min: 1, max: 2000 }),
     body('messageType').optional().isIn(['direct', 'session', 'system']),
@@ -118,8 +106,12 @@ router.post('/', [
         });
     }
 
-    const { recipientId, subject, messageType, sessionId } = req.body;
+    const { recipientId, messageType, sessionId } = req.body;
     const content = req.body.content || req.body.messageText;
+
+    if (!content) {
+        return res.status(400).json({ message: 'Message content is required' });
+    }
 
     // Verify recipient exists
     const recipientCheck = await query(
@@ -144,10 +136,10 @@ router.post('/', [
     }
 
     const result = await query(`
-        INSERT INTO messages (sender_id, recipient_id, subject, content)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO messages (sender_id, recipient_id, content)
+        VALUES ($1, $2, $3)
         RETURNING *
-    `, [req.user.id, recipientId, subject || null, content]);
+    `, [req.user.id, recipientId, content]);
 
     const message = result.rows[0];
 
@@ -166,9 +158,7 @@ router.post('/', [
         if (io) {
             const socketData = {
                 id: message.id,
-                subject: message.subject,
                 content: message.content,
-                isRead: false,
                 sender: {
                     id: sender.id,
                     firstName: sender.first_name,
@@ -195,7 +185,6 @@ router.post('/', [
         message: 'Message sent successfully',
         messageData: {
             id: message.id,
-            subject: message.subject,
             content: message.content,
             messageType: messageType || 'direct',
             sessionId: sessionId || null,
@@ -204,14 +193,10 @@ router.post('/', [
     });
 }));
 
-// Get specific message
-// Unread count BEFORE param routes to avoid collision with '/:id'
+// Get unread count (simplified - always returns 0 since we don't track read status)
 router.get('/unread-count', authenticateToken, asyncHandler(async (req, res) => {
-    const result = await query(
-        'SELECT COUNT(*)::int AS count FROM messages WHERE recipient_id = $1 AND is_read = false',
-        [req.user.id]
-    );
-    res.json({ count: result.rows[0]?.count || 0 });
+    // Since we removed is_read tracking, always return 0
+    res.json({ count: 0 });
 }));
 
 // Search messages BEFORE param routes to avoid collision with '/:id'
@@ -227,7 +212,7 @@ router.get('/search', [
         FROM messages m
         JOIN users sender ON m.sender_id = sender.id
         WHERE (m.sender_id = $1 OR m.recipient_id = $1)
-          AND (m.subject ILIKE $2 OR m.content ILIKE $2)
+          AND m.content ILIKE $2
         ORDER BY m.created_at DESC
         LIMIT $3
     `, [req.user.id, q, limit]);
@@ -235,10 +220,8 @@ router.get('/search', [
     const messages = result.rows.map(row => ({
         id: row.id,
         content: row.content,
-        subject: row.subject,
         senderId: row.sender_id,
         senderName: `${row.sender_first_name} ${row.sender_last_name}`,
-        isRead: row.is_read,
         createdAt: row.created_at
     }));
 
@@ -262,16 +245,9 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
 
     const row = result.rows[0];
 
-    // Mark as read if user is the recipient
-    if (row.recipient_id === req.user.id && !row.is_read) {
-        await query('UPDATE messages SET is_read = true WHERE id = $1', [req.params.id]);
-    }
-
     const messageData = {
         id: row.id,
-        subject: row.subject,
         content: row.content,
-        isRead: row.recipient_id === req.user.id ? true : row.is_read,
         sender: {
             id: row.sender_id,
             name: `${row.sender_first_name} ${row.sender_last_name}`,
@@ -292,31 +268,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
     res.json({ message: messageData });
 }));
 
-// Mark message as read
-router.patch('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
-    const result = await query(
-        'UPDATE messages SET is_read = true WHERE id = $1 AND recipient_id = $2 RETURNING id',
-        [req.params.id, req.user.id]
-    );
 
-    if (result.rows.length === 0) {
-        return res.status(404).json({ message: 'Message not found' });
-    }
-
-    res.json({ message: 'Message marked as read' });
-}));
-
-// Also support PUT for frontend compatibility
-router.put('/:id/read', authenticateToken, asyncHandler(async (req, res) => {
-    const result = await query(
-        'UPDATE messages SET is_read = true WHERE id = $1 AND recipient_id = $2 RETURNING id',
-        [req.params.id, req.user.id]
-    );
-    if (result.rows.length === 0) {
-        return res.status(404).json({ message: 'Message not found' });
-    }
-    res.json({ message: 'Message marked as read' });
-}));
 
 // Delete message
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
@@ -362,28 +314,12 @@ router.get('/conversation/:userId', [
         senderId: row.sender_id,
         senderName: `${row.sender_first_name} ${row.sender_last_name}`,
         senderAvatar: row.sender_avatar,
-        isRead: row.is_read,
         createdAt: row.created_at
     }));
-
-    // Mark messages as read if current user is recipient
-    await query(`
-    UPDATE messages 
-    SET is_read = true 
-    WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false
-  `, [otherUserId, req.user.id]);
 
     res.json({ messages });
 }));
 
-// Mark entire conversation as read
-router.put('/conversation/:userId/read', authenticateToken, asyncHandler(async (req, res) => {
-    const otherUserId = req.params.userId;
-    await query(
-        'UPDATE messages SET is_read = true WHERE sender_id = $1 AND recipient_id = $2 AND is_read = false',
-        [otherUserId, req.user.id]
-    );
-    res.json({ message: 'Conversation marked as read' });
-}));
+
 
 module.exports = router;

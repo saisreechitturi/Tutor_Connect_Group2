@@ -15,7 +15,10 @@ const Signup = () => {
         password: '',
         confirmPassword: '',
         role: 'student',
-        phone: ''
+        phone: '',
+        dateOfBirth: '',
+        address: '',
+        pincode: ''
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -83,6 +86,21 @@ const Signup = () => {
         if (formData.phone && !/^[+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
             setError('Please enter a valid phone number');
             return false;
+        }
+
+        // Validate date of birth if provided
+        if (formData.dateOfBirth) {
+            const birthDate = new Date(formData.dateOfBirth);
+            const today = new Date();
+            if (birthDate >= today) {
+                setError('Date of birth must be in the past');
+                return false;
+            }
+            const age = today.getFullYear() - birthDate.getFullYear();
+            if (age < 13) {
+                setError('You must be at least 13 years old to register');
+                return false;
+            }
         }
 
         return true;
@@ -239,6 +257,56 @@ const Signup = () => {
                                     value={formData.phone}
                                     onChange={handleChange}
                                     disabled={loading}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+                                    Date of Birth (Optional)
+                                </label>
+                                <input
+                                    id="dateOfBirth"
+                                    name="dateOfBirth"
+                                    type="date"
+                                    className="input-field mt-1"
+                                    value={formData.dateOfBirth}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                                    Address (Optional)
+                                </label>
+                                <textarea
+                                    id="address"
+                                    name="address"
+                                    rows={3}
+                                    className="input-field mt-1"
+                                    placeholder="Enter your full address"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    maxLength={500}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="pincode" className="block text-sm font-medium text-gray-700">
+                                    Pincode/ZIP Code (Optional)
+                                </label>
+                                <input
+                                    id="pincode"
+                                    name="pincode"
+                                    type="text"
+                                    className="input-field mt-1"
+                                    placeholder="Enter your pincode or ZIP code"
+                                    value={formData.pincode}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    maxLength={20}
                                 />
                             </div>
 

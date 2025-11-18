@@ -43,48 +43,7 @@ const userService = {
         }
     },
 
-    // Update user preferences (notifications, privacy, etc.)
-    updatePreferences: async (userId, preferences) => {
-        try {
-            // For now, we'll store preferences in localStorage since there's no backend endpoint
-            // In a real app, this would be a proper API endpoint
-            const key = `userPreferences_${userId}`;
-            localStorage.setItem(key, JSON.stringify(preferences));
-            return { message: 'Preferences updated successfully' };
-        } catch (error) {
-            console.error('Error updating user preferences:', error);
-            throw error;
-        }
-    },
 
-    // Get user preferences
-    getPreferences: async (userId) => {
-        try {
-            const key = `userPreferences_${userId}`;
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                return JSON.parse(stored);
-            }
-            return {
-                notifications: {
-                    emailNotifications: true,
-                    pushNotifications: true,
-                    sessionReminders: true,
-                    weeklyDigest: false,
-                    promotionalEmails: false
-                },
-                privacy: {
-                    profileVisibility: 'public',
-                    showEmail: false,
-                    showPhone: false,
-                    allowMessages: true
-                }
-            };
-        } catch (error) {
-            console.error('Error fetching user preferences:', error);
-            throw error;
-        }
-    },
 
     // Change password
     changePassword: async (passwordData) => {

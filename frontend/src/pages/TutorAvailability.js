@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { Clock, Plus, Edit2, Trash2, AlertCircle, Calendar } from 'lucide-react';
 import { availabilityService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { DAY_OF_WEEK_MIN, DAY_OF_WEEK_MAX } from '../constants/schema';
@@ -13,6 +13,9 @@ const TutorAvailability = () => {
     const [error, setError] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingSlot, setEditingSlot] = useState(null);
+    const [activeTab, setActiveTab] = useState('weekly');
+    const [recurringSlots, setRecurringSlots] = useState([]);
+    const [specificSlots, setSpecificSlots] = useState([]);
 
     useEffect(() => {
         if (user?.id) {
@@ -27,7 +30,11 @@ const TutorAvailability = () => {
             const data = await availabilityService.getAvailability(user.id, {
                 includeBooked: false
             });
-            setAvailabilitySlots(data.availability?.recurringSlots || []);
+            const recurring = data.availability?.recurringSlots || [];
+            const specific = data.availability?.specificSlots || [];
+            setAvailabilitySlots(recurring);
+            setRecurringSlots(recurring);
+            setSpecificSlots(specific);
         } catch (err) {
             console.error('Failed to load availability', err);
             setError(err.message || 'Failed to load availability');
@@ -127,7 +134,7 @@ const TutorAvailability = () => {
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
-                        <CalendarIcon className="h-5 w-5 inline-block mr-2" />
+                        <Calendar className="h-5 w-5 inline-block mr-2" />
                         Specific Dates
                     </button>
                 </nav>
@@ -228,7 +235,7 @@ const TutorAvailability = () => {
 
                     {specificSlots.length === 0 ? (
                         <div className="bg-gray-50 rounded-lg p-12 text-center">
-                            <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                            <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                             <p className="text-gray-600 mb-4">No specific date overrides set</p>
                             <p className="text-sm text-gray-500 mb-4">
                                 Use date overrides to block time off or add extra availability on specific dates
@@ -249,7 +256,7 @@ const TutorAvailability = () => {
                                     className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between"
                                 >
                                     <div className="flex items-center space-x-4">
-                                        <CalendarIcon className="h-5 w-5 text-gray-400" />
+                                        <Calendar className="h-5 w-5 text-gray-400" />
                                         <div>
                                             <p className="font-medium text-gray-900">
                                                 {new Date(`${slot.date}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -296,7 +303,8 @@ const TutorAvailability = () => {
                     onClose={handleCloseModal}
                     onSave={handleSaveSlot}
                     slot={editingSlot}
-                    tutorId={user.id}
+                    tutorId={user?.id}
+                    isWeekly={activeTab === 'weekly'}
                 />
             )}
         </div>
@@ -304,11 +312,13 @@ const TutorAvailability = () => {
 };
 
 // Slot Modal Component
-const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId }) => {
+const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly = true }) => {
     const [formData, setFormData] = useState({
         dayOfWeek: slot?.dayOfWeek ?? 1,
         startTime: slot?.startTime || '09:00',
-        endTime: slot?.endTime || '10:00'
+        endTime: slot?.endTime || '10:00',
+        specificDate: slot?.specificDate || '',
+        isAvailable: slot?.isAvailable ?? true
     });
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState(null);

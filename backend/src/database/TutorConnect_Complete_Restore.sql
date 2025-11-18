@@ -256,10 +256,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     sender_id uuid NOT NULL,
     recipient_id uuid NOT NULL,
-    subject character varying(255),
     content text NOT NULL,
-    is_read boolean DEFAULT false,
-    parent_message_id uuid,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT messages_pkey PRIMARY KEY (id)

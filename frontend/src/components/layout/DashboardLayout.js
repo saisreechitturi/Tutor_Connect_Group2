@@ -13,8 +13,7 @@ import {
     BarChart,
     Menu,
     X,
-    Clock,
-    Bell
+    Clock
 } from 'lucide-react';
 import Toaster from '../ui/Toaster';
 
@@ -30,15 +29,13 @@ const DashboardLayout = ({ userRole, children }) => {
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
             { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
             { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
-            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare },
-            { name: 'Notifications', href: `/${userRole}/notifications`, icon: Bell }
+            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
         ];
 
-        // Admin gets calendar and notifications but no tasks or platform messages
+        // Admin gets calendar but no tasks or platform messages
         const adminCommonItems = [
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
-            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
-            { name: 'Notifications', href: `/${userRole}/notifications`, icon: Bell }
+            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar }
         ];
 
         const commonItems = userRole === 'admin' ? adminCommonItems : baseCommonItems;
