@@ -26,11 +26,34 @@ build/Release
 # Logs and debugging
 *.log
 logs/
+backend/logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Temporary and cache files
+*.tmp
+*.temp
+*.cache
+.cache/
+temp/
+tmp/
+
+# Test files (optional - uncomment if you don't want test files in git)
+# *.test.js
+# *.spec.js
+
+# Development files
+*.local
+*.cloud
+migrate-*.js
+check-*.js
+fix-*.sql
+seed-*.js
+verify-*.js
+create-test-*.js
 
 # Runtime data
 pids/
