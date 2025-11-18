@@ -19,7 +19,7 @@ const MySessions = () => {
         if (session.status === 'completed' || session.status === 'cancelled') {
             return true;
         }
-        
+
         const now = new Date();
         const sessionEnd = new Date(session.scheduledEnd || session.scheduled_end);
         return now > sessionEnd;
@@ -29,12 +29,12 @@ const MySessions = () => {
     const getActualStatus = (session) => {
         if (session.status === 'cancelled') return 'cancelled';
         if (session.status === 'completed') return 'completed';
-        
+
         // Check if session should be marked as finished based on end time
         if (isSessionFinished(session)) {
             return 'finished'; // This means the session time has passed but wasn't marked complete
         }
-        
+
         return session.status;
     };
 
@@ -106,14 +106,14 @@ const MySessions = () => {
                         }
                     ];
                 }
-                
+
                 // Process sessions to determine actual status based on timing
                 const processedSessions = (sessionsData || []).map(session => ({
                     ...session,
                     actualStatus: getActualStatus(session),
                     isFinished: isSessionFinished(session)
                 }));
-                
+
                 setSessions(processedSessions);
             } catch (err) {
                 console.error('Error fetching sessions:', err);
@@ -212,12 +212,12 @@ const MySessions = () => {
         if (!window.confirm('Are you sure you want to cancel this session?')) {
             return;
         }
-        
+
         try {
             await sessionService.cancelSession(sessionId);
             // Update local state
-            setSessions(prev => prev.map(s => 
-                s.id === sessionId 
+            setSessions(prev => prev.map(s =>
+                s.id === sessionId
                     ? { ...s, status: 'cancelled', actualStatus: 'cancelled' }
                     : s
             ));
@@ -318,7 +318,7 @@ const MySessions = () => {
                                 const sessionDate = new Date(session.scheduledStart || session.scheduled_start);
                                 const sessionEndDate = new Date(session.scheduledEnd || session.scheduled_end);
                                 const duration = Math.round((sessionEndDate - sessionDate) / (1000 * 60)); // duration in minutes
-                                
+
                                 return (
                                     <div key={session.id} className="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow">
                                         <div className="flex items-start justify-between">
@@ -350,9 +350,9 @@ const MySessions = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                                                     <div className="flex items-center">
                                                         <Calendar className="h-4 w-4 mr-2" />
-                                                        <span>{sessionDate.toLocaleDateString('en-US', { 
+                                                        <span>{sessionDate.toLocaleDateString('en-US', {
                                                             weekday: 'short',
-                                                            month: 'short', 
+                                                            month: 'short',
                                                             day: 'numeric',
                                                             year: 'numeric'
                                                         })}</span>
@@ -360,10 +360,10 @@ const MySessions = () => {
                                                     <div className="flex items-center">
                                                         <Clock className="h-4 w-4 mr-2" />
                                                         <span>
-                                                            {sessionDate.toLocaleTimeString('en-US', { 
-                                                                hour: 'numeric', 
+                                                            {sessionDate.toLocaleTimeString('en-US', {
+                                                                hour: 'numeric',
                                                                 minute: '2-digit',
-                                                                hour12: true 
+                                                                hour12: true
                                                             })} ({duration} min)
                                                         </span>
                                                     </div>
@@ -435,7 +435,7 @@ const MySessions = () => {
                                                 {session.actualStatus === 'scheduled' && (
                                                     <>
                                                         {session.meetingLink ? (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => window.open(session.meetingLink, '_blank')}
                                                                 className="bg-primary-600 text-white px-4 py-2 rounded text-sm hover:bg-primary-700 transition-colors"
                                                             >
@@ -446,7 +446,7 @@ const MySessions = () => {
                                                                 Join Session
                                                             </button>
                                                         )}
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleCancelSession(session.id)}
                                                             className="border border-red-300 text-red-700 px-4 py-2 rounded text-sm hover:bg-red-50 transition-colors"
                                                         >
@@ -477,7 +477,7 @@ const MySessions = () => {
 
                                                 {/* Book again option for completed sessions */}
                                                 {(session.actualStatus === 'completed' || session.actualStatus === 'finished') && user.role === 'student' && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleBookAgain(session)}
                                                         className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors"
                                                     >
@@ -544,15 +544,15 @@ const MySessions = () => {
                     session={reviewSession}
                     onSubmitted={({ rating, reviewText }) => {
                         // Update the session with review data and mark as completed
-                        setSessions(prev => prev.map(s => 
-                            s.id === reviewSession.id 
-                                ? { 
-                                    ...s, 
-                                    rating, 
+                        setSessions(prev => prev.map(s =>
+                            s.id === reviewSession.id
+                                ? {
+                                    ...s,
+                                    rating,
                                     reviewText,
                                     status: 'completed',
                                     actualStatus: 'completed'
-                                  } 
+                                }
                                 : s
                         ));
                         setShowReviewModal(false);
