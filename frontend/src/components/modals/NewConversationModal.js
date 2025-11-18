@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, User, MessageSquare, Send } from 'lucide-react';
-import { tutorService, userService, messageService } from '../../services';
+import { userService, messageService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 
 const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
@@ -24,37 +24,11 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
             setLoading(true);
             setError(null);
 
-            let users = [];
-
-            // If current user is a student, fetch tutors
-            if (user.role === 'student') {
-                const tutors = await tutorService.getTutors();
-                users = tutors.map(tutor => ({
-                    id: tutor.id,
-                    name: `${tutor.firstName} ${tutor.lastName}`,
-                    firstName: tutor.firstName,
-                    lastName: tutor.lastName,
-                    role: 'tutor',
-                    subjects: tutor.subjects || [],
-                    rating: tutor.rating,
-                    profileImageUrl: tutor.profileImageUrl
-                }));
-            } else if (user.role === 'tutor') {
-                // For tutors, fetch students they've had sessions with
-                const students = await tutorService.getTutorStudents(user.id);
-                users = students.map(student => ({
-                    id: student.id,
-                    name: `${student.firstName} ${student.lastName}`,
-                    firstName: student.firstName,
-                    lastName: student.lastName,
-                    role: 'student',
-                    email: student.email,
-                    totalSessions: student.totalSessions,
-                    profileImageUrl: student.avatarUrl
-                }));
-            }
-
-            setAvailableUsers(users);
+            // For initial load, show all users by doing a broad search
+            const users = await userService.search('', 50); // Get up to 50 users initially
+            // Filter out current user
+            const filteredUsers = users.filter(u => u.id !== user.id);
+            setAvailableUsers(filteredUsers);
         } catch (err) {
             console.error('Error fetching users:', err);
             setError('Failed to load available users.');
@@ -67,13 +41,19 @@ const NewConversationModal = ({ isOpen, onClose, onConversationStarted }) => {
     useEffect(() => {
         const run = async () => {
             const q = searchTerm.trim();
-            if (!q) return;
             try {
-                const results = await userService.search(q);
+                let results;
+                if (!q) {
+                    // If no search term, show all users (up to 50)
+                    results = await userService.search('', 50);
+                } else {
+                    // Search with the term
+                    results = await userService.search(q, 20);
+                }
                 // Exclude self
                 setAvailableUsers(results.filter(u => u.id !== user.id));
             } catch (e) {
-                // ignore
+                console.error('Search error:', e);
             }
         };
         const id = setTimeout(run, 300);

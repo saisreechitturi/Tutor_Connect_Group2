@@ -9,19 +9,38 @@ const router = express.Router();
 // Search users by name or email
 router.get('/search', [
     authenticateToken,
-    expressQuery('q').isString().trim().notEmpty(),
+    expressQuery('q').optional().isString().trim(),
     expressQuery('limit').optional().isInt({ min: 1, max: 50 })
 ], asyncHandler(async (req, res) => {
-    const q = `%${req.query.q}%`;
+    const searchQuery = req.query.q || '';
     const limit = parseInt(req.query.limit) || 20;
-    const result = await query(`
-        SELECT id, first_name, last_name, email, role, profile_picture_url
-        FROM users
-        WHERE (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1)
-          AND is_active = true
-        ORDER BY last_name ASC
-        LIMIT $2
-    `, [q, limit]);
+
+    let queryText, params;
+    if (searchQuery.trim()) {
+        // Search with query
+        const q = `%${searchQuery}%`;
+        queryText = `
+            SELECT id, first_name, last_name, email, role, profile_picture_url
+            FROM users
+            WHERE (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1)
+              AND is_active = true
+            ORDER BY last_name ASC
+            LIMIT $2
+        `;
+        params = [q, limit];
+    } else {
+        // No search query, return all active users
+        queryText = `
+            SELECT id, first_name, last_name, email, role, profile_picture_url
+            FROM users
+            WHERE is_active = true
+            ORDER BY last_name ASC
+            LIMIT $1
+        `;
+        params = [limit];
+    }
+
+    const result = await query(queryText, params);
 
     const users = result.rows.map(u => ({
         id: u.id,
