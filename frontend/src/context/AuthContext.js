@@ -88,7 +88,14 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             const errorMessage = error.message || 'Registration failed';
             setError(errorMessage);
-            return { success: false, error: errorMessage };
+
+            // Pass along detailed validation errors from backend
+            return {
+                success: false,
+                error: errorMessage,
+                errors: error.errors, // Include validation errors array
+                statusCode: error.statusCode
+            };
         } finally {
             setLoading(false);
         }

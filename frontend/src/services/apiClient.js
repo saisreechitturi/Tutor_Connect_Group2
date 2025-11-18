@@ -62,11 +62,17 @@ class ApiClient {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.message || `HTTP Error: ${response.status}`;
 
+                // Create an error object that preserves the full error data
+                const error = new Error(errorMessage);
+                error.statusCode = response.status;
+                error.errors = errorData.errors; // Preserve validation errors array
+                error.errorData = errorData; // Preserve full error response
+
                 // Handle authentication errors (401) specifically
                 if (response.status === 401) {
                     // For login/auth endpoints, preserve the original error message
                     if (endpoint.includes('/auth/login') || endpoint.includes('/auth/register')) {
-                        throw new Error(errorMessage);
+                        throw error;
                     } else {
                         // For other endpoints, clear token and trigger auth error
                         this.setAuthToken(null);
@@ -75,7 +81,7 @@ class ApiClient {
                     }
                 }
 
-                throw new Error(errorMessage);
+                throw error;
             }
 
             // Return JSON response

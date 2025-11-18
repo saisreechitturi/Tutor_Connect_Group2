@@ -91,8 +91,8 @@ router.get('/', [
 // Create a new session (book a session)
 router.post('/', [
     authenticateToken,
-    body('tutorId').isInt({ min: 1 }),
-    body('subjectId').optional().isInt({ min: 1 }),
+    body('tutorId').isUUID(),
+    body('subjectId').optional().isUUID(),
     body('title').trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
     body('sessionType').isIn(['online', 'in-person']),

@@ -175,6 +175,114 @@ router.get('/:tutorId/slots', [
     });
 }));
 
+// Get availability overview for multiple dates (for calendar highlighting)
+router.get('/:tutorId/overview', [
+    authenticateToken,
+    expressQuery('startDate').isISO8601().withMessage('Start date is required and must be valid'),
+    expressQuery('endDate').isISO8601().withMessage('End date is required and must be valid'),
+    expressQuery('duration').optional().isInt({ min: 15, max: 480 }).withMessage('Duration must be between 15-480 minutes')
+], asyncHandler(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { tutorId } = req.params;
+    const { startDate, endDate, duration = 60 } = req.query;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const dateAvailability = {};
+
+    // Get tutor's recurring availability
+    const availabilitySlots = await query(`
+        SELECT * FROM tutor_availability_slots
+        WHERE tutor_id = $1 
+        AND is_available = true
+        AND is_recurring = true
+        ORDER BY day_of_week, start_time
+    `, [tutorId]);
+
+    // Get existing bookings for the date range
+    const existingBookings = await query(`
+        SELECT DATE(scheduled_start) as session_date, scheduled_start, scheduled_end
+        FROM tutoring_sessions
+        WHERE tutor_id = $1 
+        AND DATE(scheduled_start) BETWEEN $2 AND $3
+        AND status NOT IN ('cancelled', 'rejected')
+        ORDER BY scheduled_start
+    `, [tutorId, startDate, endDate]);
+
+    const bookingsByDate = {};
+    existingBookings.rows.forEach(booking => {
+        const dateKey = booking.session_date.toISOString().split('T')[0];
+        if (!bookingsByDate[dateKey]) {
+            bookingsByDate[dateKey] = [];
+        }
+        bookingsByDate[dateKey].push(booking);
+    });
+
+    // Check each date in the range
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.getDay();
+
+        // Find availability slots for this day of week
+        const daySlots = availabilitySlots.rows.filter(slot => slot.day_of_week === dayOfWeek);
+        let hasAvailability = false;
+        let totalSlots = 0;
+
+        for (const slot of daySlots) {
+            const slotStart = new Date(`${dateStr}T${slot.start_time}`);
+            const slotEnd = new Date(`${dateStr}T${slot.end_time}`);
+            const durationMs = parseInt(duration) * 60 * 1000;
+
+            // Generate time slots for this availability window
+            let currentTime = new Date(slotStart);
+            while (currentTime.getTime() + durationMs <= slotEnd.getTime()) {
+                const slotEndTime = new Date(currentTime.getTime() + durationMs);
+
+                // Check if this time slot conflicts with existing bookings
+                const dateBookings = bookingsByDate[dateStr] || [];
+                const hasConflict = dateBookings.some(booking => {
+                    const bookingStart = new Date(booking.scheduled_start);
+                    const bookingEnd = new Date(booking.scheduled_end);
+                    return !(slotEndTime <= bookingStart || currentTime >= bookingEnd);
+                });
+
+                if (!hasConflict && currentTime > new Date()) {
+                    hasAvailability = true;
+                    totalSlots++;
+                }
+
+                // Move to next 15-minute interval
+                currentTime = new Date(currentTime.getTime() + 15 * 60 * 1000);
+            }
+        }
+
+        dateAvailability[dateStr] = {
+            hasAvailability,
+            totalSlots,
+            dayOfWeek
+        };
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    res.json({
+        tutorId,
+        startDate,
+        endDate,
+        duration: parseInt(duration),
+        dateAvailability
+    });
+}));
+
 // Add/Update recurring availability slot
 router.post('/:tutorId/recurring', [
     authenticateToken,
@@ -513,7 +621,7 @@ router.post('/', [
     }
 
     // Delete existing recurring availability for this tutor
-    await query('DELETE FROM tutor_availability_slots WHERE tutor_id = $1 AND recurring_pattern IS NOT NULL', [tutorId]);
+    await query('DELETE FROM tutor_availability_slots WHERE tutor_id = $1 AND is_recurring = true', [tutorId]);
 
     // Insert new availability slots
     const dayMap = {
@@ -533,9 +641,9 @@ router.post('/', [
             for (const slot of dayData.slots) {
                 await query(`
                     INSERT INTO tutor_availability_slots 
-                    (tutor_id, day_of_week, start_time, end_time, recurring_pattern, is_available)
+                    (tutor_id, day_of_week, start_time, end_time, is_recurring, is_available)
                     VALUES ($1, $2, $3, $4, $5, true)
-                `, [tutorId, dayOfWeek, slot.startTime, slot.endTime, 'weekly']);
+                `, [tutorId, dayOfWeek, slot.startTime, slot.endTime, true]);
             }
         }
     }

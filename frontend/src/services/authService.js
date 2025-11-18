@@ -4,17 +4,30 @@ class AuthService {
     // User registration
     async register(userData) {
         try {
-            const response = await apiClient.post('/auth/register', {
+            // Prepare registration data, only including optional fields if they have values
+            const registrationData = {
                 email: userData.email,
                 password: userData.password,
                 firstName: userData.firstName,
                 lastName: userData.lastName,
                 role: userData.role || 'student',
-                phone: userData.phone,
-                dateOfBirth: userData.dateOfBirth,
-                address: userData.address,
-                pincode: userData.pincode,
-            });
+            };
+
+            // Only include optional fields if they have values
+            if (userData.phone && userData.phone.trim()) {
+                registrationData.phone = userData.phone;
+            }
+            if (userData.dateOfBirth && userData.dateOfBirth.trim()) {
+                registrationData.dateOfBirth = userData.dateOfBirth;
+            }
+            if (userData.address && userData.address.trim()) {
+                registrationData.address = userData.address;
+            }
+            if (userData.pincode && userData.pincode.trim()) {
+                registrationData.pincode = userData.pincode;
+            }
+
+            const response = await apiClient.post('/auth/register', registrationData);
 
             // Store token if registration includes login
             if (response.token) {

@@ -128,10 +128,32 @@ const Signup = () => {
         } else {
             // Provide more specific error messages
             let errorMessage = result.error;
-            if (errorMessage.includes('User already exists')) {
+
+            // Handle validation errors with specific field information
+            if (errorMessage.includes('Validation failed') && result.errors && Array.isArray(result.errors)) {
+                const fieldErrors = result.errors.map(error => {
+                    switch (error.path) {
+                        case 'email':
+                            return 'Please enter a valid email address.';
+                        case 'password':
+                            return 'Password must be at least 8 characters with uppercase, lowercase, and numbers.';
+                        case 'firstName':
+                            return 'First name is required and must be less than 100 characters.';
+                        case 'lastName':
+                            return 'Last name is required and must be less than 100 characters.';
+                        case 'role':
+                            return 'Please select a valid role (Student or Tutor).';
+                        case 'dateOfBirth':
+                            return 'Please enter a valid date of birth.';
+                        case 'address':
+                            return 'Address must be less than 500 characters.';
+                        default:
+                            return error.msg || `${error.path}: ${error.value} is invalid`;
+                    }
+                });
+                errorMessage = fieldErrors.join('. ');
+            } else if (errorMessage.includes('User already exists')) {
                 errorMessage = 'An account with this email address already exists. Please try signing in instead.';
-            } else if (errorMessage.includes('Validation failed')) {
-                errorMessage = 'Please check your information and try again.';
             } else if (errorMessage.includes('email')) {
                 errorMessage = 'Please enter a valid email address.';
             } else if (errorMessage.includes('password')) {

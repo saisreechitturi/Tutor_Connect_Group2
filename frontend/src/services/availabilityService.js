@@ -63,6 +63,36 @@ class AvailabilityService {
     }
 
     /**
+     * Get availability overview for multiple dates (for calendar highlighting)
+     * @param {string} tutorId - The tutor's user ID
+     * @param {object} params - Query parameters (startDate, endDate, duration)
+     * @returns {Promise} Date availability overview
+     */
+    async getAvailabilityOverview(tutorId, params = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            if (params.startDate) {
+                queryParams.append('startDate', params.startDate);
+            }
+            if (params.endDate) {
+                queryParams.append('endDate', params.endDate);
+            }
+            if (params.duration) {
+                queryParams.append('duration', params.duration);
+            }
+
+            const queryString = queryParams.toString();
+            const endpoint = `/availability/${tutorId}/overview${queryString ? `?${queryString}` : ''}`;
+
+            return await apiClient.get(endpoint);
+        } catch (error) {
+            console.error('Error fetching availability overview:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Create new availability slot
      * @param {string} tutorId - The tutor's user ID
      * @param {object} slotData - Slot data (day_of_week, start_time, end_time, etc.)
