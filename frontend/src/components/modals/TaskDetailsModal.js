@@ -6,13 +6,15 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(task?.progress || task?.progressPercentage || 0);
+    const [currentStatus, setCurrentStatus] = useState(task?.status || 'pending');
 
-    // Update progress when task changes
+    // Update progress and status when task changes
     useEffect(() => {
         if (task) {
             setProgress(task.progress || task.progressPercentage || 0);
+            setCurrentStatus(task.status || 'pending');
         }
-    }, [task?.id, task?.progress, task?.progressPercentage]);
+    }, [task?.id, task?.progress, task?.progressPercentage, task?.status]);
 
     if (!isOpen || !task) return null;
 
@@ -21,17 +23,19 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             setLoading(true);
             setError(null);
 
-            const response = await taskService.updateTaskProgress(task.id, newProgress);
-            const updatedTask = response.task || response;
+            await taskService.updateTaskProgress(task.id, newProgress);
 
+            // Update local state
             setProgress(newProgress);
+            const newStatus = newProgress === 100 ? 'completed' : (newProgress > 0 ? 'in-progress' : 'pending');
+            setCurrentStatus(newStatus);
 
             if (onTaskUpdated) {
                 onTaskUpdated({
                     ...task,
                     progress: newProgress,
                     progressPercentage: newProgress,
-                    status: newProgress === 100 ? 'completed' : task.status,
+                    status: newStatus,
                     completedAt: newProgress === 100 ? new Date().toISOString() : task.completedAt
                 });
             }
@@ -52,23 +56,20 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
             let newProgress;
 
             // If clicking "Mark as Complete", always go to completed
-            if (task.status !== 'completed') {
+            if (currentStatus !== 'completed') {
                 newStatus = 'completed';
                 newProgress = 100;
+                await taskService.completeTask(task.id);
             } else {
                 // If already completed, revert to pending
                 newStatus = 'pending';
                 newProgress = 0;
+                await taskService.uncompleteTask(task.id);
             }
 
-            const response = await taskService.updateTask(task.id, {
-                status: newStatus,
-                progress: newProgress,
-                progressPercentage: newProgress
-            });
-
-            const updatedTask = response.task || response;
+            // Update local state immediately
             setProgress(newProgress);
+            setCurrentStatus(newStatus);
 
             if (onTaskUpdated) {
                 onTaskUpdated({
@@ -106,7 +107,7 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
         }
     };
 
-    const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
+    const isOverdue = new Date(task.dueDate) < new Date() && currentStatus !== 'completed';
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -119,8 +120,8 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
                                 {task.priority} priority
                             </span>
-                            <span className={`text-sm font-medium ${getStatusColor(task.status)}`}>
-                                {task.status}
+                            <span className={`text-sm font-medium ${getStatusColor(currentStatus)}`}>
+                                {currentStatus}
                             </span>
                             {isOverdue && (
                                 <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full">
@@ -221,7 +222,7 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                     </div>
 
                     {/* Progress Section */}
-                    {task.status !== 'completed' && (
+                    {currentStatus !== 'completed' && (
                         <div>
                             <h3 className="text-sm font-medium text-gray-900 mb-3">Progress</h3>
                             <div className="space-y-3">
@@ -261,18 +262,20 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                         onClick={handleStatusToggle}
                         disabled={loading}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''
-                            } ${task.status === 'completed'
-                                ? 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                            } ${currentStatus === 'completed'
+                                ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
                                 : 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200'
                             }`}
                     >
-                        {task.status === 'completed' ? (
+                        {loading ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : currentStatus === 'completed' ? (
                             <CheckSquare className="h-4 w-4" />
                         ) : (
                             <Square className="h-4 w-4" />
                         )}
                         <span className="text-sm font-medium">
-                            {task.status === 'completed' ? 'Mark as Incomplete' : 'Mark as Complete'}
+                            {loading ? 'Updating...' : currentStatus === 'completed' ? 'Completed ✓' : 'Mark as Complete'}
                         </span>
                     </button>
 

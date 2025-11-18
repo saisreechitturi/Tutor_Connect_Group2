@@ -149,27 +149,35 @@ const TaskManager = () => {
             const task = userTasks.find(t => t.id === taskId);
             if (!task) return;
 
-            // Optimistically update UI first
-            let updateData = {};
-            if (task.status === 'pending') {
-                updateData.status = 'in-progress';
-            } else if (task.status === 'in-progress') {
-                updateData.status = 'completed';
-                updateData.progress = 100;
-                updateData.progressPercentage = 100;
+            // Determine the new status - directly toggle between pending and completed
+            let newStatus, newProgress;
+            if (task.status === 'completed') {
+                // If completed, mark as pending
+                newStatus = 'pending';
+                newProgress = 0;
             } else {
-                updateData.status = 'pending';
-                updateData.progress = 0;
-                updateData.progressPercentage = 0;
+                // If pending or in-progress, mark as completed
+                newStatus = 'completed';
+                newProgress = 100;
             }
 
-            // Update local state immediately for better UX
-            const updatedTask = { ...task, ...updateData };
+            // Optimistically update UI first
+            const updatedTask = {
+                ...task,
+                status: newStatus,
+                progress: newProgress,
+                progressPercentage: newProgress,
+                completedAt: newStatus === 'completed' ? new Date().toISOString() : null
+            };
             setUserTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
 
-            // Try to update on server
+            // Try to update on server using the appropriate endpoint
             try {
-                await taskService.updateTask(taskId, updateData);
+                if (newStatus === 'completed') {
+                    await taskService.completeTask(taskId);
+                } else {
+                    await taskService.uncompleteTask(taskId);
+                }
                 // Clear any existing errors on success
                 setError(null);
                 setUpdateError(null);

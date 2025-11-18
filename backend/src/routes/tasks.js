@@ -281,6 +281,96 @@ router.put('/:id/progress', [
     });
 }));
 
+// Mark task as complete
+router.put('/:id/complete', authenticateToken, asyncHandler(async (req, res) => {
+    // Check if task exists and belongs to user
+    const existingTask = await query(
+        'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+        [req.params.id, req.user.id]
+    );
+
+    if (existingTask.rows.length === 0) {
+        return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const result = await query(`
+        UPDATE tasks 
+        SET status = 'completed',
+            progress_percentage = 100,
+            completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND user_id = $2
+        RETURNING *
+    `, [req.params.id, req.user.id]);
+
+    const task = result.rows[0];
+
+    res.json({
+        message: 'Task marked as complete',
+        task: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            subject: task.subject,
+            priority: task.priority,
+            status: task.status,
+            progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
+            dueDate: task.due_date,
+            estimatedHours: task.estimated_hours,
+            tags: task.tags,
+            completedAt: task.completed_at,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at
+        }
+    });
+}));
+
+// Mark task as incomplete
+router.put('/:id/incomplete', authenticateToken, asyncHandler(async (req, res) => {
+    // Check if task exists and belongs to user
+    const existingTask = await query(
+        'SELECT id FROM tasks WHERE id = $1 AND user_id = $2',
+        [req.params.id, req.user.id]
+    );
+
+    if (existingTask.rows.length === 0) {
+        return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const result = await query(`
+        UPDATE tasks 
+        SET status = 'pending',
+            progress_percentage = 0,
+            completed_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND user_id = $2
+        RETURNING *
+    `, [req.params.id, req.user.id]);
+
+    const task = result.rows[0];
+
+    res.json({
+        message: 'Task marked as incomplete',
+        task: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            subject: task.subject,
+            priority: task.priority,
+            status: task.status,
+            progress: task.progress_percentage,
+            progressPercentage: task.progress_percentage,
+            dueDate: task.due_date,
+            estimatedHours: task.estimated_hours,
+            tags: task.tags,
+            completedAt: task.completed_at,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at
+        }
+    });
+}));
+
 // Delete task
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
     const result = await query(
