@@ -166,6 +166,17 @@ class TutorService {
             throw error;
         }
     }
+
+    // Get comprehensive tutor dashboard data
+    async getTutorDashboard(tutorId) {
+        try {
+            const response = await apiClient.get(`/tutors/dashboard/${tutorId}`);
+            return response.dashboard || response;
+        } catch (error) {
+            console.error('[TutorService] Get tutor dashboard failed:', error);
+            throw error;
+        }
+    }
 }
 
 // Create and export singleton instance

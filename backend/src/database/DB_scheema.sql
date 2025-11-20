@@ -2,38 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict Aq7SAYRBrjP7p3bxfmIW1qT9u4Ur54ImlQnjxPveRO1sQSn8LZtWr6cvOhJ3zdR
+\restrict S5VemVeQO47Gt13yzeX7gABJTSGA7eyjOYCdDVX7GM4DfsXpt4NJHnmdpDkCCnB
 
 -- Dumped from database version 18.0
 -- Dumped by pg_dump version 18.0
 
--- Started on 2025-11-12 10:21:12
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- TOC entry 5312 (class 1262 OID 16388)
--- Name: TutorConnectTest; Type: DATABASE; Schema: -; Owner: postgres
---
-
-CREATE DATABASE "TutorConnectTest" WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'English_United States.1252';
-
-
-ALTER DATABASE "TutorConnectTest" OWNER TO postgres;
-
-\unrestrict Aq7SAYRBrjP7p3bxfmIW1qT9u4Ur54ImlQnjxPveRO1sQSn8LZtWr6cvOhJ3zdR
-\connect "TutorConnectTest"
-\restrict Aq7SAYRBrjP7p3bxfmIW1qT9u4Ur54ImlQnjxPveRO1sQSn8LZtWr6cvOhJ3zdR
+-- Started on 2025-11-19 20:54:15
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -58,7 +32,7 @@ CREATE SCHEMA public;
 ALTER SCHEMA public OWNER TO pg_database_owner;
 
 --
--- TOC entry 5313 (class 0 OID 0)
+-- TOC entry 5281 (class 0 OID 0)
 -- Dependencies: 5
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: pg_database_owner
 --
@@ -67,46 +41,46 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
--- TOC entry 262 (class 1255 OID 16389)
+-- TOC entry 260 (class 1255 OID 25914)
 -- Name: update_tutor_performance_metrics(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION public.update_tutor_performance_metrics() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN
-    -- This function will be called when sessions are completed
-    IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
-        INSERT INTO tutor_performance_metrics (
-            tutor_id, year, month, total_sessions, completed_sessions, 
-            total_earnings, total_hours
-        )
-        VALUES (
-            NEW.tutor_id,
-            EXTRACT(YEAR FROM NEW.session_date),
-            EXTRACT(MONTH FROM NEW.session_date),
-            1, 1,
-            COALESCE(NEW.payment_amount, 0),
-            NEW.duration_minutes / 60.0
-        )
-        ON CONFLICT (tutor_id, year, month) 
-        DO UPDATE SET
-            total_sessions = tutor_performance_metrics.total_sessions + 1,
-            completed_sessions = tutor_performance_metrics.completed_sessions + 1,
-            total_earnings = tutor_performance_metrics.total_earnings + COALESCE(NEW.payment_amount, 0),
-            total_hours = tutor_performance_metrics.total_hours + (NEW.duration_minutes / 60.0),
-            updated_at = CURRENT_TIMESTAMP;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$;
+        BEGIN
+            -- This function will be called when sessions are completed
+            IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+                INSERT INTO tutor_performance_metrics (
+                    tutor_id, year, month, total_sessions, completed_sessions, 
+                    total_earnings, total_hours
+                )
+                VALUES (
+                    NEW.tutor_id,
+                    EXTRACT(YEAR FROM NEW.scheduled_start),
+                    EXTRACT(MONTH FROM NEW.scheduled_start),
+                    1, 1,
+                    COALESCE(NEW.payment_amount, 0),
+                    NEW.duration_minutes / 60.0
+                )
+                ON CONFLICT (tutor_id, year, month) 
+                DO UPDATE SET
+                    total_sessions = tutor_performance_metrics.total_sessions + 1,
+                    completed_sessions = tutor_performance_metrics.completed_sessions + 1,
+                    total_earnings = tutor_performance_metrics.total_earnings + COALESCE(NEW.payment_amount, 0),
+                    total_hours = tutor_performance_metrics.total_hours + (NEW.duration_minutes / 60.0),
+                    updated_at = CURRENT_TIMESTAMP;
+            END IF;
+            
+            RETURN NEW;
+        END;
+        $$;
 
 
 ALTER FUNCTION public.update_tutor_performance_metrics() OWNER TO postgres;
 
 --
--- TOC entry 263 (class 1255 OID 16390)
+-- TOC entry 259 (class 1255 OID 16390)
 -- Name: update_tutor_profile_stats(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -135,7 +109,7 @@ $$;
 ALTER FUNCTION public.update_tutor_profile_stats() OWNER TO postgres;
 
 --
--- TOC entry 240 (class 1255 OID 16391)
+-- TOC entry 237 (class 1255 OID 16391)
 -- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -156,7 +130,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 229 (class 1259 OID 16700)
+-- TOC entry 228 (class 1259 OID 16700)
 -- Name: messages; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -173,27 +147,7 @@ CREATE TABLE public.messages (
 ALTER TABLE public.messages OWNER TO postgres;
 
 --
--- TOC entry 231 (class 1259 OID 16730)
--- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.notifications (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    type character varying(50) NOT NULL,
-    title character varying(255) NOT NULL,
-    message text NOT NULL,
-    data jsonb,
-    is_read boolean DEFAULT false,
-    is_sent boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.notifications OWNER TO postgres;
-
---
--- TOC entry 234 (class 1259 OID 16781)
+-- TOC entry 231 (class 1259 OID 16781)
 -- Name: password_reset_tokens; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -211,31 +165,31 @@ CREATE TABLE public.password_reset_tokens (
 ALTER TABLE public.password_reset_tokens OWNER TO postgres;
 
 --
--- TOC entry 230 (class 1259 OID 16715)
+-- TOC entry 229 (class 1259 OID 16715)
 -- Name: payments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.payments (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    session_id uuid NOT NULL,
+    session_id uuid,
     payer_id uuid NOT NULL,
     amount numeric(10,2) NOT NULL,
-    payment_method character varying(50) NOT NULL,
-    payment_status character varying(20) DEFAULT 'pending'::character varying,
-    transaction_id character varying(255),
-    processed_at timestamp with time zone,
-    refunded_at timestamp with time zone,
-    refund_amount numeric(10,2),
+    payment_method character varying(50) DEFAULT 'mock'::character varying NOT NULL,
+    status character varying(20) DEFAULT 'completed'::character varying,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT payments_payment_status_check CHECK (((payment_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('refunded'::character varying)::text])))
+    recipient_id uuid,
+    currency character varying(3) DEFAULT 'USD'::character varying,
+    description text DEFAULT 'Mock payment'::text,
+    CONSTRAINT payments_payment_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('refunded'::character varying)::text]))),
+    CONSTRAINT payments_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'completed'::character varying, 'failed'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.payments OWNER TO postgres;
 
 --
--- TOC entry 228 (class 1259 OID 16681)
+-- TOC entry 227 (class 1259 OID 16681)
 -- Name: session_reviews; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -249,6 +203,7 @@ CREATE TABLE public.session_reviews (
     would_recommend boolean,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    reviewee_id uuid NOT NULL,
     CONSTRAINT session_reviews_rating_check CHECK (((rating >= 1) AND (rating <= 5))),
     CONSTRAINT session_reviews_reviewer_type_check CHECK (((reviewer_type)::text = ANY (ARRAY[('student'::character varying)::text, ('tutor'::character varying)::text])))
 );
@@ -257,7 +212,7 @@ CREATE TABLE public.session_reviews (
 ALTER TABLE public.session_reviews OWNER TO postgres;
 
 --
--- TOC entry 233 (class 1259 OID 16762)
+-- TOC entry 230 (class 1259 OID 16762)
 -- Name: settings; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -278,7 +233,7 @@ CREATE TABLE public.settings (
 ALTER TABLE public.settings OWNER TO postgres;
 
 --
--- TOC entry 224 (class 1259 OID 16602)
+-- TOC entry 223 (class 1259 OID 16602)
 -- Name: student_profiles; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -301,7 +256,7 @@ CREATE TABLE public.student_profiles (
 ALTER TABLE public.student_profiles OWNER TO postgres;
 
 --
--- TOC entry 239 (class 1259 OID 16884)
+-- TOC entry 236 (class 1259 OID 16884)
 -- Name: student_progress_tracking; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -330,7 +285,7 @@ CREATE TABLE public.student_progress_tracking (
 ALTER TABLE public.student_progress_tracking OWNER TO postgres;
 
 --
--- TOC entry 223 (class 1259 OID 16587)
+-- TOC entry 222 (class 1259 OID 16587)
 -- Name: subjects; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -348,15 +303,13 @@ CREATE TABLE public.subjects (
 ALTER TABLE public.subjects OWNER TO postgres;
 
 --
--- TOC entry 235 (class 1259 OID 16795)
+-- TOC entry 232 (class 1259 OID 16795)
 -- Name: tasks; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.tasks (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     user_id uuid NOT NULL,
-    tutor_id uuid,
-    subject_id uuid,
     title character varying(255) NOT NULL,
     description text,
     priority character varying(20) DEFAULT 'medium'::character varying,
@@ -364,14 +317,11 @@ CREATE TABLE public.tasks (
     due_date timestamp with time zone,
     completed_at timestamp with time zone,
     estimated_hours numeric(5,2),
-    actual_hours numeric(5,2),
-    difficulty_level character varying(20),
     tags text[],
-    attachments jsonb,
     progress_percentage integer DEFAULT 0,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT tasks_difficulty_level_check CHECK (((difficulty_level)::text = ANY (ARRAY[('easy'::character varying)::text, ('medium'::character varying)::text, ('hard'::character varying)::text]))),
+    subject character varying(100),
     CONSTRAINT tasks_priority_check CHECK (((priority)::text = ANY (ARRAY[('low'::character varying)::text, ('medium'::character varying)::text, ('high'::character varying)::text, ('urgent'::character varying)::text]))),
     CONSTRAINT tasks_progress_percentage_check CHECK (((progress_percentage >= 0) AND (progress_percentage <= 100))),
     CONSTRAINT tasks_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('in_progress'::character varying)::text, ('completed'::character varying)::text, ('cancelled'::character varying)::text])))
@@ -381,7 +331,7 @@ CREATE TABLE public.tasks (
 ALTER TABLE public.tasks OWNER TO postgres;
 
 --
--- TOC entry 236 (class 1259 OID 16815)
+-- TOC entry 233 (class 1259 OID 16815)
 -- Name: tutor_availability_slots; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -392,24 +342,28 @@ CREATE TABLE public.tutor_availability_slots (
     start_time time without time zone NOT NULL,
     end_time time without time zone NOT NULL,
     is_available boolean DEFAULT true,
-    timezone character varying(50) DEFAULT 'UTC'::character varying,
-    recurring_pattern character varying(20) DEFAULT 'weekly'::character varying,
-    effective_from date DEFAULT CURRENT_DATE,
-    effective_until date,
-    break_duration_minutes integer DEFAULT 0,
-    max_sessions_per_slot integer DEFAULT 1,
-    buffer_time_minutes integer DEFAULT 15,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT tutor_availability_slots_day_of_week_check CHECK (((day_of_week >= 0) AND (day_of_week <= 6))),
-    CONSTRAINT tutor_availability_slots_recurring_pattern_check CHECK (((recurring_pattern)::text = ANY (ARRAY[('weekly'::character varying)::text, ('biweekly'::character varying)::text, ('monthly'::character varying)::text])))
+    is_recurring boolean DEFAULT true NOT NULL,
+    specific_date date,
+    CONSTRAINT check_time_range CHECK ((end_time > start_time)),
+    CONSTRAINT tutor_availability_slots_day_of_week_check CHECK (((day_of_week >= 0) AND (day_of_week <= 6)))
 );
 
 
 ALTER TABLE public.tutor_availability_slots OWNER TO postgres;
 
 --
--- TOC entry 237 (class 1259 OID 16837)
+-- TOC entry 5282 (class 0 OID 0)
+-- Dependencies: 233
+-- Name: TABLE tutor_availability_slots; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.tutor_availability_slots IS 'Simplified tutor availability slots - recurring weekly slots by day of week';
+
+
+--
+-- TOC entry 234 (class 1259 OID 16837)
 -- Name: tutor_earnings; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -437,7 +391,7 @@ CREATE TABLE public.tutor_earnings (
 ALTER TABLE public.tutor_earnings OWNER TO postgres;
 
 --
--- TOC entry 238 (class 1259 OID 16857)
+-- TOC entry 235 (class 1259 OID 16857)
 -- Name: tutor_performance_metrics; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -467,7 +421,7 @@ CREATE TABLE public.tutor_performance_metrics (
 ALTER TABLE public.tutor_performance_metrics OWNER TO postgres;
 
 --
--- TOC entry 225 (class 1259 OID 16617)
+-- TOC entry 224 (class 1259 OID 16617)
 -- Name: tutor_profiles; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -488,11 +442,9 @@ CREATE TABLE public.tutor_profiles (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     total_earnings numeric(10,2) DEFAULT 0.00,
-    average_session_duration numeric(5,2) DEFAULT 0.00,
-    cancellation_rate integer DEFAULT 0,
-    response_rate numeric(5,2) DEFAULT 100.00,
     weekly_availability_hours numeric(5,2) DEFAULT 0.00,
     monthly_earnings numeric(10,2) DEFAULT 0.00,
+    is_available_now boolean DEFAULT true,
     CONSTRAINT tutor_profiles_preferred_teaching_method_check CHECK (((preferred_teaching_method)::text = ANY (ARRAY[('online'::character varying)::text, ('in_person'::character varying)::text, ('both'::character varying)::text]))),
     CONSTRAINT tutor_profiles_rating_check CHECK (((rating >= (0)::numeric) AND (rating <= (5)::numeric)))
 );
@@ -528,7 +480,7 @@ CREATE VIEW public.tutor_search_view AS
 ALTER VIEW public.tutor_search_view OWNER TO postgres;
 
 --
--- TOC entry 226 (class 1259 OID 16645)
+-- TOC entry 225 (class 1259 OID 16645)
 -- Name: tutor_subjects; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -546,7 +498,7 @@ CREATE TABLE public.tutor_subjects (
 ALTER TABLE public.tutor_subjects OWNER TO postgres;
 
 --
--- TOC entry 227 (class 1259 OID 16658)
+-- TOC entry 226 (class 1259 OID 16658)
 -- Name: tutoring_sessions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -584,45 +536,6 @@ CREATE TABLE public.tutoring_sessions (
 ALTER TABLE public.tutoring_sessions OWNER TO postgres;
 
 --
--- TOC entry 222 (class 1259 OID 16569)
--- Name: user_addresses; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.user_addresses (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    address_line1 character varying(255) NOT NULL,
-    address_line2 character varying(255),
-    city character varying(100) NOT NULL,
-    state character varying(100) NOT NULL,
-    postal_code character varying(20) NOT NULL,
-    country character varying(100) NOT NULL,
-    is_primary boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.user_addresses OWNER TO postgres;
-
---
--- TOC entry 232 (class 1259 OID 16746)
--- Name: user_preferences; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.user_preferences (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    user_id uuid NOT NULL,
-    preference_key character varying(100) NOT NULL,
-    preference_value text NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.user_preferences OWNER TO postgres;
-
---
 -- TOC entry 221 (class 1259 OID 16548)
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -642,6 +555,8 @@ CREATE TABLE public.users (
     is_active boolean DEFAULT true,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    address text,
+    pincode character varying(20),
     CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('student'::character varying)::text, ('tutor'::character varying)::text, ('admin'::character varying)::text])))
 );
 
@@ -649,7 +564,25 @@ CREATE TABLE public.users (
 ALTER TABLE public.users OWNER TO postgres;
 
 --
--- TOC entry 5099 (class 2606 OID 16714)
+-- TOC entry 5283 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: COLUMN users.date_of_birth; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.date_of_birth IS 'User date of birth for age verification and demographics';
+
+
+--
+-- TOC entry 5284 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: COLUMN users.pincode; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.pincode IS 'Postal/ZIP code for user address - for future use';
+
+
+--
+-- TOC entry 5074 (class 2606 OID 16714)
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -658,16 +591,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 5103 (class 2606 OID 16745)
--- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 5113 (class 2606 OID 16792)
+-- TOC entry 5083 (class 2606 OID 16792)
 -- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -676,7 +600,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 5115 (class 2606 OID 16794)
+-- TOC entry 5085 (class 2606 OID 16794)
 -- Name: password_reset_tokens password_reset_tokens_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -685,7 +609,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 5117 (class 2606 OID 17548)
+-- TOC entry 5087 (class 2606 OID 17548)
 -- Name: password_reset_tokens password_reset_tokens_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -694,7 +618,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 5101 (class 2606 OID 16729)
+-- TOC entry 5077 (class 2606 OID 16729)
 -- Name: payments payments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -703,7 +627,7 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- TOC entry 5095 (class 2606 OID 16697)
+-- TOC entry 5066 (class 2606 OID 16697)
 -- Name: session_reviews session_reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -712,7 +636,7 @@ ALTER TABLE ONLY public.session_reviews
 
 
 --
--- TOC entry 5097 (class 2606 OID 16699)
+-- TOC entry 5068 (class 2606 OID 16699)
 -- Name: session_reviews session_reviews_session_id_reviewer_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -721,7 +645,7 @@ ALTER TABLE ONLY public.session_reviews
 
 
 --
--- TOC entry 5109 (class 2606 OID 16780)
+-- TOC entry 5079 (class 2606 OID 16780)
 -- Name: settings settings_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -730,7 +654,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 5111 (class 2606 OID 16778)
+-- TOC entry 5081 (class 2606 OID 16778)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -739,7 +663,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 5081 (class 2606 OID 16614)
+-- TOC entry 5051 (class 2606 OID 16614)
 -- Name: student_profiles student_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -748,7 +672,7 @@ ALTER TABLE ONLY public.student_profiles
 
 
 --
--- TOC entry 5083 (class 2606 OID 16616)
+-- TOC entry 5053 (class 2606 OID 16616)
 -- Name: student_profiles student_profiles_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -757,7 +681,7 @@ ALTER TABLE ONLY public.student_profiles
 
 
 --
--- TOC entry 5129 (class 2606 OID 16901)
+-- TOC entry 5101 (class 2606 OID 16901)
 -- Name: student_progress_tracking student_progress_tracking_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -766,7 +690,7 @@ ALTER TABLE ONLY public.student_progress_tracking
 
 
 --
--- TOC entry 5077 (class 2606 OID 16601)
+-- TOC entry 5047 (class 2606 OID 16601)
 -- Name: subjects subjects_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -775,7 +699,7 @@ ALTER TABLE ONLY public.subjects
 
 
 --
--- TOC entry 5079 (class 2606 OID 16599)
+-- TOC entry 5049 (class 2606 OID 16599)
 -- Name: subjects subjects_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -784,7 +708,7 @@ ALTER TABLE ONLY public.subjects
 
 
 --
--- TOC entry 5119 (class 2606 OID 16814)
+-- TOC entry 5089 (class 2606 OID 16814)
 -- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -793,7 +717,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- TOC entry 5121 (class 2606 OID 16836)
+-- TOC entry 5093 (class 2606 OID 16836)
 -- Name: tutor_availability_slots tutor_availability_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -802,7 +726,7 @@ ALTER TABLE ONLY public.tutor_availability_slots
 
 
 --
--- TOC entry 5123 (class 2606 OID 16856)
+-- TOC entry 5095 (class 2606 OID 16856)
 -- Name: tutor_earnings tutor_earnings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -811,7 +735,7 @@ ALTER TABLE ONLY public.tutor_earnings
 
 
 --
--- TOC entry 5125 (class 2606 OID 16881)
+-- TOC entry 5097 (class 2606 OID 16881)
 -- Name: tutor_performance_metrics tutor_performance_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -820,7 +744,7 @@ ALTER TABLE ONLY public.tutor_performance_metrics
 
 
 --
--- TOC entry 5127 (class 2606 OID 16883)
+-- TOC entry 5099 (class 2606 OID 16883)
 -- Name: tutor_performance_metrics tutor_performance_metrics_tutor_id_year_month_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -829,7 +753,7 @@ ALTER TABLE ONLY public.tutor_performance_metrics
 
 
 --
--- TOC entry 5085 (class 2606 OID 16642)
+-- TOC entry 5055 (class 2606 OID 16642)
 -- Name: tutor_profiles tutor_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -838,7 +762,7 @@ ALTER TABLE ONLY public.tutor_profiles
 
 
 --
--- TOC entry 5087 (class 2606 OID 16644)
+-- TOC entry 5057 (class 2606 OID 16644)
 -- Name: tutor_profiles tutor_profiles_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -847,7 +771,7 @@ ALTER TABLE ONLY public.tutor_profiles
 
 
 --
--- TOC entry 5089 (class 2606 OID 16655)
+-- TOC entry 5060 (class 2606 OID 16655)
 -- Name: tutor_subjects tutor_subjects_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -856,7 +780,7 @@ ALTER TABLE ONLY public.tutor_subjects
 
 
 --
--- TOC entry 5091 (class 2606 OID 16657)
+-- TOC entry 5062 (class 2606 OID 16657)
 -- Name: tutor_subjects tutor_subjects_tutor_id_subject_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -865,7 +789,7 @@ ALTER TABLE ONLY public.tutor_subjects
 
 
 --
--- TOC entry 5093 (class 2606 OID 16680)
+-- TOC entry 5064 (class 2606 OID 16680)
 -- Name: tutoring_sessions tutoring_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -874,34 +798,16 @@ ALTER TABLE ONLY public.tutoring_sessions
 
 
 --
--- TOC entry 5075 (class 2606 OID 16586)
--- Name: user_addresses user_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- TOC entry 5070 (class 2606 OID 25923)
+-- Name: session_reviews unique_session_reviewer; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.user_addresses
-    ADD CONSTRAINT user_addresses_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 5105 (class 2606 OID 16759)
--- Name: user_preferences user_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.user_preferences
-    ADD CONSTRAINT user_preferences_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.session_reviews
+    ADD CONSTRAINT unique_session_reviewer UNIQUE (session_id, reviewer_id);
 
 
 --
--- TOC entry 5107 (class 2606 OID 16761)
--- Name: user_preferences user_preferences_user_id_preference_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.user_preferences
-    ADD CONSTRAINT user_preferences_user_id_preference_key_key UNIQUE (user_id, preference_key);
-
-
---
--- TOC entry 5071 (class 2606 OID 16568)
+-- TOC entry 5043 (class 2606 OID 16568)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -910,7 +816,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5073 (class 2606 OID 16566)
+-- TOC entry 5045 (class 2606 OID 16566)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -919,7 +825,55 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5157 (class 2620 OID 17037)
+-- TOC entry 5071 (class 1259 OID 25897)
+-- Name: idx_messages_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_messages_created_at ON public.messages USING btree (created_at DESC);
+
+
+--
+-- TOC entry 5072 (class 1259 OID 25911)
+-- Name: idx_messages_pair_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_messages_pair_created_at ON public.messages USING btree (sender_id, recipient_id, created_at DESC);
+
+
+--
+-- TOC entry 5075 (class 1259 OID 25898)
+-- Name: idx_payments_payer_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payments_payer_created ON public.payments USING btree (payer_id, created_at DESC);
+
+
+--
+-- TOC entry 5090 (class 1259 OID 25912)
+-- Name: idx_tutor_availability_specific_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tutor_availability_specific_date ON public.tutor_availability_slots USING btree (tutor_id, specific_date);
+
+
+--
+-- TOC entry 5091 (class 1259 OID 17708)
+-- Name: idx_tutor_availability_tutor_day; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tutor_availability_tutor_day ON public.tutor_availability_slots USING btree (tutor_id, day_of_week);
+
+
+--
+-- TOC entry 5058 (class 1259 OID 17710)
+-- Name: idx_tutor_subjects_tutor; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tutor_subjects_tutor ON public.tutor_subjects USING btree (tutor_id);
+
+
+--
+-- TOC entry 5126 (class 2620 OID 25915)
 -- Name: tutoring_sessions update_tutor_performance_trigger; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -927,7 +881,7 @@ CREATE TRIGGER update_tutor_performance_trigger AFTER UPDATE ON public.tutoring_
 
 
 --
--- TOC entry 5158 (class 2620 OID 17038)
+-- TOC entry 5127 (class 2620 OID 17038)
 -- Name: tutoring_sessions update_tutor_profile_stats_trigger; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -935,7 +889,16 @@ CREATE TRIGGER update_tutor_profile_stats_trigger AFTER UPDATE ON public.tutorin
 
 
 --
--- TOC entry 5140 (class 2606 OID 16957)
+-- TOC entry 5114 (class 2606 OID 25905)
+-- Name: payments fk_payments_recipient; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.payments
+    ADD CONSTRAINT fk_payments_recipient FOREIGN KEY (recipient_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5112 (class 2606 OID 16957)
 -- Name: messages messages_recipient_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -944,7 +907,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 5141 (class 2606 OID 16952)
+-- TOC entry 5113 (class 2606 OID 16952)
 -- Name: messages messages_sender_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -953,16 +916,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 5144 (class 2606 OID 16972)
--- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.notifications
-    ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 5146 (class 2606 OID 16982)
+-- TOC entry 5117 (class 2606 OID 16982)
 -- Name: password_reset_tokens password_reset_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -971,7 +925,7 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
--- TOC entry 5142 (class 2606 OID 16967)
+-- TOC entry 5115 (class 2606 OID 16967)
 -- Name: payments payments_payer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -980,7 +934,7 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- TOC entry 5143 (class 2606 OID 16962)
+-- TOC entry 5116 (class 2606 OID 16962)
 -- Name: payments payments_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -989,7 +943,16 @@ ALTER TABLE ONLY public.payments
 
 
 --
--- TOC entry 5138 (class 2606 OID 16947)
+-- TOC entry 5109 (class 2606 OID 25916)
+-- Name: session_reviews session_reviews_reviewee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.session_reviews
+    ADD CONSTRAINT session_reviews_reviewee_id_fkey FOREIGN KEY (reviewee_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5110 (class 2606 OID 16947)
 -- Name: session_reviews session_reviews_reviewer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -998,7 +961,7 @@ ALTER TABLE ONLY public.session_reviews
 
 
 --
--- TOC entry 5139 (class 2606 OID 16942)
+-- TOC entry 5111 (class 2606 OID 16942)
 -- Name: session_reviews session_reviews_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1007,7 +970,7 @@ ALTER TABLE ONLY public.session_reviews
 
 
 --
--- TOC entry 5131 (class 2606 OID 16907)
+-- TOC entry 5102 (class 2606 OID 16907)
 -- Name: student_profiles student_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1016,7 +979,7 @@ ALTER TABLE ONLY public.student_profiles
 
 
 --
--- TOC entry 5154 (class 2606 OID 17022)
+-- TOC entry 5123 (class 2606 OID 17022)
 -- Name: student_progress_tracking student_progress_tracking_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1025,7 +988,7 @@ ALTER TABLE ONLY public.student_progress_tracking
 
 
 --
--- TOC entry 5155 (class 2606 OID 17027)
+-- TOC entry 5124 (class 2606 OID 17027)
 -- Name: student_progress_tracking student_progress_tracking_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1034,7 +997,7 @@ ALTER TABLE ONLY public.student_progress_tracking
 
 
 --
--- TOC entry 5156 (class 2606 OID 17032)
+-- TOC entry 5125 (class 2606 OID 17032)
 -- Name: student_progress_tracking student_progress_tracking_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1043,25 +1006,7 @@ ALTER TABLE ONLY public.student_progress_tracking
 
 
 --
--- TOC entry 5147 (class 2606 OID 16997)
--- Name: tasks tasks_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE SET NULL;
-
-
---
--- TOC entry 5148 (class 2606 OID 16992)
--- Name: tasks tasks_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.tasks
-    ADD CONSTRAINT tasks_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- TOC entry 5149 (class 2606 OID 16987)
+-- TOC entry 5118 (class 2606 OID 16987)
 -- Name: tasks tasks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1070,7 +1015,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- TOC entry 5150 (class 2606 OID 17002)
+-- TOC entry 5119 (class 2606 OID 17002)
 -- Name: tutor_availability_slots tutor_availability_slots_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1079,7 +1024,7 @@ ALTER TABLE ONLY public.tutor_availability_slots
 
 
 --
--- TOC entry 5151 (class 2606 OID 17012)
+-- TOC entry 5120 (class 2606 OID 17012)
 -- Name: tutor_earnings tutor_earnings_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1088,7 +1033,7 @@ ALTER TABLE ONLY public.tutor_earnings
 
 
 --
--- TOC entry 5152 (class 2606 OID 17007)
+-- TOC entry 5121 (class 2606 OID 17007)
 -- Name: tutor_earnings tutor_earnings_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1097,7 +1042,7 @@ ALTER TABLE ONLY public.tutor_earnings
 
 
 --
--- TOC entry 5153 (class 2606 OID 17017)
+-- TOC entry 5122 (class 2606 OID 17017)
 -- Name: tutor_performance_metrics tutor_performance_metrics_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1106,7 +1051,7 @@ ALTER TABLE ONLY public.tutor_performance_metrics
 
 
 --
--- TOC entry 5132 (class 2606 OID 16912)
+-- TOC entry 5103 (class 2606 OID 16912)
 -- Name: tutor_profiles tutor_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1115,7 +1060,7 @@ ALTER TABLE ONLY public.tutor_profiles
 
 
 --
--- TOC entry 5133 (class 2606 OID 16922)
+-- TOC entry 5104 (class 2606 OID 16922)
 -- Name: tutor_subjects tutor_subjects_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1124,7 +1069,7 @@ ALTER TABLE ONLY public.tutor_subjects
 
 
 --
--- TOC entry 5134 (class 2606 OID 16917)
+-- TOC entry 5105 (class 2606 OID 16917)
 -- Name: tutor_subjects tutor_subjects_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1133,7 +1078,7 @@ ALTER TABLE ONLY public.tutor_subjects
 
 
 --
--- TOC entry 5135 (class 2606 OID 16927)
+-- TOC entry 5106 (class 2606 OID 16927)
 -- Name: tutoring_sessions tutoring_sessions_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1142,7 +1087,7 @@ ALTER TABLE ONLY public.tutoring_sessions
 
 
 --
--- TOC entry 5136 (class 2606 OID 16937)
+-- TOC entry 5107 (class 2606 OID 16937)
 -- Name: tutoring_sessions tutoring_sessions_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1151,7 +1096,7 @@ ALTER TABLE ONLY public.tutoring_sessions
 
 
 --
--- TOC entry 5137 (class 2606 OID 16932)
+-- TOC entry 5108 (class 2606 OID 16932)
 -- Name: tutoring_sessions tutoring_sessions_tutor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1159,29 +1104,11 @@ ALTER TABLE ONLY public.tutoring_sessions
     ADD CONSTRAINT tutoring_sessions_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
---
--- TOC entry 5130 (class 2606 OID 16902)
--- Name: user_addresses user_addresses_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.user_addresses
-    ADD CONSTRAINT user_addresses_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 5145 (class 2606 OID 16977)
--- Name: user_preferences user_preferences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.user_preferences
-    ADD CONSTRAINT user_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
--- Completed on 2025-11-12 10:21:12
+-- Completed on 2025-11-19 20:54:15
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Aq7SAYRBrjP7p3bxfmIW1qT9u4Ur54ImlQnjxPveRO1sQSn8LZtWr6cvOhJ3zdR
+\unrestrict S5VemVeQO47Gt13yzeX7gABJTSGA7eyjOYCdDVX7GM4DfsXpt4NJHnmdpDkCCnB
 

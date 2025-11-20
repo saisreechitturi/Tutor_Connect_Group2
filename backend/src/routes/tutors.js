@@ -502,4 +502,193 @@ router.post('/subjects', [
     res.json({ message: 'Subjects updated successfully' });
 }));
 
+// Get comprehensive tutor dashboard data
+router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+
+    // Check authorization - only the tutor themselves or admin can access
+    if (req.user.role !== 'admin' && req.user.id !== tutorId) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Verify tutor exists
+    const tutorCheck = await query('SELECT id FROM users WHERE id = $1 AND role = $2', [tutorId, 'tutor']);
+    if (tutorCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor not found' });
+    }
+
+    try {
+        // Get active students count (students with recent sessions)
+        const activeStudentsResult = await query(`
+            SELECT COUNT(DISTINCT student_id) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND scheduled_start >= NOW() - INTERVAL '30 days'
+        `, [tutorId]);
+
+        // Get upcoming sessions this week
+        const upcomingSessionsResult = await query(`
+            SELECT COUNT(*) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND status = 'scheduled'
+            AND scheduled_start >= NOW()
+            AND scheduled_start <= NOW() + INTERVAL '7 days'
+        `, [tutorId]);
+
+        // Get current month earnings
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        
+        const monthlyEarningsResult = await query(`
+            SELECT COALESCE(SUM(payment_amount), 0) as total
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND status = 'completed'
+            AND EXTRACT(MONTH FROM scheduled_start) = $2
+            AND EXTRACT(YEAR FROM scheduled_start) = $3
+        `, [tutorId, currentMonth, currentYear]);
+
+        // Get recent sessions for activity feed
+        const recentSessionsResult = await query(`
+            SELECT ts.id, ts.title, ts.scheduled_start, ts.status, ts.payment_amount,
+                   u.first_name as student_first_name, u.last_name as student_last_name,
+                   s.name as subject_name
+            FROM tutoring_sessions ts
+            JOIN users u ON ts.student_id = u.id
+            JOIN subjects s ON ts.subject_id = s.id
+            WHERE ts.tutor_id = $1
+            ORDER BY ts.scheduled_start DESC
+            LIMIT 10
+        `, [tutorId]);
+
+        // Get performance metrics for current month
+        const performanceResult = await query(`
+            SELECT total_sessions, completed_sessions, cancelled_sessions,
+                   total_earnings, total_hours, average_rating, total_reviews
+            FROM tutor_performance_metrics
+            WHERE tutor_id = $1 AND year = $2 AND month = $3
+        `, [tutorId, currentYear, currentMonth]);
+
+        // Get overall tutor profile stats
+        const profileStatsResult = await query(`
+            SELECT tp.rating, tp.total_sessions, tp.total_students,
+                   tp.hourly_rate, tp.total_earnings, tp.monthly_earnings
+            FROM tutor_profiles tp
+            WHERE tp.user_id = $1
+        `, [tutorId]);
+
+        // Get next upcoming session
+        const nextSessionResult = await query(`
+            SELECT ts.id, ts.title, ts.scheduled_start, ts.scheduled_end,
+                   u.first_name as student_first_name, u.last_name as student_last_name,
+                   s.name as subject_name
+            FROM tutoring_sessions ts
+            JOIN users u ON ts.student_id = u.id
+            JOIN subjects s ON ts.subject_id = s.id
+            WHERE ts.tutor_id = $1 AND ts.status = 'scheduled'
+            AND ts.scheduled_start > NOW()
+            ORDER BY ts.scheduled_start ASC
+            LIMIT 1
+        `, [tutorId]);
+
+        // Get recent student reviews
+        const recentReviewsResult = await query(`
+            SELECT sr.rating, sr.comment, sr.created_at,
+                   u.first_name as student_first_name, u.last_name as student_last_name,
+                   s.name as subject_name
+            FROM session_reviews sr
+            JOIN tutoring_sessions ts ON sr.session_id = ts.id
+            JOIN users u ON sr.reviewer_id = u.id
+            JOIN subjects s ON ts.subject_id = s.id
+            WHERE sr.reviewee_id = $1 AND sr.reviewer_type = 'student'
+            ORDER BY sr.created_at DESC
+            LIMIT 5
+        `, [tutorId]);
+
+        // Prepare dashboard data
+        const activeStudents = parseInt(activeStudentsResult.rows[0]?.count) || 0;
+        const upcomingSessions = parseInt(upcomingSessionsResult.rows[0]?.count) || 0;
+        const monthlyEarnings = parseFloat(monthlyEarningsResult.rows[0]?.total) || 0;
+        
+        const performance = performanceResult.rows[0] || {
+            total_sessions: 0,
+            completed_sessions: 0,
+            cancelled_sessions: 0,
+            total_earnings: 0,
+            total_hours: 0,
+            average_rating: 0,
+            total_reviews: 0
+        };
+
+        const profileStats = profileStatsResult.rows[0] || {
+            rating: 0,
+            total_sessions: 0,
+            total_students: 0,
+            hourly_rate: 0,
+            total_earnings: 0,
+            monthly_earnings: 0
+        };
+
+        const recentActivity = recentSessionsResult.rows.map(row => ({
+            id: row.id,
+            type: 'session',
+            title: row.title,
+            student: `${row.student_first_name} ${row.student_last_name}`,
+            subject: row.subject_name,
+            date: row.scheduled_start,
+            status: row.status,
+            amount: row.payment_amount
+        }));
+
+        const nextSession = nextSessionResult.rows[0] ? {
+            id: nextSessionResult.rows[0].id,
+            title: nextSessionResult.rows[0].title,
+            student: `${nextSessionResult.rows[0].student_first_name} ${nextSessionResult.rows[0].student_last_name}`,
+            subject: nextSessionResult.rows[0].subject_name,
+            scheduledStart: nextSessionResult.rows[0].scheduled_start,
+            scheduledEnd: nextSessionResult.rows[0].scheduled_end
+        } : null;
+
+        const recentReviews = recentReviewsResult.rows.map(row => ({
+            rating: row.rating,
+            comment: row.comment,
+            student: `${row.student_first_name} ${row.student_last_name}`,
+            subject: row.subject_name,
+            date: row.created_at
+        }));
+
+        const dashboardData = {
+            stats: {
+                activeStudents,
+                upcomingSessions,
+                monthlyEarnings: monthlyEarnings.toFixed(2),
+                overallRating: parseFloat(profileStats.rating) || 0,
+                totalSessions: parseInt(profileStats.total_sessions) || 0,
+                hourlyRate: parseFloat(profileStats.hourly_rate) || 0
+            },
+            performance: {
+                thisMonth: {
+                    totalSessions: parseInt(performance.total_sessions) || 0,
+                    completedSessions: parseInt(performance.completed_sessions) || 0,
+                    cancelledSessions: parseInt(performance.cancelled_sessions) || 0,
+                    totalEarnings: parseFloat(performance.total_earnings) || 0,
+                    totalHours: parseFloat(performance.total_hours) || 0,
+                    averageRating: parseFloat(performance.average_rating) || 0,
+                    totalReviews: parseInt(performance.total_reviews) || 0
+                }
+            },
+            recentActivity,
+            nextSession,
+            recentReviews
+        };
+
+        res.json({ dashboard: dashboardData });
+
+    } catch (error) {
+        logger.error('Error fetching tutor dashboard data:', error);
+        res.status(500).json({ message: 'Failed to fetch dashboard data' });
+    }
+}));
+
 module.exports = router;
