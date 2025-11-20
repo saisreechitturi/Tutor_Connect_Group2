@@ -172,7 +172,7 @@ class TutorService {
         try {
             const queryParams = new URLSearchParams();
             if (options.period) queryParams.append('period', options.period);
-            
+
             const endpoint = `/tutors/analytics/${tutorId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
             const response = await apiClient.get(endpoint);
             return response.analytics || response;

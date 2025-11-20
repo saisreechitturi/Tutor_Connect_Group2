@@ -22,11 +22,11 @@ const TutorAnalytics = () => {
             try {
                 setLoading(true);
                 setError(null);
-                
+
                 const data = await tutorService.getTutorAnalytics(user.id, {
                     period: timeRange
                 });
-                
+
                 setAnalyticsData(data);
             } catch (err) {
                 console.error('Error fetching analytics:', err);
@@ -48,7 +48,7 @@ const TutorAnalytics = () => {
 
     const handleRefresh = async () => {
         if (!user?.id) return;
-        
+
         try {
             setLoading(true);
             await tutorService.refreshStatistics(user.id);
@@ -80,7 +80,7 @@ const TutorAnalytics = () => {
             <div className="max-w-7xl mx-auto p-6 space-y-6">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                     <p className="text-red-800">{error}</p>
-                    <button 
+                    <button
                         onClick={handleRefresh}
                         className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
                     >
@@ -263,11 +263,10 @@ const TutorAnalytics = () => {
                                         <p className="font-medium text-gray-900">
                                             {formatCurrency(session.amount)}
                                         </p>
-                                        <p className={`text-xs px-2 py-1 rounded-full ${
-                                            session.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                            session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 
-                                            'bg-gray-100 text-gray-800'
-                                        }`}>
+                                        <p className={`text-xs px-2 py-1 rounded-full ${session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                            }`}>
                                             {session.status}
                                         </p>
                                     </div>
