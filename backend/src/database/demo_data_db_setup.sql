@@ -494,17 +494,17 @@ INSERT INTO subjects (id, name, description, category, is_active) VALUES
 -- Insert Users (1 Admin, 2 Tutors, 2 Students)
 INSERT INTO users (id, email, password_hash, first_name, last_name, phone, date_of_birth, role, bio, email_verified, is_active, address, pincode) VALUES
 -- Admin Account
-('550e8400-e29b-41d4-a716-446655440100', 'admin@tutorconnect.com', '$2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS', 'Sarah', 'Johnson', '+1-555-0101', '1985-03-15', 'admin', 'Platform administrator with 8+ years experience in educational technology and student success.', true, true, '123 Admin Street, Tech City, CA', '90210'),
+('550e8400-e29b-41d4-a716-446655440100', 'admin@demo.com', '$2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa', 'Sarah', 'Johnson', '+1-555-0101', '1985-03-15', 'admin', 'Platform administrator with 8+ years experience in educational technology and student success.', true, true, '123 Admin Street, Tech City, CA', '90210'),
 
 -- Tutor Accounts
-('550e8400-e29b-41d4-a716-446655440101', 'john.smith@email.com', '$2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS', 'John', 'Smith', '+1-555-0102', '1988-07-22', 'tutor', 'Experienced mathematics and physics tutor with PhD in Applied Mathematics. Passionate about helping students understand complex concepts through practical examples.', true, true, '456 Tutor Lane, Education City, NY', '10001'),
+('550e8400-e29b-41d4-a716-446655440101', 't1@demo.com', '$2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa', 'John', 'Smith', '+1-555-0102', '1988-07-22', 'tutor', 'Experienced mathematics and physics tutor with PhD in Applied Mathematics. Passionate about helping students understand complex concepts through practical examples.', true, true, '456 Tutor Lane, Education City, NY', '10001'),
 
-('550e8400-e29b-41d4-a716-446655440102', 'emily.davis@email.com', '$2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS', 'Emily', 'Davis', '+1-555-0103', '1990-11-08', 'tutor', 'Computer Science and English Literature tutor with 6 years of teaching experience. Specializes in programming fundamentals and creative writing.', true, true, '789 Knowledge Ave, Study Town, TX', '75001'),
+('550e8400-e29b-41d4-a716-446655440102', 't2@demo.com', '$2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa', 'Emily', 'Davis', '+1-555-0103', '1990-11-08', 'tutor', 'Computer Science and English Literature tutor with 6 years of teaching experience. Specializes in programming fundamentals and creative writing.', true, true, '789 Knowledge Ave, Study Town, TX', '75001'),
 
 -- Student Accounts
-('550e8400-e29b-41d4-a716-446655440201', 'alex.wilson@email.com', '$2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS', 'Alex', 'Wilson', '+1-555-0201', '2005-09-12', 'student', 'High school junior interested in STEM fields, particularly mathematics and computer science. Goal is to pursue engineering in college.', true, true, '321 Student St, Learning City, FL', '33101'),
+('550e8400-e29b-41d4-a716-446655440201', 's1@demo.com', '$2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa', 'Alex', 'Wilson', '+1-555-0201', '2005-09-12', 'student', 'High school junior interested in STEM fields, particularly mathematics and computer science. Goal is to pursue engineering in college.', true, true, '321 Student St, Learning City, FL', '33101'),
 
-('550e8400-e29b-41d4-a716-446655440202', 'sophia.brown@email.com', '$2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS', 'Sophia', 'Brown', '+1-555-0202', '2006-04-25', 'student', 'High school sophomore focusing on literature and languages. Enjoys creative writing and plans to study journalism or communications.', true, true, '654 Learner Blvd, Study Valley, WA', '98101');
+('550e8400-e29b-41d4-a716-446655440202', 's2@demo.com', '$2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa', 'Sophia', 'Brown', '+1-555-0202', '2006-04-25', 'student', 'High school sophomore focusing on literature and languages. Enjoys creative writing and plans to study journalism or communications.', true, true, '654 Learner Blvd, Study Valley, WA', '98101');
 
 -- Insert Student Profiles
 INSERT INTO student_profiles (id, user_id, grade_level, school_name, learning_goals, preferred_learning_style, subjects_of_interest, availability_schedule, emergency_contact) VALUES
@@ -715,8 +715,13 @@ INSERT INTO settings (id, key, value, description, category, data_type, is_publi
 -- • Comprehensive tutor availability schedules
 -- • Student progress tracking with detailed assessments
 --
--- All demo accounts use password: demo123
--- (Password hash: $2b$10$rQZ2qE1jZwNc5pP4wN8PzeHqJkXvL1yR5tN7mP9fG8hK2lQ3vE6wS)
+-- All demo accounts use password: Demo1234
+-- (Password hash: $2b$12$zqR4dOeTuvEAWvrfoUDvj.VYU7ecBuI5Wy2FYbH09QJ.jh/0akYYa)
+--
+-- DEMO ACCOUNT EMAILS:
+-- Admin: admin@demo.com
+-- Tutors: t1@demo.com, t2@demo.com
+-- Students: s1@demo.com, s2@demo.com
 --
 -- =========================================
 
