@@ -2,13 +2,15 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import TutorDashboard from '../components/dashboard/TutorDashboard';
-import TutorMessages from '../pages/TutorMessages';
-import TutorCalendar from '../pages/TutorCalendar';
 import TutorStudents from '../pages/TutorStudents';
 import TutorAnalytics from '../pages/TutorAnalytics';
 import TutorAvailability from '../pages/TutorAvailability';
 import TutorSettings from '../pages/TutorSettings';
-import TutorTasks from '../pages/TutorTasks';
+// Use the same working components that students use
+import TaskManager from '../components/ui/TaskManager';
+import Calendar from '../components/ui/Calendar';
+import Messages from '../components/ui/Messages';
+import MySessions from '../components/ui/MySessions';
 
 const TutorRoutes = () => {
     return (
@@ -16,12 +18,12 @@ const TutorRoutes = () => {
             <Routes>
                 <Route index element={<TutorDashboard />} />
                 <Route path="students" element={<TutorStudents />} />
-                <Route path="sessions" element={<TutorStudents />} />
+                <Route path="sessions" element={<MySessions />} />
                 <Route path="analytics" element={<TutorAnalytics />} />
                 <Route path="availability" element={<TutorAvailability />} />
-                <Route path="tasks" element={<TutorTasks />} />
-                <Route path="calendar" element={<TutorCalendar />} />
-                <Route path="messages" element={<TutorMessages />} />
+                <Route path="tasks" element={<TaskManager />} />
+                <Route path="calendar" element={<Calendar />} />
+                <Route path="messages" element={<Messages />} />
                 <Route path="settings" element={<TutorSettings />} />
             </Routes>
         </DashboardLayout>

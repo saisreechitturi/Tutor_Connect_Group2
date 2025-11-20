@@ -9,12 +9,23 @@ const TutorDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const refreshDashboard = async () => {
+    const refreshDashboard = async (forceRefresh = false) => {
         if (!user?.id) return;
 
         try {
             setLoading(true);
             setError(null);
+
+            // If force refresh is requested, refresh statistics first
+            if (forceRefresh) {
+                try {
+                    await tutorService.refreshStatistics(user.id);
+                    console.log('Statistics refreshed successfully');
+                } catch (statsError) {
+                    console.warn('Failed to refresh statistics, continuing with dashboard fetch:', statsError);
+                }
+            }
+
             const response = await tutorService.getTutorDashboard(user.id);
             // Handle the response format from the backend (response.dashboard)
             const data = response.dashboard || response;
@@ -26,9 +37,7 @@ const TutorDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
+    }; useEffect(() => {
         refreshDashboard();
     }, [user?.id]);
 
@@ -100,7 +109,7 @@ const TutorDashboard = () => {
                             <p className="mt-1 text-sm text-red-700">{error}</p>
                         </div>
                         <button
-                            onClick={refreshDashboard}
+                            onClick={() => refreshDashboard(true)}
                             disabled={loading}
                             className="ml-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm"
                         >
@@ -123,10 +132,10 @@ const TutorDashboard = () => {
                         </p>
                     </div>
                     <button
-                        onClick={refreshDashboard}
+                        onClick={() => refreshDashboard(true)}
                         disabled={loading}
                         className="bg-green-500 hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
-                        title="Refresh Dashboard"
+                        title="Refresh Dashboard & Update Earnings"
                     >
                         <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
@@ -148,7 +157,7 @@ const TutorDashboard = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center">
                         <div className="flex-shrink-0">
@@ -185,11 +194,26 @@ const TutorDashboard = () => {
                             <DollarSign className="h-8 w-8 text-purple-600" />
                         </div>
                         <div className="ml-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Earnings (MTD)</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Monthly</h3>
                             <p className="text-3xl font-bold text-purple-600">
                                 {formatCurrency(parseFloat(dashboardData?.stats?.monthlyEarnings) || 0)}
                             </p>
                             <p className="text-sm text-gray-500 mt-1">This month</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                            <TrendingUp className="h-8 w-8 text-green-600" />
+                        </div>
+                        <div className="ml-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Total Earned</h3>
+                            <p className="text-3xl font-bold text-green-600">
+                                {formatCurrency(parseFloat(dashboardData?.stats?.totalEarnings) || 0)}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">All time</p>
                         </div>
                     </div>
                 </div>

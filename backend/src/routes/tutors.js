@@ -580,6 +580,13 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
             WHERE tp.user_id = $1
         `, [tutorId]);
 
+        // Get real-time total earnings from payments table (most accurate)
+        const totalEarningsResult = await query(`
+            SELECT COALESCE(SUM(p.amount), 0) as total_earnings
+            FROM payments p
+            WHERE p.recipient_id = $1 AND p.status = 'completed'
+        `, [tutorId]);
+
         // Get next upcoming session
         const nextSessionResult = await query(`
             SELECT ts.id, ts.title, ts.scheduled_start, ts.scheduled_end,
@@ -632,6 +639,9 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
             monthly_earnings: 0
         };
 
+        // Get real-time total earnings (most accurate)
+        const realTimeTotalEarnings = parseFloat(totalEarningsResult.rows[0]?.total_earnings) || 0;
+
         const recentActivity = recentSessionsResult.rows.map(row => ({
             id: row.id,
             type: 'session',
@@ -665,6 +675,7 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
                 activeStudents,
                 upcomingSessions,
                 monthlyEarnings: monthlyEarnings.toFixed(2),
+                totalEarnings: realTimeTotalEarnings.toFixed(2),
                 overallRating: parseFloat(profileStats.rating) || 0,
                 totalSessions: parseInt(profileStats.total_sessions) || 0,
                 hourlyRate: parseFloat(profileStats.hourly_rate) || 0

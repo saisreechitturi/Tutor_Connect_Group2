@@ -177,6 +177,17 @@ class TutorService {
             throw error;
         }
     }
+
+    // Refresh tutor statistics
+    async refreshStatistics(tutorId) {
+        try {
+            const response = await apiClient.post(`/tutors/${tutorId}/refresh-stats`);
+            return response;
+        } catch (error) {
+            console.error('[TutorService] Refresh statistics failed:', error);
+            throw error;
+        }
+    }
 }
 
 // Create and export singleton instance
