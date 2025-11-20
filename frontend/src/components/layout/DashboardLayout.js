@@ -52,14 +52,19 @@ const DashboardLayout = ({ userRole, children }) => {
             ],
             admin: [
                 { name: 'Users', href: '/admin/users', icon: Users },
-                { name: 'Sessions', href: '/admin/sessions', icon: BookOpen }
+                { name: 'Sessions', href: '/admin/sessions', icon: BookOpen },
+                { name: 'Platform Settings', href: '/admin/platform-settings', icon: Settings }
             ]
         };
+
+        const settingsItem = userRole === 'admin'
+            ? { name: 'Profile Settings', href: `/${userRole}/settings`, icon: Settings }
+            : { name: 'Settings', href: `/${userRole}/settings`, icon: Settings };
 
         return [
             ...commonItems,
             ...roleSpecificItems[userRole],
-            { name: 'Settings', href: `/${userRole}/settings`, icon: Settings }
+            settingsItem
         ];
     };
 

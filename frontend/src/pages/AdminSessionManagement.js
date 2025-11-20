@@ -200,8 +200,42 @@ const AdminSessionManagement = () => {
 
             // Try to fetch from API first
             try {
-                const sessionsData = await adminService.getAllSessions();
-                setSessions(sessionsData || mockSessions);
+                const response = await adminService.getAllSessions();
+                const sessionsData = response.sessions || response;
+
+                // Transform API data to match expected format
+                const transformedSessions = sessionsData.map(session => ({
+                    id: session.id,
+                    tutor_name: session.tutor.name,
+                    student_name: session.student.name,
+                    subject: session.subject,
+                    status: session.status,
+                    session_type: 'video', // Default to video
+                    scheduled_at: session.scheduledAt,
+                    started_at: session.startedAt,
+                    ended_at: session.endedAt,
+                    duration: session.durationMinutes,
+                    actual_duration: session.actualDuration,
+                    total_earnings: session.rate * (session.durationMinutes / 60),
+                    tutor_earnings: session.rate * (session.durationMinutes / 60) * 0.8, // 80% to tutor
+                    rating: session.rating,
+                    notes: session.notes,
+                    location: null,
+                    tutor_id: session.tutor.id,
+                    student_id: session.student.id,
+                    tutor: {
+                        id: session.tutor.id,
+                        name: session.tutor.name,
+                        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+                    },
+                    student: {
+                        id: session.student.id,
+                        name: session.student.name,
+                        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+                    }
+                }));
+
+                setSessions(transformedSessions);
             } catch (apiError) {
                 console.warn('API not available, using mock data:', apiError);
                 // Fallback to mock data
@@ -326,7 +360,7 @@ const AdminSessionManagement = () => {
     const openSessionModal = async (session) => {
         setSelectedSession(session);
         setShowModal(true);
-        
+
         // Optionally fetch detailed session data using sessionService
         try {
             const detailedSession = await sessionService.getSession(session.id);
@@ -397,7 +431,7 @@ const AdminSessionManagement = () => {
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-500">Completion Rate</p>
                                 <p className="text-2xl font-semibold text-gray-900">
-                                    {stats.totalSessions > 0 
+                                    {stats.totalSessions > 0
                                         ? ((stats.completedSessions / stats.totalSessions) * 100).toFixed(1)
                                         : 0}%
                                 </p>
@@ -436,7 +470,7 @@ const AdminSessionManagement = () => {
                                     <Filter className="h-4 w-4 mr-2" />
                                     <span>Reset</span>
                                 </button>
-                                
+
                                 <select
                                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={filterStatus}

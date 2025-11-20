@@ -208,7 +208,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
       status,
       COUNT(*) as count,
       AVG(hourly_rate) as avg_rate,
-      SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END) as total_revenue
+      SUM(CASE WHEN status = 'completed' THEN payment_amount ELSE 0 END) as total_revenue
     FROM tutoring_sessions
     GROUP BY status
   `);

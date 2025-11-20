@@ -140,8 +140,31 @@ const AdminUserManagement = () => {
 
             // Try to fetch from API first
             try {
-                const usersData = await adminService.getAllUsers();
-                setUsers(usersData || mockUsers);
+                const response = await adminService.getAllUsers();
+                const usersData = response.users || response;
+
+                // Transform API data to match expected format
+                const transformedUsers = usersData.map(user => ({
+                    id: user.id,
+                    first_name: user.firstName,
+                    last_name: user.lastName,
+                    email: user.email,
+                    role: user.role,
+                    status: user.status || (user.isActive ? 'active' : 'inactive'),
+                    phone: user.phone,
+                    joinedDate: new Date(user.createdAt).toISOString().split('T')[0],
+                    lastLogin: user.lastLogin || user.createdAt,
+                    verified: user.emailVerified || true,
+                    isActive: user.isActive,
+                    totalSessions: user.tutorStats?.totalSessions || 0,
+                    totalSpent: 0,
+                    totalEarned: 0,
+                    rating: user.tutorStats?.rating || 0,
+                    subjects: [],
+                    avatar: `https://images.unsplash.com/photo-${user.role === 'tutor' ? '1494790108755-2616b612b786' : '1472099645785-5658abf4ff4e'}?w=150`
+                }));
+
+                setUsers(transformedUsers);
             } catch (apiError) {
                 console.warn('API not available, using mock data:', apiError);
                 // Fallback to mock data
@@ -230,11 +253,12 @@ const AdminUserManagement = () => {
 
     const updateUserStatus = async (userId, newStatus) => {
         try {
-            // TODO: Replace with actual API call when backend is ready
-            // await adminService.updateUserStatus(userId, newStatus);
+            // Call the backend API to update user status
+            await adminService.toggleUserStatus(userId, newStatus);
 
+            // Update local state
             setUserList(prev => prev.map(user =>
-                user.id === userId ? { ...user, status: newStatus } : user
+                user.id === userId ? { ...user, status: newStatus, isActive: newStatus === 'active' } : user
             ));
 
             console.log(`Updated user ${userId} status to ${newStatus}`);
@@ -599,7 +623,7 @@ const AdminUserManagement = () => {
                             <Filter className="h-4 w-4 mr-2" />
                             <span>Reset</span>
                         </button>
-                        
+
                         <select
                             value={roleFilter}
                             onChange={(e) => setRoleFilter(e.target.value)}
@@ -654,7 +678,7 @@ const AdminUserManagement = () => {
                     <div className="bg-white rounded-lg max-w-2xl w-full">
                         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900">Create New User</h2>
-                            <button 
+                            <button
                                 onClick={() => setShowCreateModal(false)}
                                 className="text-gray-400 hover:text-gray-600"
                             >

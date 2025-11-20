@@ -49,10 +49,10 @@ class AdminService {
     }
 
     // Activate/Deactivate user (admin only)
-    async toggleUserStatus(userId, isActive) {
+    async toggleUserStatus(userId, status) {
         try {
-            const response = await apiClient.put(`/admin/users/${userId}/status`, {
-                isActive
+            const response = await apiClient.patch(`/admin/users/${userId}/status`, {
+                status: status
             });
             return response;
         } catch (error) {

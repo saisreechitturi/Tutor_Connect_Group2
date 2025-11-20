@@ -1,45 +1,197 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminUserManagement from '../pages/AdminUserManagement';
 import AdminSessionManagement from '../pages/AdminSessionManagement';
 import AdminSettings from '../pages/AdminSettings';
 import AdminCalendar from '../pages/AdminCalendar';
+import AdminPlatformSettings from '../pages/AdminPlatformSettings';
+import { adminService } from '../services';
 // Removed advanced analytics and admin messaging per scope simplification
 
-const AdminDashboard = () => (
-    <div className="space-y-6">
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="mt-2 text-purple-100">
-                Monitor platform activity, manage users, and oversee system operations.
-            </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Users</h3>
-                <p className="text-3xl font-bold text-purple-600">1,247</p>
-                <p className="text-sm text-gray-500 mt-1">↗ 12% from last month</p>
+const AdminDashboard = () => {
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        activeSessions: 0,
+        totalRevenue: 0,
+        recentActivity: { newUsers: 0, newSessions: 0 },
+        topTutors: []
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true);
+            const data = await adminService.getStats();
+
+            // Process user stats
+            const userStats = data.userStats || [];
+            const totalUsers = userStats.reduce((sum, stat) => sum + parseInt(stat.count), 0);
+
+            // Process session stats
+            const sessionStats = data.sessionStats || [];
+            const activeSessions = sessionStats.find(s => s.status === 'in_progress')?.count || 0;
+            const totalRevenue = sessionStats.reduce((sum, stat) => sum + parseFloat(stat.total_revenue || 0), 0);
+
+            setStats({
+                totalUsers,
+                activeSessions: parseInt(activeSessions),
+                totalRevenue,
+                recentActivity: data.recentActivity || { newUsers: 0, newSessions: 0 },
+                topTutors: data.topTutors || []
+            });
+        } catch (err) {
+            console.error('Failed to fetch stats:', err);
+            setError('Failed to load dashboard statistics');
+            // Use fallback data
+            setStats({
+                totalUsers: 0,
+                activeSessions: 0,
+                totalRevenue: 0,
+                recentActivity: { newUsers: 0, newSessions: 0 },
+                topTutors: []
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
+                    <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                    <p className="mt-2 text-purple-100">
+                        Monitor platform activity, manage users, and oversee system operations.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="animate-pulse">
+                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Sessions</h3>
-                <p className="text-3xl font-bold text-green-600">89</p>
-                <p className="text-sm text-gray-500 mt-1">Currently ongoing</p>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
+                <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                <p className="mt-2 text-purple-100">
+                    Monitor platform activity, manage users, and oversee system operations.
+                </p>
             </div>
+
+            {error && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-yellow-800">{error}</p>
+                    <button
+                        onClick={fetchStats}
+                        className="mt-2 text-yellow-700 underline hover:text-yellow-900"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Users</h3>
+                    <p className="text-3xl font-bold text-purple-600">{stats.totalUsers.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {stats.recentActivity.newUsers > 0 ? `↗ ${stats.recentActivity.newUsers} new this month` : 'No new users this month'}
+                    </p>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Sessions</h3>
+                    <p className="text-3xl font-bold text-green-600">{stats.activeSessions}</p>
+                    <p className="text-sm text-gray-500 mt-1">Currently ongoing</p>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Revenue</h3>
+                    <p className="text-3xl font-bold text-blue-600">${stats.totalRevenue.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        {stats.recentActivity.newSessions > 0 ? `${stats.recentActivity.newSessions} new sessions this month` : 'All-time total'}
+                    </p>
+                </div>
+            </div>
+
+            {stats.topTutors.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Tutors</h2>
+                    <div className="space-y-3">
+                        {stats.topTutors.map((tutor, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p className="font-medium text-gray-900">{tutor.name}</p>
+                                    <p className="text-sm text-gray-500">{tutor.totalSessions} sessions</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-semibold text-purple-600">★ {tutor.rating}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Revenue</h3>
-                <p className="text-3xl font-bold text-blue-600">$24,586</p>
-                <p className="text-sm text-gray-500 mt-1">This month</p>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group">
+                        <div className="text-purple-600 mb-2">
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z" />
+                            </svg>
+                        </div>
+                        <h3 className="font-medium text-gray-900 group-hover:text-purple-600">Manage Users</h3>
+                        <p className="text-sm text-gray-500 mt-1">View and manage user accounts</p>
+                    </button>
+                    <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group">
+                        <div className="text-green-600 mb-2">
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4h-2V3a2 2 0 00-4 0v4z" />
+                            </svg>
+                        </div>
+                        <h3 className="font-medium text-gray-900 group-hover:text-green-600">Session Oversight</h3>
+                        <p className="text-sm text-gray-500 mt-1">Monitor tutoring sessions</p>
+                    </button>
+                    <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group">
+                        <div className="text-blue-600 mb-2">
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <h3 className="font-medium text-gray-900 group-hover:text-blue-600">Settings</h3>
+                        <p className="text-sm text-gray-500 mt-1">Configure platform settings</p>
+                    </button>
+                    <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left group">
+                        <div className="text-orange-600 mb-2">
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4h-2V3a2 2 0 00-4 0v4z" />
+                            </svg>
+                        </div>
+                        <h3 className="font-medium text-gray-900 group-hover:text-orange-600">Reports</h3>
+                        <p className="text-sm text-gray-500 mt-1">Generate system reports</p>
+                    </button>
+                </div>
             </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Management</h2>
-            <p className="text-gray-600">
-                Advanced admin features including user management, content moderation, analytics, and system settings will be available soon.
-            </p>
-        </div>
-    </div>
-);
+    );
+};
 
 const AdminRoutes = () => {
     return (
@@ -51,6 +203,7 @@ const AdminRoutes = () => {
                 <Route path="calendar" element={<AdminCalendar />} />
                 {/* Analytics and Admin Messaging removed */}
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="platform-settings" element={<AdminPlatformSettings />} />
             </Routes>
         </DashboardLayout>
     );
