@@ -15,8 +15,8 @@ out/
 
 # Logs and debugging
 *.log
-logs/
-**/logs/
+logs/*.log
+**/logs/*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
