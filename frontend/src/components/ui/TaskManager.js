@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CheckSquare, Square, Clock, Calendar, Filter, X, AlertCircle } from 'lucide-react';
+import { Plus, CheckSquare, Square, Clock, Calendar, Filter, X, AlertCircle, Edit } from 'lucide-react';
 import { taskService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import AddTaskModal from '../modals/AddTaskModal';
 import TaskDetailsModal from '../modals/TaskDetailsModal';
+import EditTaskModal from '../modals/EditTaskModal';
 
 const TaskManager = () => {
     const { user } = useAuth();
@@ -16,6 +17,7 @@ const TaskManager = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [showTaskDetails, setShowTaskDetails] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const handleTaskAdded = (response) => {
         // Extract task from response object
@@ -38,6 +40,11 @@ const TaskManager = () => {
     const handleTaskClick = (task) => {
         setSelectedTask(task);
         setShowTaskDetails(true);
+    };
+
+    const handleEditTask = (task) => {
+        setSelectedTask(task);
+        setShowEditModal(true);
     };
 
     useEffect(() => {
@@ -391,6 +398,18 @@ const TaskManager = () => {
                                     </div>
                                 </div>
                             ) : null}
+
+                            {/* Edit Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTask(task);
+                                }}
+                                className="text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0 ml-2"
+                                title="Edit task"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -424,6 +443,18 @@ const TaskManager = () => {
                 isOpen={showTaskDetails}
                 onClose={() => {
                     setShowTaskDetails(false);
+                    setSelectedTask(null);
+                }}
+                task={selectedTask}
+                onTaskUpdated={handleTaskUpdated}
+                onEdit={handleEditTask}
+            />
+
+            {/* Edit Task Modal */}
+            <EditTaskModal
+                isOpen={showEditModal}
+                onClose={() => {
+                    setShowEditModal(false);
                     setSelectedTask(null);
                 }}
                 task={selectedTask}

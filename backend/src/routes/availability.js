@@ -452,9 +452,9 @@ router.delete('/:tutorId/slots/:slotId', [
             FROM tutoring_sessions
             WHERE tutor_id = $1
             AND status IN ('scheduled', 'in-progress')
-            AND EXTRACT(DOW FROM session_date) = $2
-            AND start_time >= $3 AND start_time < $4
-            AND session_date >= CURRENT_DATE
+            AND EXTRACT(DOW FROM scheduled_start) = $2
+            AND scheduled_start::time >= $3 AND scheduled_start::time < $4
+            AND scheduled_start >= CURRENT_DATE
         `, [tutorId, slot.day_of_week, slot.start_time, slot.end_time]);
 
         upcomingSessionsCount = parseInt(upcomingSessions.rows[0].count);
@@ -464,8 +464,8 @@ router.delete('/:tutorId/slots/:slotId', [
             FROM tutoring_sessions
             WHERE tutor_id = $1
             AND status IN ('scheduled', 'in-progress')
-            AND session_date = $2
-            AND start_time >= $3 AND start_time < $4
+            AND scheduled_start::date = $2
+            AND scheduled_start::time >= $3 AND scheduled_start::time < $4
         `, [tutorId, slot.specific_date, slot.start_time, slot.end_time]);
 
         upcomingSessionsCount = parseInt(upcomingSessions.rows[0].count);

@@ -313,10 +313,19 @@ const TutorAvailability = () => {
 
 // Slot Modal Component
 const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly = true }) => {
+    // Helper function to convert HH:MM:SS to HH:MM
+    const formatTimeForInput = (time) => {
+        if (!time) return '';
+        // If time already in HH:MM format, return as is
+        if (time.length === 5) return time;
+        // If time in HH:MM:SS format, remove seconds
+        return time.substring(0, 5);
+    };
+
     const [formData, setFormData] = useState({
         dayOfWeek: slot?.dayOfWeek ?? 1,
-        startTime: slot?.startTime || '09:00',
-        endTime: slot?.endTime || '10:00',
+        startTime: formatTimeForInput(slot?.startTime) || '09:00',
+        endTime: formatTimeForInput(slot?.endTime) || '10:00',
         specificDate: slot?.specificDate || '',
         isAvailable: slot?.isAvailable ?? true
     });

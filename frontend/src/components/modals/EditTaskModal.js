@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { X, Plus, Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, Tag, AlertCircle } from 'lucide-react';
 import { taskService } from '../../services';
 
-const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
+const EditTaskModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [formData, setFormData] = useState({
@@ -24,36 +24,45 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
         { value: 'urgent', label: 'Urgent', color: 'text-red-800' }
     ];
 
+    // Initialize form data when task changes
+    useEffect(() => {
+        if (task) {
+            setFormData({
+                title: task.title || '',
+                description: task.description || '',
+                subject: task.subject || '',
+                priority: task.priority || 'medium',
+                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+                estimatedDuration: task.estimatedHours ? task.estimatedHours * 60 : 60,
+                tags: task.tags || []
+            });
+        }
+    }, [task]);
+
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
-        // Clear error when user starts typing
-        if (error) setError(null);
+        // Clear error when user makes changes
+        setError(null);
     };
 
-    const addTag = () => {
+    const handleAddTag = () => {
         if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-            setFormData(prev => ({
-                ...prev,
-                tags: [...prev.tags, tagInput.trim()]
-            }));
+            handleInputChange('tags', [...formData.tags, tagInput.trim()]);
             setTagInput('');
         }
     };
 
-    const removeTag = (tagToRemove) => {
-        setFormData(prev => ({
-            ...prev,
-            tags: prev.tags.filter(tag => tag !== tagToRemove)
-        }));
+    const handleRemoveTag = (tagToRemove) => {
+        handleInputChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
     };
 
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            addTag();
+            handleAddTag();
         }
     };
 
@@ -66,10 +75,14 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             setError('Due date is required');
             return false;
         }
+        // Allow today's date and future dates
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Set to beginning of today
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(23, 59, 59, 999); // End of yesterday
+
         const selectedDate = new Date(formData.dueDate);
-        if (selectedDate < today) {
+        if (selectedDate <= yesterday) {
             setError('Due date cannot be in the past');
             return false;
         }
@@ -85,60 +98,46 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
             setLoading(true);
             setError(null);
 
-            const taskData = {
+            const updateData = {
                 title: formData.title.trim(),
                 description: formData.description.trim(),
                 subject: formData.subject.trim(),
                 priority: formData.priority,
                 dueDate: formData.dueDate,
-                estimatedHours: formData.estimatedDuration / 60,
+                estimatedHours: formData.estimatedDuration / 60, // Convert minutes to hours
                 tags: formData.tags
             };
 
-            const newTask = await taskService.createTask(taskData);
+            await taskService.updateTask(task.id, updateData);
 
-            // Reset form
-            setFormData({
-                title: '',
-                description: '',
-                subject: '',
-                priority: 'medium',
-                dueDate: '',
-                estimatedDuration: 60,
-                tags: []
-            });
+            // Create updated task object for callback
+            const updatedTask = {
+                ...task,
+                ...updateData,
+                estimatedHours: updateData.estimatedHours
+            };
 
-            // Notify parent component
-            if (onTaskAdded) {
-                onTaskAdded(newTask);
+            if (onTaskUpdated) {
+                onTaskUpdated(updatedTask);
             }
 
             // Close modal
             onClose();
         } catch (err) {
-            console.error('Error creating task:', err);
-            setError(err.message || 'Failed to create task. Please try again.');
+            console.error('Error updating task:', err);
+            setError(err.message || 'Failed to update task. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     const handleClose = () => {
-        setFormData({
-            title: '',
-            description: '',
-            subject: '',
-            priority: 'medium',
-            dueDate: '',
-            estimatedDuration: 60,
-            tags: []
-        });
         setError(null);
         setTagInput('');
         onClose();
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || !task) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -146,8 +145,8 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                        <Plus className="h-5 w-5 mr-2 text-primary-600" />
-                        Add New Task
+                        <Tag className="h-5 w-5 mr-2 text-primary-600" />
+                        Edit Task
                     </h2>
                     <button
                         onClick={handleClose}
@@ -177,10 +176,10 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             type="text"
                             required
                             className="input-field"
-                            placeholder="Enter task title..."
                             value={formData.title}
                             onChange={(e) => handleInputChange('title', e.target.value)}
                             disabled={loading}
+                            placeholder="Enter task title..."
                         />
                     </div>
 
@@ -190,12 +189,12 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             Description
                         </label>
                         <textarea
+                            rows={3}
                             className="input-field"
-                            rows="3"
-                            placeholder="Describe the task in detail..."
                             value={formData.description}
                             onChange={(e) => handleInputChange('description', e.target.value)}
                             disabled={loading}
+                            placeholder="Describe your task..."
                         />
                     </div>
 
@@ -207,10 +206,10 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                         <input
                             type="text"
                             className="input-field"
-                            placeholder="e.g., Math, Physics, Programming..."
                             value={formData.subject}
                             onChange={(e) => handleInputChange('subject', e.target.value)}
                             disabled={loading}
+                            placeholder="Enter subject..."
                         />
                     </div>
 
@@ -225,9 +224,9 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             onChange={(e) => handleInputChange('priority', e.target.value)}
                             disabled={loading}
                         >
-                            {priorityOptions.map(priority => (
-                                <option key={priority.value} value={priority.value}>
-                                    {priority.label}
+                            {priorityOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
                                 </option>
                             ))}
                         </select>
@@ -278,12 +277,12 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             {formData.tags.map((tag, index) => (
                                 <span
                                     key={index}
-                                    className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-800 text-sm rounded-full"
+                                    className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-md"
                                 >
                                     {tag}
                                     <button
                                         type="button"
-                                        onClick={() => removeTag(tag)}
+                                        onClick={() => handleRemoveTag(tag)}
                                         className="ml-1 text-primary-600 hover:text-primary-800"
                                         disabled={loading}
                                     >
@@ -296,16 +295,16 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                             <input
                                 type="text"
                                 className="input-field flex-1"
-                                placeholder="Add a tag..."
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
                                 onKeyPress={handleKeyPress}
+                                placeholder="Add tag..."
                                 disabled={loading}
                             />
                             <button
                                 type="button"
-                                onClick={addTag}
-                                className="btn-secondary"
+                                onClick={handleAddTag}
+                                className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
                                 disabled={loading || !tagInput.trim()}
                             >
                                 Add
@@ -314,31 +313,24 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
                     </div>
 
                     {/* Submit Buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <div className="flex justify-end space-x-3 pt-4">
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="btn-secondary"
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
                             disabled={loading}
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="btn-primary flex items-center"
+                            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center"
                             disabled={loading}
                         >
-                            {loading ? (
-                                <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Creating...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Create Task
-                                </>
+                            {loading && (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                             )}
+                            {loading ? 'Updating...' : 'Update Task'}
                         </button>
                     </div>
                 </form>
@@ -347,4 +339,4 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded }) => {
     );
 };
 
-export default AddTaskModal;
+export default EditTaskModal;

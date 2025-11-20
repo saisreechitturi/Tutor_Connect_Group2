@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, Tag, FileText, AlertCircle, CheckSquare, Square } from 'lucide-react';
+import { X, Calendar, Clock, Tag, FileText, AlertCircle, CheckSquare, Square, Edit } from 'lucide-react';
 import { taskService } from '../../services';
 
-const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
+const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated, onEdit }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [progress, setProgress] = useState(task?.progress || task?.progressPercentage || 0);
@@ -280,6 +280,18 @@ const TaskDetailsModal = ({ isOpen, onClose, task, onTaskUpdated }) => {
                     </button>
 
                     <div className="flex space-x-3">
+                        {onEdit && (
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    onEdit(task);
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors flex items-center"
+                            >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit Task
+                            </button>
+                        )}
                         <button
                             onClick={onClose}
                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
