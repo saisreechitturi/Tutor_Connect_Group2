@@ -317,10 +317,25 @@ router.get('/sessions', [
     const sessions = result.rows.map(row => ({
         id: row.id,
         title: row.title,
+        description: row.description,
         scheduledAt: row.scheduled_start,
-        durationMinutes: Math.round((new Date(row.scheduled_end) - new Date(row.scheduled_start)) / (1000 * 60)),
+        scheduledEnd: row.scheduled_end,
+        startedAt: row.actual_start,
+        endedAt: row.actual_end,
+        durationMinutes: row.duration_minutes,
+        actualDuration: row.actual_start && row.actual_end
+            ? Math.round((new Date(row.actual_end) - new Date(row.actual_start)) / (1000 * 60))
+            : null,
         rate: row.hourly_rate,
+        paymentAmount: row.payment_amount,
         status: row.status,
+        sessionType: row.session_type,
+        notes: row.session_notes,
+        homeworkAssigned: row.homework_assigned,
+        materialsUsed: row.materials_used,
+        meetingLink: row.meeting_link,
+        meetingRoom: row.meeting_room,
+        cancellationReason: row.cancellation_reason,
         student: {
             id: row.student_id,
             name: `${row.student_first_name} ${row.student_last_name}`
@@ -330,7 +345,8 @@ router.get('/sessions', [
             name: `${row.tutor_first_name} ${row.tutor_last_name}`
         },
         subject: row.subject_name,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
     }));
 
     res.json({ sessions });

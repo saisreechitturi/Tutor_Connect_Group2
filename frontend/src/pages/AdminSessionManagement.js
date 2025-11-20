@@ -18,165 +18,24 @@ import {
     FileText,
     Eye,
     AlertCircle,
-    TrendingUp,
-    Activity
+    TrendingUp
 } from 'lucide-react';
 
-// Mock data for sessions
-const mockSessions = [
-    {
-        id: 1,
-        tutor_name: 'Emily Johnson',
-        student_name: 'Alex Thompson',
-        subject: 'Mathematics',
-        status: 'completed',
-        session_type: 'video',
-        scheduled_at: '2025-09-28T14:00:00Z',
-        started_at: '2025-09-28T14:05:00Z',
-        ended_at: '2025-09-28T15:15:00Z',
-        duration: 75,
-        actual_duration: 70,
-        total_earnings: 50,
-        tutor_earnings: 40,
-        rating: 5,
-        notes: 'Great session on calculus derivatives. Student showed excellent progress.',
-        location: null,
-        tutor_id: 2,
-        student_id: 4,
-        tutor: {
-            id: 2,
-            name: 'Emily Johnson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        },
-        student: {
-            id: 4,
-            name: 'Alex Thompson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        }
-    },
-    {
-        id: 2,
-        tutor_name: 'Michael Davis',
-        student_name: 'Taylor Brown',
-        subject: 'Chemistry',
-        status: 'scheduled',
-        session_type: 'video',
-        scheduled_at: '2025-10-02T16:00:00Z',
-        started_at: null,
-        ended_at: null,
-        duration: 60,
-        actual_duration: null,
-        total_earnings: 40,
-        tutor_earnings: 32,
-        rating: null,
-        notes: 'Session on molecular bonding and ionic compounds.',
-        location: null,
-        tutor_id: 3,
-        student_id: 5,
-        tutor: {
-            id: 3,
-            name: 'Michael Davis',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-        },
-        student: {
-            id: 5,
-            name: 'Taylor Brown',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-        }
-    },
-    {
-        id: 3,
-        tutor_name: 'Emily Johnson',
-        student_name: 'Jamie Wilson',
-        subject: 'Computer Science',
-        status: 'in-progress',
-        session_type: 'video',
-        scheduled_at: '2025-09-30T10:00:00Z',
-        started_at: '2025-09-30T10:02:00Z',
-        ended_at: null,
-        duration: 90,
-        actual_duration: null,
-        total_earnings: 60,
-        tutor_earnings: 48,
-        rating: null,
-        notes: 'Advanced programming concepts - object-oriented design patterns.',
-        location: null,
-        tutor_id: 2,
-        student_id: 6,
-        tutor: {
-            id: 2,
-            name: 'Emily Johnson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        },
-        student: {
-            id: 6,
-            name: 'Jamie Wilson',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
-        }
-    },
-    {
-        id: 4,
-        tutor_name: 'Emily Johnson',
-        student_name: 'Alex Thompson',
-        subject: 'Physics',
-        status: 'cancelled',
-        session_type: 'in-person',
-        scheduled_at: '2025-09-29T13:00:00Z',
-        started_at: null,
-        ended_at: null,
-        duration: 60,
-        actual_duration: null,
-        total_earnings: 0,
-        tutor_earnings: 0,
-        rating: null,
-        notes: 'Cancelled due to student emergency. Will reschedule for next week.',
-        location: 'Central Library, Room 204',
-        tutor_id: 2,
-        student_id: 4,
-        tutor: {
-            id: 2,
-            name: 'Emily Johnson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        },
-        student: {
-            id: 4,
-            name: 'Alex Thompson',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-        }
-    },
-    {
-        id: 5,
-        tutor_name: 'Michael Davis',
-        student_name: 'Jamie Wilson',
-        subject: 'Web Development',
-        status: 'completed',
-        session_type: 'video',
-        scheduled_at: '2025-09-27T15:30:00Z',
-        started_at: '2025-09-27T15:35:00Z',
-        ended_at: '2025-09-27T16:45:00Z',
-        duration: 75,
-        actual_duration: 70,
-        total_earnings: 55,
-        tutor_earnings: 44,
-        rating: 4,
-        notes: 'React components and state management. Student needs more practice with hooks.',
-        location: null,
-        tutor_id: 3,
-        student_id: 6,
-        tutor: {
-            id: 3,
-            name: 'Michael Davis',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-        },
-        student: {
-            id: 6,
-            name: 'Jamie Wilson',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
-        }
-    }
-];
-
 const AdminSessionManagement = () => {
+    // Avatar helper functions
+    const getUserInitial = (name) => {
+        if (!name) return 'U';
+        return name.charAt(0).toUpperCase();
+    };
+
+    const getAvatarColor = (name) => {
+        const colors = [
+            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+        ];
+        const charCode = name ? name.charCodeAt(0) : 0;
+        return colors[charCode % colors.length];
+    };
     const [activeTab, setActiveTab] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSession, setSelectedSession] = useState(null);
@@ -196,53 +55,58 @@ const AdminSessionManagement = () => {
             setLoading(true);
             setError(null);
 
-            // Try to fetch from API first
-            try {
-                const response = await adminService.getAllSessions();
-                const sessionsData = response.sessions || response;
+            const response = await adminService.getAllSessions();
+            const sessionsData = response.sessions || [];
 
-                // Transform API data to match expected format
-                const transformedSessions = sessionsData.map(session => ({
-                    id: session.id,
-                    tutor_name: session.tutor.name,
-                    student_name: session.student.name,
-                    subject: session.subject,
-                    status: session.status,
-                    session_type: 'video', // Default to video
-                    scheduled_at: session.scheduledAt,
-                    started_at: session.startedAt,
-                    ended_at: session.endedAt,
-                    duration: session.durationMinutes,
-                    actual_duration: session.actualDuration,
-                    total_earnings: session.rate * (session.durationMinutes / 60),
-                    tutor_earnings: session.rate * (session.durationMinutes / 60) * 0.8, // 80% to tutor
-                    rating: session.rating,
-                    notes: session.notes,
-                    location: null,
-                    tutor_id: session.tutor.id,
-                    student_id: session.student.id,
-                    tutor: {
-                        id: session.tutor.id,
-                        name: session.tutor.name,
-                        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-                    },
-                    student: {
-                        id: session.student.id,
-                        name: session.student.name,
-                        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-                    }
-                }));
+            // Transform API data to match expected format
+            const transformedSessions = sessionsData.map(session => ({
+                id: session.id,
+                title: session.title,
+                description: session.description,
+                tutor_name: session.tutor.name,
+                student_name: session.student.name,
+                subject: session.subject,
+                status: session.status,
+                session_type: session.sessionType || 'video',
+                scheduled_at: session.scheduledAt,
+                scheduled_end: session.scheduledEnd,
+                started_at: session.startedAt,
+                ended_at: session.endedAt,
+                duration: session.durationMinutes,
+                actual_duration: session.actualDuration,
+                total_earnings: session.paymentAmount || (session.rate ? session.rate * (session.durationMinutes / 60) : 0),
+                tutor_earnings: session.paymentAmount ? session.paymentAmount * 0.8 : (session.rate ? session.rate * (session.durationMinutes / 60) * 0.8 : 0),
+                rating: session.rating,
+                notes: session.notes,
+                homework_assigned: session.homeworkAssigned,
+                materials_used: session.materialsUsed,
+                meeting_link: session.meetingLink,
+                meeting_room: session.meetingRoom,
+                cancellation_reason: session.cancellationReason,
+                location: session.meetingRoom || (session.sessionType === 'in-person' ? 'In-Person' : null),
+                tutor_id: session.tutor.id,
+                student_id: session.student.id,
+                tutor: {
+                    id: session.tutor.id,
+                    name: session.tutor.name,
+                    initial: getUserInitial(session.tutor.name),
+                    avatarColor: getAvatarColor(session.tutor.name)
+                },
+                student: {
+                    id: session.student.id,
+                    name: session.student.name,
+                    initial: getUserInitial(session.student.name),
+                    avatarColor: getAvatarColor(session.student.name)
+                },
+                created_at: session.createdAt,
+                updated_at: session.updatedAt
+            }));
 
-                setSessions(transformedSessions);
-            } catch (apiError) {
-                console.warn('API not available, using mock data:', apiError);
-                // Fallback to mock data
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setSessions(mockSessions);
-            }
+            setSessions(transformedSessions);
         } catch (err) {
             console.error('Error fetching sessions:', err);
             setError('Failed to load sessions. Please try again.');
+            setSessions([]);
         } finally {
             setLoading(false);
         }
@@ -290,7 +154,6 @@ const AdminSessionManagement = () => {
     const stats = {
         totalSessions: sessions.length,
         completedSessions: sessions.filter(s => s.status === 'completed').length,
-        inProgressSessions: sessions.filter(s => s.status === 'in-progress' || s.status === 'scheduled').length,
         scheduledSessions: sessions.filter(s => s.status === 'scheduled').length,
         cancelledSessions: sessions.filter(s => s.status === 'cancelled').length,
         totalEarnings: sessions.reduce((sum, s) => sum + (s.total_earnings || s.totalEarnings || 0), 0),
@@ -319,7 +182,6 @@ const AdminSessionManagement = () => {
     const getStatusColor = (status) => {
         switch (status) {
             case 'completed': return 'bg-green-100 text-green-800';
-            case 'in-progress': return 'bg-blue-100 text-blue-800';
             case 'scheduled': return 'bg-yellow-100 text-yellow-800';
             case 'cancelled': return 'bg-gray-100 text-gray-800';
             default: return 'bg-gray-100 text-gray-800';
@@ -329,7 +191,6 @@ const AdminSessionManagement = () => {
     const getStatusIcon = (status) => {
         switch (status) {
             case 'completed': return <CheckCircle className="w-4 h-4" />;
-            case 'in-progress': return <Activity className="w-4 h-4" />;
             case 'scheduled': return <Calendar className="w-4 h-4" />;
             case 'cancelled': return <XCircle className="w-4 h-4" />;
             default: return <Clock className="w-4 h-4" />;
@@ -476,7 +337,6 @@ const AdminSessionManagement = () => {
                                 >
                                     <option value="all">All Status</option>
                                     <option value="completed">Completed</option>
-                                    <option value="in-progress">In Progress</option>
                                     <option value="scheduled">Scheduled</option>
                                     <option value="cancelled">Cancelled</option>
                                 </select>
@@ -502,7 +362,6 @@ const AdminSessionManagement = () => {
                                 {[
                                     { key: 'all', label: 'All Sessions', count: stats.totalSessions },
                                     { key: 'completed', label: 'Completed', count: stats.completedSessions },
-                                    { key: 'in-progress', label: 'In Progress', count: stats.inProgressSessions },
                                     { key: 'scheduled', label: 'Scheduled', count: stats.scheduledSessions }
                                 ].map((tab) => (
                                     <button
