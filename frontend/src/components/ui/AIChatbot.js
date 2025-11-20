@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // Mock AI data - in a real app this would come from an AI service
 const aiResponses = {
@@ -8,6 +9,18 @@ const aiResponses = {
     tutors: "I can recommend tutors based on your needs. What subject and skill level are you looking for?",
     help: "I'm here to help with any questions about TutorConnect. You can ask me about scheduling, finding tutors, managing your profile, or platform features.",
     default: "That's a great question! Let me help you with that. Could you provide more specific details?"
+};
+
+const tutorAiResponses = {
+    greeting: "Hello! I'm your TutorConnect AI teaching assistant. I can help you with teaching strategies, lesson planning, student management, and educational best practices.",
+    engagement: "Here are some effective student engagement strategies: 1) Use interactive questioning techniques, 2) Incorporate real-world examples, 3) Break complex topics into smaller chunks, 4) Encourage active participation, 5) Use visual aids and multimedia when possible.",
+    planning: "For effective lesson planning: 1) Set clear learning objectives, 2) Structure content with introduction, main content, and summary, 3) Include interactive elements, 4) Plan for different learning styles, 5) Prepare assessment checkpoints throughout the lesson.",
+    difficult: "When handling challenging students: 1) Stay calm and patient, 2) Set clear expectations and boundaries, 3) Try to understand underlying issues, 4) Use positive reinforcement, 5) Adapt your teaching style to their needs, 6) Communicate with parents if necessary.",
+    assessment: "Effective assessment techniques include: 1) Formative assessments during lessons, 2) Regular quizzes and tests, 3) Project-based evaluations, 4) Peer assessments, 5) Self-reflection exercises, 6) Portfolio reviews.",
+    online: "Online teaching best practices: 1) Ensure good lighting and audio quality, 2) Use interactive tools and screen sharing, 3) Keep sessions engaging with frequent interaction, 4) Have backup plans for technical issues, 5) Provide clear instructions and materials.",
+    time: "Time management tips for tutors: 1) Plan lessons in advance, 2) Set realistic goals for each session, 3) Use timers for activities, 4) Prepare materials beforehand, 5) Build in buffer time between sessions, 6) Track your most productive hours.",
+    help: "I'm here to help with teaching strategies, lesson planning, student engagement, assessment methods, and educational best practices. What specific area would you like guidance on?",
+    default: "That's an excellent teaching question! Let me help you with effective strategies. Could you provide more details about your specific situation?"
 };
 
 const aiSuggestions = [
@@ -19,13 +32,25 @@ const aiSuggestions = [
     "Rate my tutor"
 ];
 
+const tutorAiSuggestions = [
+    "Student engagement strategies",
+    "Lesson planning tips",
+    "How to handle difficult students",
+    "Assessment techniques",
+    "Online teaching best practices",
+    "Time management for tutors"
+];
+
 const AIChatbot = () => {
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         {
             id: 1,
             type: 'bot',
-            content: "Hello! I'm your AI study assistant. I can help you with platform questions, study tips, and subject-specific guidance. What would you like to know?",
+            content: user?.role === 'tutor'
+                ? "Hello! I'm your AI teaching assistant. I can help you with teaching strategies, lesson planning, student engagement techniques, and educational best practices. What would you like to know?"
+                : "Hello! I'm your AI study assistant. I can help you with platform questions, study tips, and subject-specific guidance. What would you like to know?",
             timestamp: new Date()
         }
     ]);
@@ -50,9 +75,32 @@ const AIChatbot = () => {
 
     const getAIResponse = (query) => {
         const lowerQuery = query.toLowerCase();
+        const responses = user?.role === 'tutor' ? tutorAiResponses : aiResponses;
 
-        // Check for specific keywords and return appropriate responses
-        for (const [key, response] of Object.entries(aiResponses)) {
+        // Check for tutor-specific keywords
+        if (user?.role === 'tutor') {
+            if (lowerQuery.includes('engagement') || lowerQuery.includes('engage') || lowerQuery.includes('difficult')) {
+                return responses.engagement;
+            }
+            if (lowerQuery.includes('lesson') || lowerQuery.includes('plan') || lowerQuery.includes('planning')) {
+                return responses.planning;
+            }
+            if (lowerQuery.includes('difficult') || lowerQuery.includes('challenging') || lowerQuery.includes('problem')) {
+                return responses.difficult;
+            }
+            if (lowerQuery.includes('assessment') || lowerQuery.includes('evaluate') || lowerQuery.includes('test')) {
+                return responses.assessment;
+            }
+            if (lowerQuery.includes('online') || lowerQuery.includes('virtual') || lowerQuery.includes('remote')) {
+                return responses.online;
+            }
+            if (lowerQuery.includes('time') || lowerQuery.includes('manage') || lowerQuery.includes('schedule')) {
+                return responses.time;
+            }
+        }
+
+        // Check for general keywords
+        for (const [key, response] of Object.entries(responses)) {
             if (key === 'default' || key === 'greeting') continue;
 
             if (lowerQuery.includes(key) ||
@@ -66,7 +114,7 @@ const AIChatbot = () => {
         }
 
         // Default response
-        return aiResponses.default;
+        return responses.default;
     };
 
     const handleSendMessage = async (message = inputValue.trim()) => {
@@ -128,7 +176,7 @@ const AIChatbot = () => {
             <div className="bg-primary-600 text-white p-4 rounded-t-lg flex items-center justify-between">
                 <div className="flex items-center">
                     <Bot className="h-5 w-5 mr-2" />
-                    <span className="font-semibold">AI Study Assistant</span>
+                    <span className="font-semibold">AI {user?.role === 'tutor' ? 'Teaching' : 'Study'} Assistant</span>
                 </div>
                 <button
                     onClick={() => setIsOpen(false)}
@@ -194,7 +242,7 @@ const AIChatbot = () => {
                 <div className="px-4 py-2 border-t border-gray-200">
                     <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
                     <div className="flex flex-wrap gap-1">
-                        {aiSuggestions.slice(0, 3).map((suggestion, index) => (
+                        {(user?.role === 'tutor' ? tutorAiSuggestions : aiSuggestions).slice(0, 3).map((suggestion, index) => (
                             <button
                                 key={index}
                                 onClick={() => handleSuggestionClick(suggestion)}

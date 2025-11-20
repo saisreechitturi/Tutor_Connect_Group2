@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import aiService from '../services/aiService';
 import MessageBubble from './MessageBubble';
+import { useAuth } from '../context/AuthContext';
 
 const AIChat = ({ isOpen, onClose, initialMessage = '' }) => {
+    const { user } = useAuth();
     // State management
     const [sessions, setSessions] = useState([]);
     const [currentSession, setCurrentSession] = useState(null);
@@ -301,7 +303,7 @@ const AIChat = ({ isOpen, onClose, initialMessage = '' }) => {
             <div className="bg-blue-600 text-white p-4 rounded-t-lg flex items-center justify-between">
                 <div className="flex items-center">
                     <Sparkles className="h-5 w-5 mr-2" />
-                    <span className="font-semibold">AI Study Assistant</span>
+                    <span className="font-semibold">AI {user?.role === 'tutor' ? 'Teaching' : 'Study'} Assistant</span>
                 </div>
                 <div className="flex items-center space-x-2">
                     <button
@@ -446,7 +448,10 @@ const AIChat = ({ isOpen, onClose, initialMessage = '' }) => {
                             <div className="flex flex-col items-center justify-center h-full text-center">
                                 <Bot className="h-12 w-12 text-gray-300 mb-2" />
                                 <p className="text-gray-500 text-sm">
-                                    Hi! I'm your AI Study Assistant. Ask me anything about your studies!
+                                    {user?.role === 'tutor'
+                                        ? "Hi! I'm your AI Teaching Assistant. Ask me about teaching strategies, lesson planning, student engagement, or educational best practices!"
+                                        : "Hi! I'm your AI Study Assistant. Ask me anything about your studies!"
+                                    }
                                 </p>
                             </div>
                         ) : (

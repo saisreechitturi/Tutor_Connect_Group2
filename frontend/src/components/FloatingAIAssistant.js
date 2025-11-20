@@ -8,8 +8,8 @@ const FloatingAIAssistant = ({ initialMessage = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [hasNewMessage, setHasNewMessage] = useState(false);
 
-    // Only show AI assistant to authenticated students
-    if (!isAuthenticated || user?.role !== 'student') {
+    // Only show AI assistant to authenticated students and tutors
+    if (!isAuthenticated || (user?.role !== 'student' && user?.role !== 'tutor')) {
         return null;
     }
 
@@ -29,7 +29,7 @@ const FloatingAIAssistant = ({ initialMessage = '' }) => {
                 <button
                     onClick={handleOpen}
                     className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
-                    aria-label="Open AI Study Assistant"
+                    aria-label={`Open AI ${user?.role === 'tutor' ? 'Teaching' : 'Study'} Assistant`}
                 >
                     <div className="relative">
                         <Sparkles className="h-6 w-6" />
