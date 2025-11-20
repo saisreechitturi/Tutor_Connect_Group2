@@ -25,7 +25,7 @@ const userService = {
     getProfile: async (userId) => {
         try {
             const response = await apiClient.get(`/users/${userId}`);
-            return response.data;
+            return response; // apiClient already returns the data, not response.data
         } catch (error) {
             console.error('Error fetching user profile:', error);
             throw error;
@@ -36,7 +36,7 @@ const userService = {
     updateProfile: async (userId, profileData) => {
         try {
             const response = await apiClient.put(`/users/${userId}`, profileData);
-            return response.data;
+            return response; // apiClient already returns the data, not response.data
         } catch (error) {
             console.error('Error updating user profile:', error);
             throw error;
