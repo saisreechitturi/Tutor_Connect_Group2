@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Clock, MapPin, Star, Filter, Plus, Video, User, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { sessionService, reviewService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import ReviewSessionModal from '../modals/ReviewSessionModal';
 
 const MySessions = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [filter, setFilter] = useState('all');
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [sessions, setSessions] = useState([]);
@@ -330,23 +332,19 @@ const MySessions = () => {
                             <BookOpen className="h-6 w-6 mr-2 text-primary-600" />
                             My Sessions
                         </h1>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center">
                             <button
-                                onClick={() => setFilter('all')}
-                                className="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-                                title="Reset filters"
-                            >
-                                <Filter className="h-4 w-4 mr-2" />
-                                <span className="text-sm">
-                                    {filter === 'all' ? 'All Sessions' : `Filter: ${filter}`}
-                                </span>
-                            </button>
-                            <button
-                                onClick={() => setShowBookingModal(true)}
+                                onClick={() => {
+                                    if (user.role === 'student') {
+                                        navigate('/student/tutors');
+                                    } else {
+                                        setShowBookingModal(true);
+                                    }
+                                }}
                                 className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
-                                {user.role === 'student' ? 'Book Session' : 'Add Availability'}
+                                {user.role === 'student' ? 'Find Tutors' : 'Add Availability'}
                             </button>
                         </div>
                     </div>
@@ -412,9 +410,16 @@ const MySessions = () => {
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h3 className="text-lg font-semibold text-gray-900">
-                                                        {session.subject || session.title || 'Tutoring Session'}
-                                                    </h3>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">
+                                                            {session.title || session.subject || 'Tutoring Session'}
+                                                        </h3>
+                                                        {session.subject && session.title && session.title !== session.subject && (
+                                                            <p className="text-sm text-gray-600 mt-1">
+                                                                {session.subject}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                     <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(session.actualStatus)}`}>
                                                         {getStatusLabel(session.actualStatus)}
                                                     </span>
