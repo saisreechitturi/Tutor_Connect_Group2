@@ -30,7 +30,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
     const sessionTypes = [
         { value: 'online', label: 'Online Session', icon: Video },
-        { value: 'in-person', label: 'In-Person Session', icon: MapPin }
+        { value: 'in_person', label: 'In-Person Session', icon: MapPin }
     ];
 
     const durationOptions = [
@@ -94,7 +94,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         try {
             const response = await tutorService.getTutorDetails(tutorId);
             setTutorDetails(response);
-            
+
             // Update hourly rate from tutor details
             if (response.tutor?.hourlyRate) {
                 setFormData(prev => ({
@@ -112,14 +112,14 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         try {
             setSlotsLoading(true);
             setError(null);
-            
+
             const response = await availabilityService.getAvailableTimeSlots(formData.tutorId, {
                 date: formData.scheduledDate,
                 duration: formData.durationMinutes
             });
-            
+
             setAvailableSlots(response.availableSlots || []);
-            
+
             if (response.availableSlots?.length === 0) {
                 setError('No available slots for the selected date and duration. Please try a different date.');
             }
@@ -130,204 +130,204 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
         } finally {
             setSlotsLoading(false);
         }
-        }
+    }
 
-    };
+};
 
-    const handleInputChange = (field, value) => {
+const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+        ...prev,
+        [field]: value
+    }));
+
+    // Clear selected time when date or duration changes
+    if (field === 'scheduledDate' || field === 'durationMinutes') {
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            scheduledTime: ''
         }));
+    }
 
-        // Clear selected time when date or duration changes
-        if (field === 'scheduledDate' || field === 'durationMinutes') {
-            setFormData(prev => ({
-                ...prev,
-                scheduledTime: ''
-            }));
-        }
+    // Clear error when user starts typing
+    if (error) setError(null);
+    if (success) setSuccess(false);
+};
 
-        // Clear error when user starts typing
-        if (error) setError(null);
-        if (success) setSuccess(false);
-    };
+const validateForm = () => {
+    if (!formData.tutorId) {
+        setError('Please select a tutor');
+        return false;
+    }
+    if (!formData.title.trim()) {
+        setError('Session title is required');
+        return false;
+    }
+    if (!formData.subjectId) {
+        setError('Please select a subject');
+        return false;
+    }
+    if (!formData.scheduledDate) {
+        setError('Please select a date');
+        return false;
+    }
+    if (!formData.scheduledTime) {
+        setError('Please select a time slot');
+        return false;
+    }
 
-    const validateForm = () => {
-        if (!formData.tutorId) {
-            setError('Please select a tutor');
-            return false;
-        }
-        if (!formData.title.trim()) {
-            setError('Session title is required');
-            return false;
-        }
-        if (!formData.subjectId) {
-            setError('Please select a subject');
-            return false;
-        }
-        if (!formData.scheduledDate) {
-            setError('Please select a date');
-            return false;
-        }
-        if (!formData.scheduledTime) {
-            setError('Please select a time slot');
-            return false;
-        }
+    // Check if the scheduled time is in the future
+    const scheduledDateTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
+    if (scheduledDateTime <= new Date()) {
+        setError('Scheduled time must be in the future');
+        return false;
+    }
 
-        // Check if the scheduled time is in the future
-        const scheduledDateTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
-        if (scheduledDateTime <= new Date()) {
-            setError('Scheduled time must be in the future');
-            return false;
-        }
+    // Validate session type specific fields
+    if (formData.sessionType === 'online' && !formData.meetingLink.trim()) {
+        setError('Meeting link is required for online sessions');
+        return false;
+    }
+    if (formData.sessionType === 'in-person' && !formData.locationAddress.trim()) {
+        setError('Location address is required for in-person sessions');
+        return false;
+    }
 
-        // Validate session type specific fields
-        if (formData.sessionType === 'online' && !formData.meetingLink.trim()) {
-            setError('Meeting link is required for online sessions');
-            return false;
-        }
-        if (formData.sessionType === 'in-person' && !formData.locationAddress.trim()) {
-            setError('Location address is required for in-person sessions');
-            return false;
-        }
+    return true;
+};
 
-        return true;
-    };
+const calculateTotalCost = () => {
+    const hours = formData.durationMinutes / 60;
+    return (formData.hourlyRate * hours).toFixed(2);
+};
 
-    const calculateTotalCost = () => {
-        const hours = formData.durationMinutes / 60;
-        return (formData.hourlyRate * hours).toFixed(2);
-    };
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    if (!validateForm()) return;
 
-        if (!validateForm()) return;
-
-        try {
-            setLoading(true);
-            setError(null);
-
-            const scheduledDateTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
-            const endDateTime = new Date(scheduledDateTime.getTime() + formData.durationMinutes * 60000);
-
-            const sessionData = {
-                tutorId: parseInt(formData.tutorId),
-                subjectId: parseInt(formData.subjectId),
-                title: formData.title.trim(),
-                description: formData.description.trim(),
-                sessionType: formData.sessionType,
-                scheduledStart: scheduledDateTime.toISOString(),
-                scheduledEnd: endDateTime.toISOString(),
-                hourlyRate: formData.hourlyRate,
-                meetingLink: formData.sessionType === 'online' ? formData.meetingLink.trim() : null,
-                locationAddress: formData.sessionType === 'in-person' ? formData.locationAddress.trim() : null
-            };
-
-            const newSession = await sessionService.createSession(sessionData);
-
-            setSuccess(true);
-
-            // Show success toast
-            try {
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: {
-                        type: 'success',
-                        title: 'Session booked successfully!',
-                        message: `Your session "${formData.title.trim()}" has been scheduled.`
-                    }
-                }));
-            } catch (toastError) {
-                console.warn('Failed to show toast:', toastError);
-            }
-
-            // Notify parent component
-            if (onSessionBooked) {
-                onSessionBooked(newSession);
-            }
-
-            // Close modal after a short delay
-            setTimeout(() => {
-                handleClose();
-            }, 2000);
-
-        } catch (err) {
-            console.error('Error booking session:', err);
-            const msg = (err?.message || '').toLowerCase();
-            if (msg.includes('conflict') || msg.includes('not available') || msg.includes('overlap')) {
-                setError('The selected time slot is no longer available. Please choose a different time.');
-            } else {
-                setError(err.message || 'Failed to book session. Please try again.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleClose = () => {
-        setFormData({
-            tutorId: selectedTutor?.id || '',
-            title: '',
-            description: '',
-            subjectId: '',
-            sessionType: 'online',
-            scheduledDate: '',
-            scheduledTime: '',
-            durationMinutes: 60,
-            hourlyRate: selectedTutor?.hourlyRate || 0,
-            meetingLink: '',
-            locationAddress: ''
-        });
+    try {
+        setLoading(true);
         setError(null);
-        setSuccess(false);
-        setTutorDetails(null);
-        setAvailableSlots([]);
-        onClose();
-    };
 
-    const getMinDate = () => {
-        const today = new Date();
-        return today.toISOString().split('T')[0];
-    };
+        const scheduledDateTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
+        const endDateTime = new Date(scheduledDateTime.getTime() + formData.durationMinutes * 60000);
 
-    if (!isOpen) return null;
+        const sessionData = {
+            tutorId: parseInt(formData.tutorId),
+            subjectId: parseInt(formData.subjectId),
+            title: formData.title.trim(),
+            description: formData.description.trim(),
+            sessionType: formData.sessionType,
+            scheduledStart: scheduledDateTime.toISOString(),
+            scheduledEnd: endDateTime.toISOString(),
+            hourlyRate: formData.hourlyRate,
+            meetingLink: formData.sessionType === 'online' ? formData.meetingLink.trim() : null,
+            locationAddress: formData.sessionType === 'in_person' ? formData.locationAddress.trim() : null
+        };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                        <Calendar className="h-5 w-5 mr-2 text-blue-600" />
-                        Book a Tutoring Session
-                    </h2>
-                    <button
-                        onClick={handleClose}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded"
-                        disabled={loading}
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
+        const newSession = await sessionService.createSession(sessionData);
 
-                <div className="p-6">
-                    {success && (
-                        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
-                            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-                            <div>
-                                <p className="text-green-800 font-medium">Session booked successfully!</p>
-                                <p className="text-green-700 text-sm">You will receive a confirmation email shortly.</p>
-                            </div>
+        setSuccess(true);
+
+        // Show success toast
+        try {
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    type: 'success',
+                    title: 'Session booked successfully!',
+                    message: `Your session "${formData.title.trim()}" has been scheduled.`
+                }
+            }));
+        } catch (toastError) {
+            console.warn('Failed to show toast:', toastError);
+        }
+
+        // Notify parent component
+        if (onSessionBooked) {
+            onSessionBooked(newSession);
+        }
+
+        // Close modal after a short delay
+        setTimeout(() => {
+            handleClose();
+        }, 2000);
+
+    } catch (err) {
+        console.error('Error booking session:', err);
+        const msg = (err?.message || '').toLowerCase();
+        if (msg.includes('conflict') || msg.includes('not available') || msg.includes('overlap')) {
+            setError('The selected time slot is no longer available. Please choose a different time.');
+        } else {
+            setError(err.message || 'Failed to book session. Please try again.');
+        }
+    } finally {
+        setLoading(false);
+    }
+};
+
+const handleClose = () => {
+    setFormData({
+        tutorId: selectedTutor?.id || '',
+        title: '',
+        description: '',
+        subjectId: '',
+        sessionType: 'online',
+        scheduledDate: '',
+        scheduledTime: '',
+        durationMinutes: 60,
+        hourlyRate: selectedTutor?.hourlyRate || 0,
+        meetingLink: '',
+        locationAddress: ''
+    });
+    setError(null);
+    setSuccess(false);
+    setTutorDetails(null);
+    setAvailableSlots([]);
+    onClose();
+};
+
+const getMinDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+};
+
+if (!isOpen) return null;
+
+return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                    Book a Tutoring Session
+                </h2>
+                <button
+                    onClick={handleClose}
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                    disabled={loading}
+                >
+                    <X className="h-5 w-5" />
+                </button>
+            </div>
+
+            <div className="p-6">
+                {success && (
+                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+                        <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                        <div>
+                            <p className="text-green-800 font-medium">Session booked successfully!</p>
+                            <p className="text-green-700 text-sm">You will receive a confirmation email shortly.</p>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-                            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-                            <p className="text-red-800">{error}</p>
-                        </div>
-                    )}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+                        <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+                        <p className="text-red-800">{error}</p>
+                    </div>
+                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -655,7 +655,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                 </form>
             </div>
         </div>
-    );
+        );
 };
 
-export default BookSessionModal;
+        export default BookSessionModal;

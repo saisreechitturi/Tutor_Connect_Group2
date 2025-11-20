@@ -33,7 +33,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
 
     const sessionTypes = [
         { value: 'online', label: 'Online Session', icon: Video },
-        { value: 'in-person', label: 'In-Person Session', icon: MapPin }
+        { value: 'in_person', label: 'In-Person Session', icon: MapPin }
     ];
 
     const durationOptions = [
@@ -200,7 +200,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
             setError('Meeting link is required for online sessions');
             return false;
         }
-        if (formData.sessionType === 'in-person' && !formData.locationAddress.trim()) {
+        if (formData.sessionType === 'in_person' && !formData.locationAddress.trim()) {
             setError('Location address is required for in-person sessions');
             return false;
         }
@@ -282,7 +282,7 @@ const BookSessionModal = ({ isOpen, onClose, onSessionBooked, selectedTutor = nu
                 scheduledEnd: endDateTime.toISOString(),
                 hourlyRate: parseFloat(formData.hourlyRate),
                 meetingLink: formData.sessionType === 'online' ? formData.meetingLink.trim() : null,
-                locationAddress: formData.sessionType === 'in-person' ? formData.locationAddress.trim() : null
+                locationAddress: formData.sessionType === 'in_person' ? formData.locationAddress.trim() : null
             };
 
             console.log('Session data being sent:', sessionData);

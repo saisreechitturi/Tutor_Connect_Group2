@@ -128,8 +128,8 @@ const StudentDashboard = () => {
     ];
 
     const recentSessions = sessions
-        .filter(s => s.status === 'scheduled')
-        .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))
+        .filter(s => (s.status === 'scheduled' || s.actualStatus === 'scheduled') && (s.scheduledStart || s.scheduled_start))
+        .sort((a, b) => new Date(a.scheduledStart || a.scheduled_start) - new Date(b.scheduledStart || b.scheduled_start))
         .slice(0, 3);
 
     const urgentTasks = tasks
@@ -190,20 +190,38 @@ const StudentDashboard = () => {
                     <div className="p-6">
                         {recentSessions.length > 0 ? (
                             <div className="space-y-4">
-                                {recentSessions.map((session) => (
-                                    <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <h3 className="font-medium text-gray-900">{session.subject}</h3>
-                                            <p className="text-sm text-gray-600">
-                                                {new Date(session.scheduled_date).toLocaleDateString()} at {session.scheduled_time}
-                                            </p>
+                                {recentSessions.map((session) => {
+                                    const sessionDate = new Date(session.scheduledStart || session.scheduled_start);
+                                    const sessionEndDate = new Date(session.scheduledEnd || session.scheduled_end);
+                                    const duration = sessionEndDate && sessionDate ?
+                                        Math.round((sessionEndDate - sessionDate) / (1000 * 60)) :
+                                        session.durationMinutes || 60;
+
+                                    return (
+                                        <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                            <div>
+                                                <h3 className="font-medium text-gray-900">
+                                                    {session.title || session.subject || 'Tutoring Session'}
+                                                </h3>
+                                                <p className="text-sm text-gray-600">
+                                                    {sessionDate.toLocaleDateString('en-US', {
+                                                        weekday: 'short',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })} at {sessionDate.toLocaleTimeString('en-US', {
+                                                        hour: 'numeric',
+                                                        minute: '2-digit',
+                                                        hour12: true
+                                                    })}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center text-sm text-gray-500">
+                                                <Clock className="h-4 w-4 mr-1" />
+                                                {duration}min
+                                            </div>
                                         </div>
-                                        <div className="flex items-center text-sm text-gray-500">
-                                            <Clock className="h-4 w-4 mr-1" />
-                                            {session.duration}min
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="text-center py-8">

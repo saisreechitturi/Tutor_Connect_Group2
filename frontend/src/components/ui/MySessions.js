@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Calendar, Clock, MapPin, Star, Filter, Plus, Video, User, AlertCircle } from 'lucide-react';
+import { BookOpen, Calendar, Clock, MapPin, Star, Plus, Video, User, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sessionService, reviewService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
@@ -134,7 +134,7 @@ const MySessions = () => {
                             description: 'Calculus and derivatives review',
                             scheduledStart: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
                             scheduledEnd: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hour ago  
-                            sessionType: 'in-person',
+                            sessionType: 'in_person',
                             status: 'scheduled', // This will be marked as "finished" by our logic
                             tutor: { id: 2, name: 'Michael Davis' },
                             student: { id: 2, name: 'Alex Thompson' },

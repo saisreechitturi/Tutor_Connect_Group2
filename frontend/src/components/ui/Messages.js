@@ -244,8 +244,8 @@ const Messages = () => {
             conv.latestMessage = message;
         }
 
-        // Count unread messages
-        if (!message.isRead && message.recipient.id === user.id) {
+        // Count unread messages - only count messages where current user is recipient and message is unread
+        if (!message.isRead && message.recipient?.id === user.id) {
             conv.unreadCount++;
         }
     });
@@ -318,18 +318,22 @@ const Messages = () => {
 
     const markConversationAsRead = async (conversation) => {
         if (conversation.unreadCount > 0) {
+            const currentUnreadCount = conversation.unreadCount;
             try {
                 await messageService.markConversationAsRead(conversation.userId);
+                
                 // Update local state to mark messages as read
                 setMessages(prev => prev.map(msg => {
-                    if ((msg.sender.id === conversation.userId && msg.recipient.id === user.id) ||
-                        (msg.sender.id === user.id && msg.recipient.id === conversation.userId)) {
+                    // Mark messages from this conversation as read where current user is recipient
+                    if (msg.sender.id === conversation.userId && msg.recipient.id === user.id && !msg.isRead) {
                         return { ...msg, isRead: true };
                     }
                     return msg;
                 }));
-                // Update unread count
-                setUnreadCount(prev => Math.max(0, prev - conversation.unreadCount));
+                
+                // Update global unread count
+                setUnreadCount(prev => Math.max(0, prev - currentUnreadCount));
+                
             } catch (error) {
                 console.warn('Failed to mark conversation as read:', error);
             }
@@ -437,9 +441,12 @@ const Messages = () => {
                                 filteredConversations.map((conversation) => (
                                     <button
                                         key={conversation.userId}
-                                        onClick={() => {
+                                        onClick={async () => {
                                             setSelectedConversation(conversation);
-                                            markConversationAsRead(conversation);
+                                            // Mark as read if there are unread messages
+                                            if (conversation.unreadCount > 0) {
+                                                await markConversationAsRead(conversation);
+                                            }
                                         }}
                                         className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 text-left transition-colors ${selectedConversation?.userId === conversation.userId ? 'bg-primary-50 border-primary-200' : ''
                                             }`}

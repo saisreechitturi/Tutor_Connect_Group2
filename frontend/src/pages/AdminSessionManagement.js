@@ -7,7 +7,6 @@ import {
     AlertTriangle,
     CheckCircle,
     XCircle,
-    MessageSquare,
     Search,
     Filter,
     MapPin,
@@ -83,7 +82,7 @@ const AdminSessionManagement = () => {
                 meeting_link: session.meetingLink,
                 meeting_room: session.meetingRoom,
                 cancellation_reason: session.cancellationReason,
-                location: session.meetingRoom || (session.sessionType === 'in-person' ? 'In-Person' : null),
+                location: session.meetingRoom || (session.sessionType === 'in_person' ? 'In-Person' : null),
                 tutor_id: session.tutor.id,
                 student_id: session.student.id,
                 tutor: {
@@ -151,18 +150,19 @@ const AdminSessionManagement = () => {
     }
 
     // Summary statistics
+    const safeSessions = sessions || [];
     const stats = {
-        totalSessions: sessions.length,
-        completedSessions: sessions.filter(s => s.status === 'completed').length,
-        scheduledSessions: sessions.filter(s => s.status === 'scheduled').length,
-        cancelledSessions: sessions.filter(s => s.status === 'cancelled').length,
-        totalEarnings: sessions.reduce((sum, s) => sum + (s.total_earnings || s.totalEarnings || 0), 0),
-        averageRating: sessions.filter(s => s.rating).reduce((sum, s, _, arr) => sum + (s.rating || 0) / arr.length, 0) || 0,
-        totalDuration: sessions.reduce((sum, s) => sum + (s.actual_duration || s.actualDuration || s.duration || 0), 0)
+        totalSessions: safeSessions.length,
+        completedSessions: safeSessions.filter(s => s.status === 'completed').length,
+        scheduledSessions: safeSessions.filter(s => s.status === 'scheduled').length,
+        cancelledSessions: safeSessions.filter(s => s.status === 'cancelled').length,
+        totalEarnings: Number(safeSessions.reduce((sum, s) => sum + (parseFloat(s.total_earnings) || parseFloat(s.totalEarnings) || 0), 0)) || 0,
+        averageRating: Number(safeSessions.filter(s => s.rating).reduce((sum, s, _, arr) => sum + (parseFloat(s.rating) || 0) / arr.length, 0)) || 0,
+        totalDuration: Number(safeSessions.reduce((sum, s) => sum + (parseFloat(s.actual_duration) || parseFloat(s.actualDuration) || parseFloat(s.duration) || 0), 0)) || 0
     };
 
     // Filter sessions
-    const filteredSessions = sessions.filter(session => {
+    const filteredSessions = safeSessions.filter(session => {
         const tutorName = session.tutor_name || (session.tutor && session.tutor.name) || '';
         const studentName = session.student_name || (session.student && session.student.name) || '';
         const sessionId = session.id || '';
@@ -201,7 +201,7 @@ const AdminSessionManagement = () => {
         switch (type) {
             case 'video': return <Video className="w-4 h-4" />;
             case 'phone': return <Phone className="w-4 h-4" />;
-            case 'in-person': return <MapPin className="w-4 h-4" />;
+            case 'in_person': return <MapPin className="w-4 h-4" />;
             default: return <Users className="w-4 h-4" />;
         }
     };
@@ -265,7 +265,7 @@ const AdminSessionManagement = () => {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-500">Total Earnings</p>
-                                <p className="text-2xl font-semibold text-gray-900">${stats.totalEarnings.toFixed(2)}</p>
+                                <p className="text-2xl font-semibold text-gray-900">${(stats.totalEarnings || 0).toFixed(2)}</p>
                             </div>
                         </div>
                     </div>
@@ -277,7 +277,7 @@ const AdminSessionManagement = () => {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-500">Average Rating</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.averageRating.toFixed(1)}</p>
+                                <p className="text-2xl font-semibold text-gray-900">{(stats.averageRating || 0).toFixed(1)}</p>
                             </div>
                         </div>
                     </div>
@@ -349,7 +349,7 @@ const AdminSessionManagement = () => {
                                     <option value="all">All Types</option>
                                     <option value="video">Video</option>
                                     <option value="phone">Phone</option>
-                                    <option value="in-person">In Person</option>
+                                    <option value="in_person">In Person</option>
                                 </select>
                             </div>
                         </div>
@@ -449,14 +449,14 @@ const AdminSessionManagement = () => {
                                                     <span className="ml-1 capitalize">{session.status}</span>
                                                 </span>
                                             </div>
-                                            <div className="text-sm text-gray-900 font-medium">${(session.total_earnings || session.totalEarnings || 0).toFixed(2)}</div>
+                                            <div className="text-sm text-gray-900 font-medium">${(parseFloat(session.total_earnings) || parseFloat(session.totalEarnings) || 0).toFixed(2)}</div>
                                             {session.rating && (
                                                 <div className="flex items-center">
                                                     <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                                     <span className="text-sm text-gray-500 ml-1">{session.rating}/5</span>
                                                 </div>
                                             )}
-                                            {session.issues && session.issues.length > 0 && (
+                                            {session.issues && Array.isArray(session.issues) && session.issues.length > 0 && (
                                                 <div className="flex items-center mt-1">
                                                     <AlertCircle className="w-4 h-4 text-red-500" />
                                                     <span className="text-xs text-red-600 ml-1">{session.issues.length} issue(s)</span>
@@ -562,7 +562,7 @@ const AdminSessionManagement = () => {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Total Earnings:</span>
-                                                <span className="font-medium text-green-600">${(selectedSession.total_earnings || selectedSession.totalEarnings || 0).toFixed(2)}</span>
+                                                <span className="font-medium text-green-600">${(parseFloat(selectedSession.total_earnings) || parseFloat(selectedSession.totalEarnings) || 0).toFixed(2)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -592,7 +592,7 @@ const AdminSessionManagement = () => {
                                         </div>
                                     )}
 
-                                    {selectedSession.resources.length > 0 && (
+                                    {selectedSession.resources && Array.isArray(selectedSession.resources) && selectedSession.resources.length > 0 && (
                                         <div className="bg-gray-50 rounded-lg p-4">
                                             <h4 className="font-semibold text-gray-900 mb-3">Session Resources</h4>
                                             <div className="space-y-2">
@@ -606,7 +606,7 @@ const AdminSessionManagement = () => {
                                         </div>
                                     )}
 
-                                    {selectedSession.issues.length > 0 && (
+                                    {selectedSession.issues && Array.isArray(selectedSession.issues) && selectedSession.issues.length > 0 && (
                                         <div className="bg-red-50 rounded-lg p-4">
                                             <h4 className="font-semibold text-red-900 mb-3 flex items-center">
                                                 <AlertTriangle className="w-5 h-5 mr-2" />
@@ -625,16 +625,12 @@ const AdminSessionManagement = () => {
                                 </div>
                             </div>
 
-                            <div className="mt-6 flex justify-end space-x-3">
+                            <div className="mt-6 flex justify-end">
                                 <button
                                     onClick={closeModal}
                                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
                                 >
                                     Close
-                                </button>
-                                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                    <MessageSquare className="w-4 h-4 inline mr-2" />
-                                    Contact Participants
                                 </button>
                             </div>
                         </div>

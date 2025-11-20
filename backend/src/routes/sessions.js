@@ -95,7 +95,7 @@ router.post('/', [
     body('subjectId').optional().isUUID(),
     body('title').trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isLength({ max: 1000 }),
-    body('sessionType').isIn(['online', 'in-person']),
+    body('sessionType').isIn(['online', 'in_person']),
     body('scheduledStart').isISO8601(),
     body('scheduledEnd').isISO8601(),
     body('hourlyRate').isFloat({ min: 0 }),
@@ -159,7 +159,7 @@ router.post('/', [
         scheduledEnd,
         hourlyRate,
         sessionType === 'online' ? meetingLink : null,
-        sessionType === 'in-person' ? locationAddress : null
+        sessionType === 'in_person' ? locationAddress : null
     ]);
 
     const session = result.rows[0];
