@@ -4,16 +4,15 @@ import { useAuth } from '../../context/AuthContext';
 import {
     Home,
     Search,
-    Calendar,
     MessageSquare,
     CheckSquare,
     Users,
-    Settings,
     BookOpen,
     BarChart,
     Menu,
     X,
-    Clock
+    Clock,
+    Star
 } from 'lucide-react';
 import Toaster from '../ui/Toaster';
 
@@ -27,15 +26,13 @@ const DashboardLayout = ({ userRole, children }) => {
         // Base common items for students and tutors
         const baseCommonItems = [
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
-            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar },
             { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
             { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
         ];
 
-        // Admin gets calendar but no tasks or platform messages
+        // Admin gets basic navigation without calendar, tasks or platform messages
         const adminCommonItems = [
-            { name: 'Dashboard', href: `/${userRole}`, icon: Home },
-            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar }
+            { name: 'Dashboard', href: `/${userRole}`, icon: Home }
         ];
 
         const commonItems = userRole === 'admin' ? adminCommonItems : baseCommonItems;
@@ -53,18 +50,19 @@ const DashboardLayout = ({ userRole, children }) => {
             admin: [
                 { name: 'Users', href: '/admin/users', icon: Users },
                 { name: 'Sessions', href: '/admin/sessions', icon: BookOpen },
-                { name: 'Platform Settings', href: '/admin/platform-settings', icon: Settings }
+                { name: 'Reviews', href: '/admin/reviews', icon: Star }
             ]
         };
 
-        const settingsItem = userRole === 'admin'
-            ? { name: 'Profile Settings', href: `/${userRole}/settings`, icon: Settings }
-            : { name: 'Settings', href: `/${userRole}/settings`, icon: Settings };
+        // Settings only for students and tutors, not admin
+        const settingsItem = userRole !== 'admin'
+            ? { name: 'Settings', href: `/${userRole}/settings`, icon: Users }
+            : null;
 
         return [
             ...commonItems,
             ...roleSpecificItems[userRole],
-            settingsItem
+            ...(settingsItem ? [settingsItem] : [])
         ];
     };
 

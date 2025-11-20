@@ -398,6 +398,40 @@ class AdminService {
             throw error;
         }
     }
+
+    // Get all reviews (admin only)
+    async getAllReviews(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+
+            // Add filters to query params
+            if (filters.rating) queryParams.append('rating', filters.rating);
+            if (filters.reviewerType) queryParams.append('reviewerType', filters.reviewerType);
+            if (filters.dateRange) queryParams.append('dateRange', filters.dateRange);
+            if (filters.search) queryParams.append('search', filters.search);
+            if (filters.limit) queryParams.append('limit', filters.limit);
+            if (filters.offset) queryParams.append('offset', filters.offset);
+
+            const endpoint = `/admin/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Get all reviews failed:', error);
+            throw error;
+        }
+    }
+
+    // Delete a review (admin only)
+    async deleteReview(reviewId) {
+        try {
+            const response = await apiClient.delete(`/admin/reviews/${reviewId}`);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Delete review failed:', error);
+            throw error;
+        }
+    }
 }
 
 // Create and export singleton instance

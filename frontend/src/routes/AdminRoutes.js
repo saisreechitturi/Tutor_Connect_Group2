@@ -3,9 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AdminUserManagement from '../pages/AdminUserManagement';
 import AdminSessionManagement from '../pages/AdminSessionManagement';
-import AdminSettings from '../pages/AdminSettings';
-import AdminCalendar from '../pages/AdminCalendar';
-import AdminPlatformSettings from '../pages/AdminPlatformSettings';
+import AdminReviewsManagement from '../pages/AdminReviewsManagement';
 import { adminService } from '../services';
 // Removed advanced analytics and admin messaging per scope simplification
 
@@ -14,6 +12,7 @@ const AdminDashboard = () => {
         totalUsers: 0,
         activeSessions: 0,
         totalRevenue: 0,
+        totalSessions: 0,
         recentActivity: { newUsers: 0, newSessions: 0 },
         topTutors: []
     });
@@ -42,6 +41,7 @@ const AdminDashboard = () => {
                 totalUsers,
                 activeSessions: parseInt(activeSessions),
                 totalRevenue,
+                totalSessions: data.totalSessions || 0,
                 recentActivity: data.recentActivity || { newUsers: 0, newSessions: 0 },
                 topTutors: data.topTutors || []
             });
@@ -53,6 +53,7 @@ const AdminDashboard = () => {
                 totalUsers: 0,
                 activeSessions: 0,
                 totalRevenue: 0,
+                totalSessions: 0,
                 recentActivity: { newUsers: 0, newSessions: 0 },
                 topTutors: []
             });
@@ -70,8 +71,8 @@ const AdminDashboard = () => {
                         Monitor platform activity, manage users, and oversee system operations.
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[...Array(3)].map((_, i) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
                         <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                             <div className="animate-pulse">
                                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
@@ -106,7 +107,7 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Users</h3>
                     <p className="text-3xl font-bold text-purple-600">{stats.totalUsers.toLocaleString()}</p>
@@ -115,37 +116,23 @@ const AdminDashboard = () => {
                     </p>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Sessions</h3>
+                    <p className="text-3xl font-bold text-indigo-600">{stats.totalSessions.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mt-1">All sessions created</p>
+                </div>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Sessions</h3>
                     <p className="text-3xl font-bold text-green-600">{stats.activeSessions}</p>
                     <p className="text-sm text-gray-500 mt-1">Currently ongoing</p>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Revenue</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Payments Made</h3>
                     <p className="text-3xl font-bold text-blue-600">${stats.totalRevenue.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {stats.recentActivity.newSessions > 0 ? `${stats.recentActivity.newSessions} new sessions this month` : 'All-time total'}
-                    </p>
+                    <p className="text-sm text-gray-500 mt-1">From completed sessions</p>
                 </div>
             </div>
 
-            {stats.topTutors.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Tutors</h2>
-                    <div className="space-y-3">
-                        {stats.topTutors.map((tutor, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{tutor.name}</p>
-                                    <p className="text-sm text-gray-500">{tutor.totalSessions} sessions</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-semibold text-purple-600">★ {tutor.rating}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -200,10 +187,8 @@ const AdminRoutes = () => {
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUserManagement />} />
                 <Route path="sessions" element={<AdminSessionManagement />} />
-                <Route path="calendar" element={<AdminCalendar />} />
-                {/* Analytics and Admin Messaging removed */}
-                <Route path="settings" element={<AdminSettings />} />
-                <Route path="platform-settings" element={<AdminPlatformSettings />} />
+                <Route path="reviews" element={<AdminReviewsManagement />} />
+                {/* Analytics, Admin Messaging, and Settings removed */}
             </Routes>
         </DashboardLayout>
     );

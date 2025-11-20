@@ -187,7 +187,8 @@ router.patch('/users/:id/status', [
         user: {
             id: result.rows[0].id,
             email: result.rows[0].email,
-            status: result.rows[0].is_active ? 'active' : 'inactive'
+            status: result.rows[0].is_active ? 'active' : 'inactive',
+            isActive: result.rows[0].is_active
         }
     });
 }));
@@ -211,6 +212,12 @@ router.get('/stats', asyncHandler(async (req, res) => {
       SUM(CASE WHEN status = 'completed' THEN payment_amount ELSE 0 END) as total_revenue
     FROM tutoring_sessions
     GROUP BY status
+  `);
+
+    // Get total sessions count
+    const totalSessions = await query(`
+    SELECT COUNT(*) as count
+    FROM tutoring_sessions
   `);
 
     // Get recent activity
@@ -239,6 +246,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
     res.json({
         userStats: userStats.rows,
         sessionStats: sessionStats.rows,
+        totalSessions: parseInt(totalSessions.rows[0].count),
         recentActivity: {
             newUsers: parseInt(recentUsers.rows[0].count),
             newSessions: parseInt(recentSessions.rows[0].count)
@@ -601,6 +609,197 @@ router.post('/populate-tutor-subjects', asyncHandler(async (req, res) => {
 
     } catch (error) {
         logger.error(`[${requestId}] Error populating tutor-subject relationships:`, error);
+        throw error;
+    }
+}));
+
+// Get all reviews with filtering and pagination
+router.get('/reviews', [
+    expressQuery('rating').optional().isInt({ min: 1, max: 5 }),
+    expressQuery('reviewerType').optional().isIn(['student', 'tutor']),
+    expressQuery('dateRange').optional().isIn(['week', 'month', 'quarter']),
+    expressQuery('search').optional().isString(),
+    expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
+    expressQuery('offset').optional().isInt({ min: 0 })
+], asyncHandler(async (req, res) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    logger.info(`[${requestId}] Admin request: Get all reviews`, {
+        userId: req.user?.id,
+        userRole: req.user?.role,
+        filters: req.query
+    });
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn(`[${requestId}] Validation failed:`, errors.array());
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    try {
+        const { rating, reviewerType, dateRange, search } = req.query;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+
+        let queryText = `
+            SELECT sr.id, sr.rating, sr.comment, sr.reviewer_type, sr.would_recommend, 
+                   sr.created_at, sr.session_id, sr.reviewer_id, sr.reviewee_id,
+                   reviewer.first_name as reviewer_first_name,
+                   reviewer.last_name as reviewer_last_name,
+                   reviewer.email as reviewer_email,
+                   reviewer.profile_picture_url as reviewer_avatar,
+                   reviewee.first_name as reviewee_first_name,
+                   reviewee.last_name as reviewee_last_name,
+                   reviewee.email as reviewee_email,
+                   ts.subject_name,
+                   ts.scheduled_start_time,
+                   ts.duration_minutes
+            FROM session_reviews sr
+            JOIN users reviewer ON sr.reviewer_id = reviewer.id
+            JOIN users reviewee ON sr.reviewee_id = reviewee.id
+            LEFT JOIN tutoring_sessions ts ON sr.session_id = ts.id
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        // Rating filter
+        if (rating) {
+            queryText += ` AND sr.rating = $${params.length + 1}`;
+            params.push(rating);
+        }
+
+        // Reviewer type filter
+        if (reviewerType) {
+            queryText += ` AND sr.reviewer_type = $${params.length + 1}`;
+            params.push(reviewerType);
+        }
+
+        // Date range filter
+        if (dateRange) {
+            const days = { week: 7, month: 30, quarter: 90 };
+            if (days[dateRange]) {
+                queryText += ` AND sr.created_at >= NOW() - INTERVAL '${days[dateRange]} days'`;
+            }
+        }
+
+        // Search filter
+        if (search) {
+            queryText += ` AND (
+                sr.comment ILIKE $${params.length + 1} OR
+                reviewer.first_name ILIKE $${params.length + 1} OR
+                reviewer.last_name ILIKE $${params.length + 1} OR
+                reviewee.first_name ILIKE $${params.length + 1} OR
+                reviewee.last_name ILIKE $${params.length + 1} OR
+                ts.subject_name ILIKE $${params.length + 1}
+            )`;
+            params.push(`%${search}%`);
+        }
+
+        queryText += ` ORDER BY sr.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(limit, offset);
+
+        logger.debug(`[${requestId}] Executing reviews query with ${params.length} parameters`);
+        const result = await query(queryText, params);
+        logger.info(`[${requestId}] Reviews query successful: ${result.rows.length} rows returned`);
+
+        const reviews = result.rows.map(row => ({
+            id: row.id,
+            sessionId: row.session_id,
+            rating: row.rating,
+            comment: row.comment,
+            reviewerType: row.reviewer_type,
+            wouldRecommend: row.would_recommend,
+            createdAt: row.created_at,
+            reviewer: {
+                firstName: row.reviewer_first_name,
+                lastName: row.reviewer_last_name,
+                email: row.reviewer_email,
+                avatar: row.reviewer_avatar || `https://images.unsplash.com/photo-${row.reviewer_type === 'tutor' ? '1494790108755-2616b612b786' : '1472099645785-5658abf4ff4e'}?w=150`
+            },
+            reviewee: {
+                firstName: row.reviewee_first_name,
+                lastName: row.reviewee_last_name,
+                email: row.reviewee_email
+            },
+            session: row.subject_name ? {
+                subject: row.subject_name,
+                duration: row.duration_minutes,
+                date: row.scheduled_start_time ? new Date(row.scheduled_start_time).toISOString().split('T')[0] : null
+            } : null
+        }));
+
+        // Get total count for pagination
+        let countQueryText = 'SELECT COUNT(*) FROM session_reviews sr WHERE 1=1';
+        const countParams = [];
+        let paramIndex = 0;
+
+        if (rating) {
+            countQueryText += ` AND sr.rating = $${++paramIndex}`;
+            countParams.push(rating);
+        }
+        if (reviewerType) {
+            countQueryText += ` AND sr.reviewer_type = $${++paramIndex}`;
+            countParams.push(reviewerType);
+        }
+        if (dateRange) {
+            const days = { week: 7, month: 30, quarter: 90 };
+            if (days[dateRange]) {
+                countQueryText += ` AND sr.created_at >= NOW() - INTERVAL '${days[dateRange]} days'`;
+            }
+        }
+        if (search) {
+            countQueryText += ` AND EXISTS (
+                SELECT 1 FROM users reviewer WHERE reviewer.id = sr.reviewer_id AND 
+                (sr.comment ILIKE $${++paramIndex} OR reviewer.first_name ILIKE $${paramIndex} OR reviewer.last_name ILIKE $${paramIndex})
+            )`;
+            countParams.push(`%${search}%`);
+        }
+
+        const totalResult = await query(countQueryText, countParams);
+        const totalReviews = parseInt(totalResult.rows[0].count);
+
+        res.json({
+            reviews,
+            pagination: {
+                total: totalReviews,
+                limit,
+                offset,
+                hasMore: offset + limit < totalReviews
+            }
+        });
+
+    } catch (error) {
+        logger.error(`[${requestId}] Error fetching reviews:`, error);
+        throw error;
+    }
+}));
+
+// Delete a review
+router.delete('/reviews/:id', asyncHandler(async (req, res) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    logger.info(`[${requestId}] Admin request: Delete review`, {
+        userId: req.user?.id,
+        reviewId: req.params.id
+    });
+
+    try {
+        const result = await query(
+            'DELETE FROM session_reviews WHERE id = $1 RETURNING id',
+            [req.params.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        logger.info(`[${requestId}] Review deleted successfully: ${req.params.id}`);
+        res.json({ message: 'Review deleted successfully' });
+
+    } catch (error) {
+        logger.error(`[${requestId}] Error deleting review:`, error);
         throw error;
     }
 }));

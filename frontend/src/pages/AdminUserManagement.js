@@ -146,22 +146,22 @@ const AdminUserManagement = () => {
                 // Transform API data to match expected format
                 const transformedUsers = usersData.map(user => ({
                     id: user.id,
-                    first_name: user.firstName,
-                    last_name: user.lastName,
+                    first_name: user.firstName || user.first_name,
+                    last_name: user.lastName || user.last_name,
                     email: user.email,
                     role: user.role,
-                    status: user.status || (user.isActive ? 'active' : 'inactive'),
-                    phone: user.phone,
-                    joinedDate: new Date(user.createdAt).toISOString().split('T')[0],
-                    lastLogin: user.lastLogin || user.createdAt,
-                    verified: user.emailVerified || true,
+                    status: user.status,
+                    phone: user.phone || 'N/A',
+                    joinedDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'N/A',
+                    lastLogin: user.lastLogin || user.createdAt || 'Never',
+                    verified: user.emailVerified !== false,
                     isActive: user.isActive,
                     totalSessions: user.tutorStats?.totalSessions || 0,
                     totalSpent: 0,
                     totalEarned: 0,
                     rating: user.tutorStats?.rating || 0,
-                    subjects: [],
-                    avatar: `https://images.unsplash.com/photo-${user.role === 'tutor' ? '1494790108755-2616b612b786' : '1472099645785-5658abf4ff4e'}?w=150`
+                    subjects: user.subjects || [],
+                    avatar: `https://images.unsplash.com/photo-${user.role === 'tutor' ? '1494790108755-2616b612b786' : user.role === 'admin' ? '1560250097-f9871d5e6e74' : '1472099645785-5658abf4ff4e'}?w=150`
                 }));
 
                 setUsers(transformedUsers);
@@ -254,12 +254,23 @@ const AdminUserManagement = () => {
     const updateUserStatus = async (userId, newStatus) => {
         try {
             // Call the backend API to update user status
-            await adminService.toggleUserStatus(userId, newStatus);
+            const response = await adminService.toggleUserStatus(userId, newStatus);
 
-            // Update local state
-            setUserList(prev => prev.map(user =>
-                user.id === userId ? { ...user, status: newStatus, isActive: newStatus === 'active' } : user
-            ));
+            // Update local state with API response or fallback
+            if (response && response.user) {
+                setUserList(prev => prev.map(user =>
+                    user.id === userId ? {
+                        ...user,
+                        status: response.user.status,
+                        isActive: response.user.isActive
+                    } : user
+                ));
+            } else {
+                // Fallback to local update
+                setUserList(prev => prev.map(user =>
+                    user.id === userId ? { ...user, status: newStatus, isActive: newStatus === 'active' } : user
+                ));
+            }
 
             console.log(`Updated user ${userId} status to ${newStatus}`);
         } catch (err) {
