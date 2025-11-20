@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { sessionService, taskService } from '../../services';
 import { Calendar, CheckSquare, BookOpen, Clock, TrendingUp } from 'lucide-react';
 import AddTaskModal from '../modals/AddTaskModal';
-import BookSessionModal from '../modals/BookSessionModal';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [sessions, setSessions] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
-    const [showBookSessionModal, setShowBookSessionModal] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -43,10 +43,6 @@ const StudentDashboard = () => {
 
     const handleTaskAdded = (newTask) => {
         setTasks(prev => [...prev, newTask]);
-    };
-
-    const handleSessionBooked = (newSession) => {
-        setSessions(prev => [...prev, newSession]);
     };
 
     if (loading) {
@@ -149,6 +145,41 @@ const StudentDashboard = () => {
                 </p>
             </div>
 
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button
+                        onClick={() => navigate('/student/tutors')}
+                        className="flex items-center justify-center px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                        <BookOpen className="h-5 w-5 mr-2" />
+                        Book Session
+                    </button>
+                    <button
+                        onClick={() => setShowAddTaskModal(true)}
+                        className="flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <CheckSquare className="h-5 w-5 mr-2" />
+                        Add Task
+                    </button>
+                    <button
+                        onClick={() => navigate('/student/tutors')}
+                        className="flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <TrendingUp className="h-5 w-5 mr-2" />
+                        Find Tutors
+                    </button>
+                    <button
+                        onClick={() => navigate('/student/calendar')}
+                        className="flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        <Calendar className="h-5 w-5 mr-2" />
+                        View Calendar
+                    </button>
+                </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat) => {
@@ -227,7 +258,10 @@ const StudentDashboard = () => {
                             <div className="text-center py-8">
                                 <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                 <p className="text-gray-500">No upcoming sessions</p>
-                                <button className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium">
+                                <button
+                                    onClick={() => navigate('/student/tutors')}
+                                    className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                                >
                                     Book a session
                                 </button>
                             </div>
@@ -284,13 +318,6 @@ const StudentDashboard = () => {
                 isOpen={showAddTaskModal}
                 onClose={() => setShowAddTaskModal(false)}
                 onTaskAdded={handleTaskAdded}
-            />
-
-            {/* Book Session Modal */}
-            <BookSessionModal
-                isOpen={showBookSessionModal}
-                onClose={() => setShowBookSessionModal(false)}
-                onSessionBooked={handleSessionBooked}
             />
         </div>
     );
