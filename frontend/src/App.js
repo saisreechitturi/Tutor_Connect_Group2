@@ -17,7 +17,8 @@ import ResetPassword from './components/auth/ResetPassword';
 import StudentRoutes from './routes/StudentRoutes';
 import TutorRoutes from './routes/TutorRoutes';
 import AdminRoutes from './routes/AdminRoutes';
-import AIChatbot from './components/ui/AIChatbot';
+import FloatingAIAssistant from './components/FloatingAIAssistant';
+import ErrorBoundary from './components/ErrorBoundary';
 import NotFound from './pages/error/NotFound';
 
 function App() {
@@ -166,8 +167,10 @@ function App() {
                         <Route path="*" element={<NotFound />} />
                     </Routes>
 
-                    {/* AI Chatbot - Available on all pages */}
-                    <AIChatbot />
+                    {/* AI Assistant - Available on all pages */}
+                    <ErrorBoundary>
+                        <FloatingAIAssistant />
+                    </ErrorBoundary>
                 </div>
             </Router>
         </AuthProvider>

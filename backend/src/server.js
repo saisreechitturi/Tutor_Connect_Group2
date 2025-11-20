@@ -19,6 +19,7 @@ const availabilityRoutes = require('./routes/availability');
 const paymentsRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
 const calendarRoutes = require('./routes/calendar');
+const aiChatRoutes = require('./routes/ai-chat');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { connectDatabase } = require('./database/connection');
@@ -82,6 +83,7 @@ app.use('/api/availability', availabilityRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

@@ -102,8 +102,18 @@ class ApiClient {
     }
 
     // HTTP Methods
-    async get(endpoint) {
-        return this.request(endpoint, { method: 'GET' });
+    async get(endpoint, options = {}) {
+        const config = { method: 'GET', ...options };
+
+        // Handle query parameters
+        if (options.params) {
+            const searchParams = new URLSearchParams(options.params);
+            const separator = endpoint.includes('?') ? '&' : '?';
+            endpoint = endpoint + separator + searchParams.toString();
+            delete config.params; // Remove params from config as it's now in the URL
+        }
+
+        return this.request(endpoint, config);
     }
 
     async post(endpoint, data) {

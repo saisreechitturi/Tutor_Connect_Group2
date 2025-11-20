@@ -18,6 +18,7 @@ import reviewService from './reviewService';
 import notificationService from './notificationService';
 import settingsService from './settingsService';
 import profileService from './profileService';
+import aiService from './aiService';
 
 // Export individual services
 export {
@@ -37,7 +38,8 @@ export {
     reviewService,
     notificationService,
     settingsService,
-    profileService
+    profileService,
+    aiService
 };
 
 // Re-export for convenience
@@ -58,5 +60,6 @@ export {
     reviewService as reviews,
     notificationService as notifications,
     settingsService as settings,
-    profileService as profiles
+    profileService as profiles,
+    aiService as ai
 };
