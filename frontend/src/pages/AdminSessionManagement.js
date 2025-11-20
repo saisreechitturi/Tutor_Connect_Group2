@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { adminService, sessionService } from '../services';
 import {
     Calendar,
@@ -178,7 +177,6 @@ const mockSessions = [
 ];
 
 const AdminSessionManagement = () => {
-    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSession, setSelectedSession] = useState(null);

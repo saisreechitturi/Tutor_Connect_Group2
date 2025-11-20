@@ -82,7 +82,7 @@ const ResetPassword = () => {
         setError('');
 
         try {
-            const response = await authService.resetPassword(token, formData.password);
+            await authService.resetPassword(token, formData.password);
             setIsSuccess(true);
 
             // Redirect to login after 3 seconds

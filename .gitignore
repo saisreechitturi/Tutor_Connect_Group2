@@ -41,6 +41,13 @@ lerna-debug.log*
 temp/
 tmp/
 
+# Test files and temporary scripts
+test-*.js
+*-test.js
+admin-*.js
+*-summary.md
+*-changes.md
+
 # Test files (optional - uncomment if you don't want test files in git)
 # *.test.js
 # *.spec.js
