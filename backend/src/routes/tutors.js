@@ -72,6 +72,15 @@ router.get('/', [
         params.push(`%${search}%`);
     }
 
+    if (subject) {
+        queryText += ` AND EXISTS (
+            SELECT 1 FROM tutor_subjects ts2 
+            JOIN subjects s2 ON ts2.subject_id = s2.id 
+            WHERE ts2.tutor_id = tp.user_id AND s2.name ILIKE $${params.length + 1}
+        )`;
+        params.push(`%${subject}%`);
+    }
+
     queryText += ` GROUP BY u.id, u.first_name, u.last_name, u.profile_picture_url, u.bio, tp.hourly_rate, tp.years_of_experience, tp.rating, tp.total_sessions, tp.languages_spoken, tp.education_background, tp.is_verified`;
     queryText += ` ORDER BY tp.rating DESC, tp.total_sessions DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);

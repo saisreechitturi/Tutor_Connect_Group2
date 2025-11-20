@@ -10,7 +10,8 @@ const BrowseTutors = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
-    const [priceRange, setPriceRange] = useState('');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
     const [sortBy, setSortBy] = useState('price_low');
     const [subjects, setSubjects] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -28,9 +29,8 @@ const BrowseTutors = () => {
             setError(null);
             const data = await tutorService.getTutors({
                 subject: selectedSubject || undefined,
-                ...(priceRange === 'low' && { minRate: 0, maxRate: 30 }),
-                ...(priceRange === 'medium' && { minRate: 30, maxRate: 60 }),
-                ...(priceRange === 'high' && { minRate: 60 }),
+                ...(minPrice && { minRate: parseFloat(minPrice) }),
+                ...(maxPrice && { maxRate: parseFloat(maxPrice) }),
                 minRating: undefined,
                 search: searchTerm || undefined,
             });
@@ -41,12 +41,12 @@ const BrowseTutors = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedSubject, priceRange, searchTerm]);
+    }, [selectedSubject, minPrice, maxPrice, searchTerm]);
 
     // Refetch tutors when filters change (debounced search could be added later)
     useEffect(() => {
         fetchTutors();
-    }, [fetchTutors, selectedSubject, priceRange, sortBy]);
+    }, [fetchTutors, selectedSubject, minPrice, maxPrice, sortBy]);
 
 
 
@@ -110,10 +110,8 @@ const BrowseTutors = () => {
             tutor.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (tutor.bio && tutor.bio.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        const matchesPrice = !priceRange ||
-            (priceRange === 'low' && tutor.hourlyRate <= 30) ||
-            (priceRange === 'medium' && tutor.hourlyRate > 30 && tutor.hourlyRate <= 60) ||
-            (priceRange === 'high' && tutor.hourlyRate > 60);
+        const matchesPrice = (!minPrice || tutor.hourlyRate >= parseFloat(minPrice)) &&
+            (!maxPrice || tutor.hourlyRate <= parseFloat(maxPrice));
 
         return matchesSearch && matchesPrice;
     });
@@ -149,7 +147,7 @@ const BrowseTutors = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Search and Filters */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         {/* Search Input */}
                         <div className="lg:col-span-2">
                             <div className="relative">
@@ -181,17 +179,25 @@ const BrowseTutors = () => {
                         </div>
 
                         {/* Price Range Filter */}
-                        <div>
-                            <select
-                                value={priceRange}
-                                onChange={(e) => setPriceRange(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                            >
-                                <option value="">Any Price</option>
-                                <option value="low">Under $30/hr</option>
-                                <option value="medium">$30-60/hr</option>
-                                <option value="high">Over $60/hr</option>
-                            </select>
+                        <div className="flex space-x-2">
+                            <input
+                                type="number"
+                                placeholder="Min $"
+                                value={minPrice}
+                                onChange={(e) => setMinPrice(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                min="0"
+                                step="1"
+                            />
+                            <input
+                                type="number"
+                                placeholder="Max $"
+                                value={maxPrice}
+                                onChange={(e) => setMaxPrice(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                min="0"
+                                step="1"
+                            />
                         </div>
 
                         {/* Sort By */}
@@ -212,7 +218,8 @@ const BrowseTutors = () => {
                             onClick={() => {
                                 setSearchTerm('');
                                 setSelectedSubject('');
-                                setPriceRange('');
+                                setMinPrice('');
+                                setMaxPrice('');
                                 setSortBy('price_low');
                             }}
                             className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -362,7 +369,8 @@ const BrowseTutors = () => {
                             onClick={() => {
                                 setSearchTerm('');
                                 setSelectedSubject('');
-                                setPriceRange('');
+                                setMinPrice('');
+                                setMaxPrice('');
                                 setSortBy('price_low');
                             }}
                             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
