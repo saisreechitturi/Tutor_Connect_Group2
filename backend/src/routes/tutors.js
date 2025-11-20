@@ -706,6 +706,182 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
     }
 }));
 
+// Get tutor analytics data
+router.get('/analytics/:tutorId', authenticateToken, asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+    const { period = 'month' } = req.query;
+
+    // Check authorization - only the tutor themselves or admin can access
+    if (req.user.role !== 'admin' && req.user.id !== tutorId) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Verify tutor exists
+    const tutorCheck = await query('SELECT id FROM users WHERE id = $1 AND role = $2', [tutorId, 'tutor']);
+    if (tutorCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor not found' });
+    }
+
+    try {
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1;
+        const currentYear = currentDate.getFullYear();
+
+        // Get total earnings from payments table
+        const totalEarningsResult = await query(`
+            SELECT COALESCE(SUM(p.amount), 0) as total_earnings
+            FROM payments p
+            WHERE p.recipient_id = $1 AND p.status = 'completed'
+        `, [tutorId]);
+
+        // Get current month earnings
+        const monthlyEarningsResult = await query(`
+            SELECT COALESCE(SUM(p.amount), 0) as monthly_earnings
+            FROM payments p
+            WHERE p.recipient_id = $1 
+            AND p.status = 'completed'
+            AND EXTRACT(MONTH FROM p.created_at) = $2
+            AND EXTRACT(YEAR FROM p.created_at) = $3
+        `, [tutorId, currentMonth, currentYear]);
+
+        // Get total hours tutored
+        const totalHoursResult = await query(`
+            SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (
+                CASE 
+                    WHEN ts.actual_end IS NOT NULL AND ts.actual_start IS NOT NULL 
+                    THEN ts.actual_end - ts.actual_start
+                    ELSE ts.scheduled_end - ts.scheduled_start
+                END
+            ))/3600), 0) as total_hours
+            FROM tutoring_sessions ts
+            WHERE ts.tutor_id = $1 AND ts.status = 'completed'
+        `, [tutorId]);
+
+        // Get current month hours
+        const monthlyHoursResult = await query(`
+            SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (
+                CASE 
+                    WHEN ts.actual_end IS NOT NULL AND ts.actual_start IS NOT NULL 
+                    THEN ts.actual_end - ts.actual_start
+                    ELSE ts.scheduled_end - ts.scheduled_start
+                END
+            ))/3600), 0) as monthly_hours
+            FROM tutoring_sessions ts
+            WHERE ts.tutor_id = $1 
+            AND ts.status = 'completed'
+            AND EXTRACT(MONTH FROM ts.scheduled_start) = $2
+            AND EXTRACT(YEAR FROM ts.scheduled_start) = $3
+        `, [tutorId, currentMonth, currentYear]);
+
+        // Get active students count
+        const activeStudentsResult = await query(`
+            SELECT COUNT(DISTINCT student_id) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND scheduled_start >= NOW() - INTERVAL '30 days'
+        `, [tutorId]);
+
+        // Get average rating
+        const averageRatingResult = await query(`
+            SELECT COALESCE(ROUND(AVG(sr.rating)::numeric, 1), 0) as avg_rating
+            FROM session_reviews sr
+            JOIN tutoring_sessions ts ON sr.session_id = ts.id
+            WHERE ts.tutor_id = $1
+        `, [tutorId]);
+
+        // Get sessions completed
+        const sessionsCompletedResult = await query(`
+            SELECT COUNT(*) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 AND status = 'completed'
+        `, [tutorId]);
+
+        // Get current month sessions completed
+        const monthlySessionsResult = await query(`
+            SELECT COUNT(*) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND status = 'completed'
+            AND EXTRACT(MONTH FROM scheduled_start) = $2
+            AND EXTRACT(YEAR FROM scheduled_start) = $3
+        `, [tutorId, currentMonth, currentYear]);
+
+        // Get upcoming sessions
+        const upcomingSessionsResult = await query(`
+            SELECT COUNT(*) as count
+            FROM tutoring_sessions
+            WHERE tutor_id = $1 
+            AND status = 'scheduled'
+            AND scheduled_start >= NOW()
+            AND scheduled_start <= NOW() + INTERVAL '7 days'
+        `, [tutorId]);
+
+        // Get earnings breakdown by month (last 6 months)
+        const earningsBreakdownResult = await query(`
+            SELECT 
+                TO_CHAR(p.created_at, 'Mon') as month,
+                EXTRACT(MONTH FROM p.created_at) as month_num,
+                COALESCE(SUM(p.amount), 0) as amount
+            FROM payments p
+            WHERE p.recipient_id = $1 
+            AND p.status = 'completed'
+            AND p.created_at >= NOW() - INTERVAL '6 months'
+            GROUP BY EXTRACT(MONTH FROM p.created_at), TO_CHAR(p.created_at, 'Mon')
+            ORDER BY month_num
+        `, [tutorId]);
+
+        // Get recent sessions
+        const recentSessionsResult = await query(`
+            SELECT ts.id, ts.title, ts.scheduled_start, ts.status,
+                   u.first_name as student_first_name, u.last_name as student_last_name,
+                   s.name as subject_name, p.amount
+            FROM tutoring_sessions ts
+            JOIN users u ON ts.student_id = u.id
+            JOIN subjects s ON ts.subject_id = s.id
+            LEFT JOIN payments p ON ts.id = p.session_id AND p.recipient_id = ts.tutor_id
+            WHERE ts.tutor_id = $1
+            ORDER BY ts.scheduled_start DESC
+            LIMIT 5
+        `, [tutorId]);
+
+        // Prepare analytics data
+        const analyticsData = {
+            overview: {
+                totalEarnings: parseFloat(totalEarningsResult.rows[0]?.total_earnings) || 0,
+                monthlyEarnings: parseFloat(monthlyEarningsResult.rows[0]?.monthly_earnings) || 0,
+                totalHours: parseFloat(totalHoursResult.rows[0]?.total_hours) || 0,
+                monthlyHours: parseFloat(monthlyHoursResult.rows[0]?.monthly_hours) || 0,
+                activeStudents: parseInt(activeStudentsResult.rows[0]?.count) || 0,
+                averageRating: parseFloat(averageRatingResult.rows[0]?.avg_rating) || 0,
+                sessionsCompleted: parseInt(sessionsCompletedResult.rows[0]?.count) || 0,
+                monthlySessionsCompleted: parseInt(monthlySessionsResult.rows[0]?.count) || 0,
+                upcomingSessions: parseInt(upcomingSessionsResult.rows[0]?.count) || 0
+            },
+            earnings: {
+                breakdown: earningsBreakdownResult.rows.map(row => ({
+                    month: row.month,
+                    amount: parseFloat(row.amount) || 0
+                }))
+            },
+            recentSessions: recentSessionsResult.rows.map(row => ({
+                id: row.id,
+                title: row.title,
+                student: `${row.student_first_name} ${row.student_last_name}`,
+                subject: row.subject_name,
+                date: row.scheduled_start,
+                status: row.status,
+                amount: parseFloat(row.amount) || 0
+            }))
+        };
+
+        res.json({ analytics: analyticsData });
+
+    } catch (error) {
+        logger.error('Error fetching tutor analytics:', error);
+        res.status(500).json({ message: 'Failed to fetch analytics data' });
+    }
+}));
+
 // Refresh tutor statistics (manual refresh)
 router.post('/:tutorId/refresh-stats', authenticateToken, asyncHandler(async (req, res) => {
     const { tutorId } = req.params;

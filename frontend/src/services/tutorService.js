@@ -167,6 +167,21 @@ class TutorService {
         }
     }
 
+    // Get tutor analytics data
+    async getTutorAnalytics(tutorId, options = {}) {
+        try {
+            const queryParams = new URLSearchParams();
+            if (options.period) queryParams.append('period', options.period);
+            
+            const endpoint = `/tutors/analytics/${tutorId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+            const response = await apiClient.get(endpoint);
+            return response.analytics || response;
+        } catch (error) {
+            console.error('[TutorService] Get tutor analytics failed:', error);
+            throw error;
+        }
+    }
+
     // Refresh tutor statistics
     async refreshStatistics(tutorId) {
         try {
