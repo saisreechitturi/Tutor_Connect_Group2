@@ -539,7 +539,7 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
         // Get current month earnings
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
-        
+
         const monthlyEarningsResult = await query(`
             SELECT COALESCE(SUM(payment_amount), 0) as total
             FROM tutoring_sessions
@@ -610,7 +610,7 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
         const activeStudents = parseInt(activeStudentsResult.rows[0]?.count) || 0;
         const upcomingSessions = parseInt(upcomingSessionsResult.rows[0]?.count) || 0;
         const monthlyEarnings = parseFloat(monthlyEarningsResult.rows[0]?.total) || 0;
-        
+
         const performance = performanceResult.rows[0] || {
             total_sessions: 0,
             completed_sessions: 0,

@@ -11,7 +11,7 @@ const TutorDashboard = () => {
 
     const refreshDashboard = async () => {
         if (!user?.id) return;
-        
+
         try {
             setLoading(true);
             setError(null);
@@ -305,11 +305,10 @@ const TutorDashboard = () => {
                                                     {[...Array(5)].map((_, i) => (
                                                         <Star
                                                             key={i}
-                                                            className={`h-4 w-4 ${
-                                                                i < review.rating
+                                                            className={`h-4 w-4 ${i < review.rating
                                                                     ? 'text-yellow-400 fill-current'
                                                                     : 'text-gray-300'
-                                                            }`}
+                                                                }`}
                                                         />
                                                     ))}
                                                 </div>
