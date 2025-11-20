@@ -139,6 +139,21 @@ VALUES
     ('550e8400-e29b-41d4-a716-446655440001', 5, '10:00:00', '16:00:00', true, true)  -- Friday
 ON CONFLICT DO NOTHING;
 
+-- Create payment records for completed sessions
+INSERT INTO payments (session_id, payer_id, recipient_id, amount, payment_method, status, currency, description)
+SELECT 
+    ts.id,
+    ts.student_id,
+    ts.tutor_id,
+    ts.hourly_rate,
+    'mock',
+    'completed',
+    'USD',
+    'Payment for ' || ts.title
+FROM tutoring_sessions ts
+WHERE ts.status = 'completed' AND ts.tutor_id = '550e8400-e29b-41d4-a716-446655440001'
+ON CONFLICT DO NOTHING;
+
 -- Update tutor profile statistics based on actual session data
 UPDATE tutor_profiles SET 
     total_sessions = (
@@ -156,15 +171,17 @@ UPDATE tutor_profiles SET
         WHERE ts.tutor_id = '550e8400-e29b-41d4-a716-446655440001'
     ),
     total_earnings = (
-        SELECT COALESCE(SUM(payment_amount), 0) FROM tutoring_sessions 
-        WHERE tutor_id = '550e8400-e29b-41d4-a716-446655440001' AND status = 'completed'
+        SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+        JOIN tutoring_sessions ts ON p.session_id = ts.id
+        WHERE p.recipient_id = '550e8400-e29b-41d4-a716-446655440001' AND p.status = 'completed'
     ),
     monthly_earnings = (
-        SELECT COALESCE(SUM(payment_amount), 0) FROM tutoring_sessions 
-        WHERE tutor_id = '550e8400-e29b-41d4-a716-446655440001' 
-        AND status = 'completed'
-        AND EXTRACT(MONTH FROM scheduled_start) = EXTRACT(MONTH FROM NOW())
-        AND EXTRACT(YEAR FROM scheduled_start) = EXTRACT(YEAR FROM NOW())
+        SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+        JOIN tutoring_sessions ts ON p.session_id = ts.id
+        WHERE p.recipient_id = '550e8400-e29b-41d4-a716-446655440001' 
+        AND p.status = 'completed'
+        AND EXTRACT(MONTH FROM p.created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM p.created_at) = EXTRACT(YEAR FROM NOW())
     )
 WHERE user_id = '550e8400-e29b-41d4-a716-446655440001';
 
@@ -179,7 +196,12 @@ SELECT
     EXTRACT(MONTH FROM NOW()),
     COUNT(*) FILTER (WHERE status IN ('completed', 'scheduled', 'in_progress')),
     COUNT(*) FILTER (WHERE status = 'completed'),
-    COALESCE(SUM(payment_amount) FILTER (WHERE status = 'completed'), 0),
+    (SELECT COALESCE(SUM(p.amount), 0) FROM payments p 
+     JOIN tutoring_sessions ts2 ON p.session_id = ts2.id 
+     WHERE p.recipient_id = '550e8400-e29b-41d4-a716-446655440001' 
+     AND p.status = 'completed'
+     AND EXTRACT(MONTH FROM p.created_at) = EXTRACT(MONTH FROM NOW())
+     AND EXTRACT(YEAR FROM p.created_at) = EXTRACT(YEAR FROM NOW())),
     COALESCE(SUM(EXTRACT(EPOCH FROM (scheduled_end - scheduled_start))/3600) FILTER (WHERE status = 'completed'), 0),
     (SELECT COALESCE(AVG(rating), 0) FROM session_reviews sr 
      JOIN tutoring_sessions ts ON sr.session_id = ts.id 

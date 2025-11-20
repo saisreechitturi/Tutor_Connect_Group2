@@ -327,12 +327,38 @@ router.put('/:id', [
     RETURNING *
   `, params);
 
+    const updatedSession = result.rows[0];
+
+    // If session is marked as completed, create payment record
+    if (status === 'completed' && updatedSession.status === 'completed') {
+        // Check if payment already exists
+        const existingPayment = await query(`
+            SELECT id FROM payments WHERE session_id = $1
+        `, [updatedSession.id]);
+
+        if (existingPayment.rows.length === 0) {
+            // Create payment record
+            await query(`
+                INSERT INTO payments (session_id, payer_id, recipient_id, amount, payment_method, status, currency, description)
+                VALUES ($1, $2, $3, $4, 'platform', 'completed', 'USD', $5)
+            `, [
+                updatedSession.id,
+                updatedSession.student_id,
+                updatedSession.tutor_id,
+                updatedSession.hourly_rate,
+                `Payment for ${updatedSession.title || 'tutoring session'}`
+            ]);
+
+            logger.info(`Payment created for completed session ${updatedSession.id}`);
+        }
+    }
+
     res.json({
         message: 'Session updated successfully',
         session: {
-            id: result.rows[0].id,
-            status: result.rows[0].status,
-            updatedAt: result.rows[0].updated_at
+            id: updatedSession.id,
+            status: updatedSession.status,
+            updatedAt: updatedSession.updated_at
         }
     });
 }));

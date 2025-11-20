@@ -541,22 +541,24 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
         const currentYear = new Date().getFullYear();
 
         const monthlyEarningsResult = await query(`
-            SELECT COALESCE(SUM(payment_amount), 0) as total
-            FROM tutoring_sessions
-            WHERE tutor_id = $1 
-            AND status = 'completed'
-            AND EXTRACT(MONTH FROM scheduled_start) = $2
-            AND EXTRACT(YEAR FROM scheduled_start) = $3
+            SELECT COALESCE(SUM(p.amount), 0) as total
+            FROM payments p
+            JOIN tutoring_sessions ts ON p.session_id = ts.id
+            WHERE p.recipient_id = $1 
+            AND p.status = 'completed'
+            AND EXTRACT(MONTH FROM p.created_at) = $2
+            AND EXTRACT(YEAR FROM p.created_at) = $3
         `, [tutorId, currentMonth, currentYear]);
 
         // Get recent sessions for activity feed
         const recentSessionsResult = await query(`
-            SELECT ts.id, ts.title, ts.scheduled_start, ts.status, ts.payment_amount,
+            SELECT ts.id, ts.title, ts.scheduled_start, ts.status, p.amount as payment_amount,
                    u.first_name as student_first_name, u.last_name as student_last_name,
                    s.name as subject_name
             FROM tutoring_sessions ts
             JOIN users u ON ts.student_id = u.id
             JOIN subjects s ON ts.subject_id = s.id
+            LEFT JOIN payments p ON ts.id = p.session_id AND p.recipient_id = ts.tutor_id AND p.status = 'completed'
             WHERE ts.tutor_id = $1
             ORDER BY ts.scheduled_start DESC
             LIMIT 10
@@ -688,6 +690,112 @@ router.get('/dashboard/:tutorId', authenticateToken, asyncHandler(async (req, re
     } catch (error) {
         logger.error('Error fetching tutor dashboard data:', error);
         res.status(500).json({ message: 'Failed to fetch dashboard data' });
+    }
+}));
+
+// Refresh tutor statistics (manual refresh)
+router.post('/:tutorId/refresh-stats', authenticateToken, asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+
+    // Check authorization - only the tutor themselves or admin can refresh
+    if (req.user.role !== 'admin' && req.user.id !== tutorId) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Verify tutor exists
+    const tutorCheck = await query('SELECT id FROM users WHERE id = $1 AND role = $2', [tutorId, 'tutor']);
+    if (tutorCheck.rows.length === 0) {
+        return res.status(404).json({ message: 'Tutor not found' });
+    }
+
+    try {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+
+        // Update tutor profile statistics
+        await query(`
+            UPDATE tutor_profiles 
+            SET 
+                total_sessions = (
+                    SELECT COUNT(*) FROM tutoring_sessions 
+                    WHERE tutor_id = $1 AND status = 'completed'
+                ),
+                total_students = (
+                    SELECT COUNT(DISTINCT student_id) FROM tutoring_sessions 
+                    WHERE tutor_id = $1
+                ),
+                rating = (
+                    SELECT COALESCE(ROUND(AVG(rating)::numeric, 2), 0)
+                    FROM session_reviews sr
+                    JOIN tutoring_sessions ts ON sr.session_id = ts.id
+                    WHERE ts.tutor_id = $1
+                ),
+                total_earnings = (
+                    SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                    WHERE p.recipient_id = $1 AND p.status = 'completed'
+                ),
+                monthly_earnings = (
+                    SELECT COALESCE(SUM(p.amount), 0) FROM payments p
+                    WHERE p.recipient_id = $1 
+                    AND p.status = 'completed'
+                    AND EXTRACT(MONTH FROM p.created_at) = $2
+                    AND EXTRACT(YEAR FROM p.created_at) = $3
+                ),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1
+        `, [tutorId, currentMonth, currentYear]);
+
+        // Update performance metrics for current month
+        await query(`
+            INSERT INTO tutor_performance_metrics (
+                tutor_id, year, month, total_sessions, completed_sessions, 
+                total_earnings, total_hours, average_rating, total_reviews
+            )
+            SELECT 
+                $1,
+                $3,
+                $2,
+                COUNT(*) FILTER (WHERE ts.status IN ('completed', 'scheduled', 'in_progress')),
+                COUNT(*) FILTER (WHERE ts.status = 'completed'),
+                COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'completed'), 0),
+                COALESCE(SUM(EXTRACT(EPOCH FROM (
+                    CASE 
+                        WHEN ts.actual_end IS NOT NULL AND ts.actual_start IS NOT NULL 
+                        THEN ts.actual_end - ts.actual_start
+                        ELSE ts.scheduled_end - ts.scheduled_start
+                    END
+                ))/3600) FILTER (WHERE ts.status = 'completed'), 0),
+                (SELECT COALESCE(AVG(rating), 0) FROM session_reviews sr 
+                 JOIN tutoring_sessions ts2 ON sr.session_id = ts2.id 
+                 WHERE ts2.tutor_id = $1
+                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2
+                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3),
+                (SELECT COUNT(*) FROM session_reviews sr 
+                 JOIN tutoring_sessions ts2 ON sr.session_id = ts2.id 
+                 WHERE ts2.tutor_id = $1
+                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2
+                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3)
+            FROM tutoring_sessions ts
+            LEFT JOIN payments p ON ts.id = p.session_id AND p.recipient_id = $1
+            WHERE ts.tutor_id = $1
+            AND EXTRACT(MONTH FROM ts.scheduled_start) = $2
+            AND EXTRACT(YEAR FROM ts.scheduled_start) = $3
+            ON CONFLICT (tutor_id, year, month) DO UPDATE SET
+                total_sessions = EXCLUDED.total_sessions,
+                completed_sessions = EXCLUDED.completed_sessions,
+                total_earnings = EXCLUDED.total_earnings,
+                total_hours = EXCLUDED.total_hours,
+                average_rating = EXCLUDED.average_rating,
+                total_reviews = EXCLUDED.total_reviews,
+                updated_at = CURRENT_TIMESTAMP
+        `, [tutorId, currentMonth, currentYear]);
+
+        logger.info(`Statistics refreshed for tutor ${tutorId}`);
+        res.json({ message: 'Statistics refreshed successfully' });
+
+    } catch (error) {
+        logger.error('Error refreshing tutor statistics:', error);
+        res.status(500).json({ message: 'Failed to refresh statistics' });
     }
 }));
 

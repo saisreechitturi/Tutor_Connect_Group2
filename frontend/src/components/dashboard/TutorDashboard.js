@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, DollarSign, Users, TrendingUp, Star, BookOpen, Award, RefreshCw } from 'lucide-react';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import tutorService from '../../services/tutorService';
 
 const TutorDashboard = () => {
-    const { user } = useContext(AuthContext);
+    const { user } = useAuth();
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -306,8 +306,8 @@ const TutorDashboard = () => {
                                                         <Star
                                                             key={i}
                                                             className={`h-4 w-4 ${i < review.rating
-                                                                    ? 'text-yellow-400 fill-current'
-                                                                    : 'text-gray-300'
+                                                                ? 'text-yellow-400 fill-current'
+                                                                : 'text-gray-300'
                                                                 }`}
                                                         />
                                                     ))}
