@@ -1,80 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { tutorService, sessionService } from '../services';
-import { Search, Filter, MessageCircle, Calendar, BookOpen, Star, Clock, TrendingUp, Award } from 'lucide-react';
-
-// Mock data for students
-const mockStudents = [
-    {
-        id: 1,
-        name: 'Alex Thompson',
-        first_name: 'Alex',
-        last_name: 'Thompson',
-        email: 'alex.student@tutorconnect.com',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-        status: 'active',
-        avgRating: 4.8,
-        totalSessions: 15,
-        progress: 85,
-        hoursLearned: 32,
-        subjects: ['Mathematics', 'Physics'],
-        lastSession: '2025-09-28',
-        joinedDate: '2025-08-15',
-        gradeLevel: '12th Grade',
-        school: 'Central High School',
-        parentContact: 'parent@example.com',
-        notes: 'Excellent student, very dedicated to learning. Shows strong progress in calculus.',
-        upcomingSessions: 3,
-        completedAssignments: 12,
-        pendingAssignments: 2
-    },
-    {
-        id: 2,
-        name: 'Taylor Brown',
-        first_name: 'Taylor',
-        last_name: 'Brown',
-        email: 'taylor.study@tutorconnect.com',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        status: 'active',
-        avgRating: 4.5,
-        totalSessions: 8,
-        progress: 65,
-        hoursLearned: 18,
-        subjects: ['Algebra', 'Chemistry'],
-        lastSession: '2025-09-25',
-        joinedDate: '2025-09-01',
-        gradeLevel: '10th Grade',
-        school: 'Westfield Academy',
-        parentContact: 'taylor.parent@email.com',
-        notes: 'Struggling with algebra but making steady progress. Needs encouragement.',
-        upcomingSessions: 2,
-        completedAssignments: 6,
-        pendingAssignments: 3
-    },
-    {
-        id: 3,
-        name: 'Jamie Wilson',
-        first_name: 'Jamie',
-        last_name: 'Wilson',
-        email: 'jamie.learner@tutorconnect.com',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-        status: 'active',
-        avgRating: 4.9,
-        totalSessions: 22,
-        progress: 92,
-        hoursLearned: 45,
-        subjects: ['Computer Science', 'Mathematics'],
-        lastSession: '2025-09-29',
-        joinedDate: '2025-07-10',
-        gradeLevel: 'College Sophomore',
-        school: 'State University',
-        parentContact: null,
-        notes: 'Advanced student with excellent programming skills. Ready for advanced topics.',
-        upcomingSessions: 4,
-        completedAssignments: 18,
-        pendingAssignments: 1
-    }
-];
+import {
+    Search, Filter, MessageCircle, Calendar, BookOpen, Star, Clock,
+    TrendingUp, Award, X, User, Calendar as CalendarIcon
+} from 'lucide-react';
 
 const TutorStudents = () => {
     const { user } = useAuth();
@@ -84,6 +14,8 @@ const TutorStudents = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [studentSessions, setStudentSessions] = useState([]);
+    const [showDetailModal, setShowDetailModal] = useState(false);
 
     useEffect(() => {
         fetchStudents();
@@ -96,17 +28,21 @@ const TutorStudents = () => {
             setLoading(true);
             setError(null);
 
-            // Try to fetch from API first, fall back to mock data
-            try {
-                const studentsData = await tutorService.getTutorStudents(user.id);
-                const sessionsData = await sessionService.getSessions();
-                console.log("Loaded sessions for students:", sessionsData?.length || 0);
-                setStudents(studentsData || mockStudents);
-            } catch (apiError) {
-                console.warn('API not available, using mock data:', apiError);
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setStudents(mockStudents);
+            const response = await tutorService.getTutorStudents(user.id);
+            if (response && response.students) {
+                // Enhance student data with computed fields
+                const enhancedStudents = response.students.map(student => ({
+                    ...student,
+                    name: student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+                    status: student.totalSessions > 0 ? 'active' : 'inactive',
+                    progress: Math.min(100, Math.max(0, (student.completedSessions / Math.max(1, student.totalSessions)) * 100)),
+                    hoursLearned: Math.round((student.totalSessions * 1.5) * 10) / 10, // Estimate 1.5 hours per session
+                    subjects: [], // Will be populated from session data if needed
+                    avatar: student.avatarUrl || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+                }));
+                setStudents(enhancedStudents);
+            } else {
+                setStudents([]);
             }
         } catch (err) {
             console.error('Error fetching students:', err);
@@ -116,6 +52,52 @@ const TutorStudents = () => {
         }
     };
 
+    const fetchStudentDetails = async (studentId) => {
+        try {
+            // Fetch student's sessions with this tutor
+            const sessionsResponse = await sessionService.getSessions();
+            const studentSessionsData = sessionsResponse?.filter(session =>
+                session.student_id === studentId && session.tutor_id === user.id
+            ) || [];
+            setStudentSessions(studentSessionsData);
+        } catch (error) {
+            console.error('Error fetching student details:', error);
+        }
+    };
+
+    const filteredStudents = students.filter(student => {
+        const studentName = student.name || '';
+        const email = student.email || '';
+        const subjects = student.subjects || [];
+
+        const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesFilter = filterStatus === 'all' || student.status === filterStatus;
+
+        return matchesSearch && matchesFilter;
+    });
+
+    const getStatusColor = (status) => {
+        return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    };
+
+    const handleViewStudent = async (student) => {
+        setSelectedStudent(student);
+        await fetchStudentDetails(student.id);
+        setShowDetailModal(true);
+    };
+
+    const handleMessage = (student) => {
+        alert(`Messaging ${student.name}. This will be integrated with the messaging system.`);
+    };
+
+    const handleSchedule = (student) => {
+        alert(`Scheduling session with ${student.name}. This will be integrated with the calendar system.`);
+    };
+
+    // Loading state
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 p-6">
@@ -137,6 +119,7 @@ const TutorStudents = () => {
         );
     }
 
+    // Error state
     if (error) {
         return (
             <div className="min-h-screen bg-gray-50 p-6">
@@ -156,29 +139,9 @@ const TutorStudents = () => {
         );
     }
 
-    const filteredStudents = students.filter(student => {
-        const studentName = student.first_name && student.last_name ?
-            `${student.first_name} ${student.last_name}` :
-            student.name || '';
-        const email = student.email || '';
-        const subjects = student.subjects || [];
-
-        const matchesSearch = studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        const matchesFilter = filterStatus === 'all' || student.status === filterStatus;
-
-        return matchesSearch && matchesFilter;
-    });
-
-    const getStatusColor = (status) => {
-        return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-    };
-
     const StudentCard = ({ student }) => (
         <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => setSelectedStudent(student)}>
+            onClick={() => handleViewStudent(student)}>
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                     <img
@@ -197,7 +160,7 @@ const TutorStudents = () => {
                 <div className="text-right">
                     <div className="flex items-center text-sm text-gray-500 mb-1">
                         <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                        {student.avgRating || 'N/A'}
+                        {student.avgRating ? Math.round(student.avgRating * 10) / 10 : 'N/A'}
                     </div>
                     <p className="text-xs text-gray-400">Avg Rating</p>
                 </div>
@@ -209,7 +172,7 @@ const TutorStudents = () => {
                     <p className="text-xs text-gray-500">Total Sessions</p>
                 </div>
                 <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">{student.progress || 0}%</p>
+                    <p className="text-2xl font-bold text-green-600">{Math.round(student.progress || 0)}%</p>
                     <p className="text-xs text-gray-500">Progress</p>
                 </div>
                 <div className="text-center">
@@ -220,11 +183,15 @@ const TutorStudents = () => {
 
             <div className="mb-4">
                 <div className="flex flex-wrap gap-1">
-                    {(student.subjects || []).map((subject, index) => (
-                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                            {subject}
-                        </span>
-                    ))}
+                    {(student.subjects || []).length > 0 ? (
+                        student.subjects.map((subject, index) => (
+                            <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                                {subject}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-xs text-gray-400">No subjects yet</span>
+                    )}
                 </div>
             </div>
 
@@ -237,9 +204,9 @@ const TutorStudents = () => {
                         className="p-1 text-gray-400 hover:text-primary-600 transition-colors"
                         onClick={(e) => {
                             e.stopPropagation();
-                            // Handle message action
-                            console.log('Message student:', student.name);
+                            handleMessage(student);
                         }}
+                        title="Send message"
                     >
                         <MessageCircle className="h-4 w-4" />
                     </button>
@@ -247,9 +214,9 @@ const TutorStudents = () => {
                         className="p-1 text-gray-400 hover:text-primary-600 transition-colors"
                         onClick={(e) => {
                             e.stopPropagation();
-                            // Handle calendar action
-                            console.log('Schedule session with:', student.name);
+                            handleSchedule(student);
                         }}
+                        title="Schedule session"
                     >
                         <Calendar className="h-4 w-4" />
                     </button>
@@ -259,32 +226,32 @@ const TutorStudents = () => {
     );
 
     const StudentDetailModal = ({ student, onClose }) => {
-        const [isEditingNotes, setIsEditingNotes] = useState(false);
-        const [notes, setNotes] = useState(student.notes || '');
+        const [activeTab, setActiveTab] = useState('overview');
 
-        const handleSaveNotes = () => {
-            // TODO: Save notes to backend
-            console.log('Saving notes for student:', student.name, notes);
-            setIsEditingNotes(false);
+        const getRecentSessions = () => {
+            return studentSessions
+                .sort((a, b) => new Date(b.scheduled_start || b.session_date) - new Date(a.scheduled_start || a.session_date))
+                .slice(0, 5)
+                .map(session => ({
+                    ...session,
+                    date: session.scheduled_start || session.session_date,
+                    status: session.status || 'completed',
+                    subject: session.title || 'Session',
+                    duration: session.duration_minutes || 60
+                }));
         };
 
-        const handleScheduleSession = () => {
-            // TODO: Implement session scheduling
-            console.log('Schedule session with:', student.name);
-            alert(`Scheduling session with ${student.name}. This feature will be implemented soon.`);
+        const getSessionStatusColor = (status) => {
+            switch (status) {
+                case 'completed': return 'bg-green-100 text-green-800';
+                case 'scheduled': return 'bg-blue-100 text-blue-800';
+                case 'cancelled': return 'bg-red-100 text-red-800';
+                case 'in_progress': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
         };
 
-        const handleSendMessage = () => {
-            // TODO: Implement messaging
-            console.log('Send message to:', student.name);
-            alert(`Sending message to ${student.name}. This feature will be implemented soon.`);
-        };
-
-        const handleViewAllSessions = () => {
-            // TODO: Navigate to sessions view
-            console.log('View all sessions for:', student.name);
-            alert(`Viewing all sessions for ${student.name}. This feature will be implemented soon.`);
-        };
+        if (!student) return null;
 
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -292,6 +259,7 @@ const TutorStudents = () => {
                     if (e.target === e.currentTarget) onClose();
                 }}>
                 <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    {/* Header */}
                     <div className="p-6 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
@@ -303,26 +271,75 @@ const TutorStudents = () => {
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900">{student.name || 'Unknown Student'}</h2>
                                     <p className="text-gray-600">{student.email || 'No email'}</p>
-                                    <p className="text-sm text-gray-500">
-                                        Joined {student.joinedDate ? new Date(student.joinedDate).toLocaleDateString() : 'Unknown'}
-                                    </p>
+                                    <div className="flex items-center space-x-4 mt-2">
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(student.status || 'inactive')}`}>
+                                            {student.status || 'inactive'}
+                                        </span>
+                                        <div className="flex items-center text-sm text-gray-500">
+                                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                                            {student.avgRating ? Math.round(student.avgRating * 10) / 10 : 'N/A'} avg rating
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            >
-                                Close
-                            </button>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => handleMessage(student)}
+                                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors flex items-center space-x-2"
+                                >
+                                    <MessageCircle className="h-4 w-4" />
+                                    <span>Message</span>
+                                </button>
+                                <button
+                                    onClick={() => handleSchedule(student)}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                                >
+                                    <Calendar className="h-4 w-4" />
+                                    <span>Schedule</span>
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
+                    {/* Tab Navigation */}
+                    <div className="border-b border-gray-200">
+                        <nav className="flex space-x-8 px-6">
+                            {[
+                                { id: 'overview', label: 'Overview', icon: User },
+                                { id: 'sessions', label: 'Sessions', icon: CalendarIcon },
+                                { id: 'progress', label: 'Progress', icon: TrendingUp }
+                            ].map(tab => {
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${activeTab === tab.id
+                                                ? 'border-primary-500 text-primary-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        <span>{tab.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
+
+                    {/* Tab Content */}
                     <div className="p-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Progress Overview */}
-                            <div className="space-y-6">
-                                <div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Progress Overview</h3>
+                        {activeTab === 'overview' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Stats Cards */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-medium text-gray-900">Statistics</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-blue-50 p-4 rounded-lg">
                                             <div className="flex items-center">
@@ -337,7 +354,7 @@ const TutorStudents = () => {
                                             <div className="flex items-center">
                                                 <TrendingUp className="h-8 w-8 text-green-600" />
                                                 <div className="ml-3">
-                                                    <p className="text-2xl font-bold text-green-600">{student.progress || 0}%</p>
+                                                    <p className="text-2xl font-bold text-green-600">{Math.round(student.progress || 0)}%</p>
                                                     <p className="text-sm text-green-600">Progress</p>
                                                 </div>
                                             </div>
@@ -355,7 +372,7 @@ const TutorStudents = () => {
                                             <div className="flex items-center">
                                                 <Award className="h-8 w-8 text-yellow-600" />
                                                 <div className="ml-3">
-                                                    <p className="text-2xl font-bold text-yellow-600">{student.avgRating || 'N/A'}</p>
+                                                    <p className="text-2xl font-bold text-yellow-600">{student.avgRating ? Math.round(student.avgRating * 10) / 10 : 'N/A'}</p>
                                                     <p className="text-sm text-yellow-600">Avg Rating</p>
                                                 </div>
                                             </div>
@@ -367,109 +384,101 @@ const TutorStudents = () => {
                                 <div>
                                     <h3 className="text-lg font-medium text-gray-900 mb-4">Student Information</h3>
                                     <div className="space-y-3">
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">Grade Level:</span>
-                                            <p className="text-gray-900">{student.gradeLevel || 'Not specified'}</p>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-sm text-gray-600">{student.email || 'No email'}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">School:</span>
-                                            <p className="text-gray-900">{student.school || 'Not specified'}</p>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-sm text-gray-600">
+                                                Last session: {student.lastSession ? new Date(student.lastSession).toLocaleDateString() : 'Never'}
+                                            </span>
                                         </div>
-                                        {student.parentContact && (
+                                        {student.subjects && student.subjects.length > 0 && (
                                             <div>
-                                                <span className="text-sm font-medium text-gray-500">Parent Contact:</span>
-                                                <p className="text-gray-900">{student.parentContact}</p>
+                                                <span className="text-sm font-medium text-gray-500">Subjects:</span>
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {student.subjects.map((subject, index) => (
+                                                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                                                            {subject}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-500">Subjects:</span>
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {(student.subjects || []).map((subject, index) => (
-                                                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                                                        {subject}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Assignments and Notes */}
+                        {activeTab === 'sessions' && (
                             <div className="space-y-6">
                                 <div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Assignment Status</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-gray-50 p-4 rounded-lg">
-                                            <p className="text-2xl font-bold text-gray-900">{student.completedAssignments || 0}</p>
-                                            <p className="text-sm text-gray-600">Completed</p>
-                                        </div>
-                                        <div className="bg-orange-50 p-4 rounded-lg">
-                                            <p className="text-2xl font-bold text-orange-600">{student.pendingAssignments || 0}</p>
-                                            <p className="text-sm text-orange-600">Pending</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Session History</h3>
 
-                                {/* Notes Section */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-medium text-gray-900">Notes</h3>
-                                        <button
-                                            onClick={() => setIsEditingNotes(!isEditingNotes)}
-                                            className="text-sm text-primary-600 hover:text-primary-700"
-                                        >
-                                            {isEditingNotes ? 'Cancel' : 'Edit'}
-                                        </button>
-                                    </div>
-                                    {isEditingNotes ? (
+                                    {getRecentSessions().length > 0 ? (
                                         <div className="space-y-3">
-                                            <textarea
-                                                value={notes}
-                                                onChange={(e) => setNotes(e.target.value)}
-                                                className="w-full p-3 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                                                rows={4}
-                                                placeholder="Add notes about this student..."
-                                            />
-                                            <button
-                                                onClick={handleSaveNotes}
-                                                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                                            >
-                                                Save Notes
-                                            </button>
+                                            {getRecentSessions().map((session, index) => (
+                                                <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-gray-900">{session.subject}</h4>
+                                                            <p className="text-sm text-gray-600">
+                                                                {new Date(session.date).toLocaleDateString()} • {session.duration} minutes
+                                                            </p>
+                                                            {session.session_notes && (
+                                                                <p className="text-sm text-gray-500 mt-1">{session.session_notes}</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSessionStatusColor(session.status)}`}>
+                                                                {session.status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     ) : (
-                                        <div className="bg-gray-50 p-4 rounded-lg">
-                                            <p className="text-gray-700">{notes || 'No notes available'}</p>
+                                        <div className="text-center py-8">
+                                            <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                            <p className="text-gray-500">No sessions yet</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Action Buttons */}
-                        <div className="mt-8 flex flex-wrap gap-4 pt-6 border-t border-gray-200">
-                            <button
-                                onClick={handleScheduleSession}
-                                className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                            >
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Schedule Session
-                            </button>
-                            <button
-                                onClick={handleSendMessage}
-                                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            >
-                                <MessageCircle className="h-4 w-4 mr-2" />
-                                Send Message
-                            </button>
-                            <button
-                                onClick={handleViewAllSessions}
-                                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                            >
-                                View All Sessions
-                            </button>
-                        </div>
+                        {activeTab === 'progress' && (
+                            <div className="space-y-6">
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Learning Progress</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="text-center">
+                                            <div className="text-3xl font-bold text-blue-600">{student.completedSessions || 0}</div>
+                                            <div className="text-sm text-gray-600">Completed Sessions</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-3xl font-bold text-green-600">{Math.round(student.progress || 0)}%</div>
+                                            <div className="text-sm text-gray-600">Overall Progress</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-3xl font-bold text-purple-600">{student.hoursLearned || 0}h</div>
+                                            <div className="text-sm text-gray-600">Total Hours</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Progress Chart Placeholder */}
+                                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                                    <h4 className="font-medium text-gray-900 mb-4">Performance Over Time</h4>
+                                    <div className="flex items-center justify-center h-40 bg-gray-50 rounded-lg">
+                                        <div className="text-center">
+                                            <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                            <p className="text-sm text-gray-500">Progress chart will be implemented with session data</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -478,6 +487,7 @@ const TutorStudents = () => {
 
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-6">
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">My Students</h1>
@@ -523,21 +533,30 @@ const TutorStudents = () => {
                 ))}
             </div>
 
+            {/* Empty State */}
             {filteredStudents.length === 0 && (
                 <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
                         <BookOpen className="h-12 w-12 mx-auto" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
-                    <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+                    <p className="text-gray-500">
+                        {students.length === 0
+                            ? "You don't have any students yet. Students will appear here after they book sessions with you."
+                            : "Try adjusting your search or filter criteria."
+                        }
+                    </p>
                 </div>
             )}
 
             {/* Student Detail Modal */}
-            {selectedStudent && (
+            {showDetailModal && selectedStudent && (
                 <StudentDetailModal
                     student={selectedStudent}
-                    onClose={() => setSelectedStudent(null)}
+                    onClose={() => {
+                        setShowDetailModal(false);
+                        setSelectedStudent(null);
+                    }}
                 />
             )}
         </div>

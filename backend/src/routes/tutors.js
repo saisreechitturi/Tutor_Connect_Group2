@@ -226,7 +226,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
     });
 }));
 
-// Get tutor's students (only for the tutor themselves or admin)
+// COMMENTED OUT: Get tutor's students endpoint - removed from frontend
+/*
 router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => {
     // Check if user can access this data
     if (req.user.role !== 'admin' && req.user.id != req.params.id) {
@@ -262,6 +263,7 @@ router.get('/:id/students', authenticateToken, asyncHandler(async (req, res) => 
 
     res.json({ students });
 }));
+*/
 
 // Get tutor's subjects
 router.get('/:id/subjects', asyncHandler(async (req, res) => {

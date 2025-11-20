@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import TutorDashboard from '../components/dashboard/TutorDashboard';
-import TutorStudents from '../pages/TutorStudents';
 import TutorAnalytics from '../pages/TutorAnalytics';
 import TutorAvailability from '../pages/TutorAvailability';
 import TutorSettings from '../pages/TutorSettings';
@@ -17,7 +16,6 @@ const TutorRoutes = () => {
         <DashboardLayout userRole="tutor">
             <Routes>
                 <Route index element={<TutorDashboard />} />
-                <Route path="students" element={<TutorStudents />} />
                 <Route path="sessions" element={<MySessions />} />
                 <Route path="analytics" element={<TutorAnalytics />} />
                 <Route path="availability" element={<TutorAvailability />} />

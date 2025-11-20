@@ -236,42 +236,6 @@ const TutorDashboard = () => {
                 </div>
             </div>
 
-            {/* Performance This Month */}
-            {dashboardData?.performance?.thisMonth && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <TrendingUp className="h-5 w-5 mr-2" />
-                        This Month's Performance
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-blue-600">
-                                {dashboardData.performance.thisMonth.completedSessions ?? 0}
-                            </p>
-                            <p className="text-sm text-gray-500">Completed Sessions</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-green-600">
-                                {formatCurrency(dashboardData.performance.thisMonth.totalEarnings ?? 0)}
-                            </p>
-                            <p className="text-sm text-gray-500">Total Earnings</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-purple-600">
-                                {(dashboardData.performance.thisMonth.totalHours ?? 0).toFixed(1)}h
-                            </p>
-                            <p className="text-sm text-gray-500">Hours Taught</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-2xl font-bold text-yellow-600">
-                                {(dashboardData.performance.thisMonth.averageRating ?? 0).toFixed(1)}
-                            </p>
-                            <p className="text-sm text-gray-500">Avg Rating</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Recent Activity */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

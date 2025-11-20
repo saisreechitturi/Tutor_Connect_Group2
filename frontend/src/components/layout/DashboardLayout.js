@@ -46,7 +46,6 @@ const DashboardLayout = ({ userRole, children }) => {
                 { name: 'My Sessions', href: '/student/sessions', icon: BookOpen }
             ],
             tutor: [
-                { name: 'My Students', href: '/tutor/students', icon: Users },
                 { name: 'My Sessions', href: '/tutor/sessions', icon: BookOpen },
                 { name: 'Analytics', href: '/tutor/analytics', icon: BarChart },
                 { name: 'Availability', href: '/tutor/availability', icon: Clock }

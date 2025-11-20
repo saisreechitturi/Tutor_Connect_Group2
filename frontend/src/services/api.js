@@ -66,8 +66,7 @@ export const usersAPI = {
 // Tutors API
 export const tutorsAPI = {
     getAllTutors: (params = {}) => api.get('/tutors', { params }),
-    getTutorProfile: (id) => api.get(`/tutors/${id}`),
-    getTutorStudents: (id) => api.get(`/tutors/${id}/students`)
+    getTutorProfile: (id) => api.get(`/tutors/${id}`)
 };
 
 // Tasks API
