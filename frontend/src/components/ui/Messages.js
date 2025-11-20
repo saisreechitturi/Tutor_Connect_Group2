@@ -321,7 +321,7 @@ const Messages = () => {
             const currentUnreadCount = conversation.unreadCount;
             try {
                 await messageService.markConversationAsRead(conversation.userId);
-                
+
                 // Update local state to mark messages as read
                 setMessages(prev => prev.map(msg => {
                     // Mark messages from this conversation as read where current user is recipient
@@ -330,10 +330,10 @@ const Messages = () => {
                     }
                     return msg;
                 }));
-                
+
                 // Update global unread count
                 setUnreadCount(prev => Math.max(0, prev - currentUnreadCount));
-                
+
             } catch (error) {
                 console.warn('Failed to mark conversation as read:', error);
             }
@@ -409,9 +409,7 @@ const Messages = () => {
                                     <MessageSquare className="h-5 w-5 mr-2 text-primary-600" />
                                     Messages
                                     {unreadCount > 0 && (
-                                        <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                                            {unreadCount}
-                                        </span>
+                                        <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
                                     )}
                                 </h1>
                                 <button
@@ -478,9 +476,7 @@ const Messages = () => {
                                                     {conversation.latestMessage?.content || 'No messages yet'}
                                                 </p>
                                                 {conversation.unreadCount > 0 && (
-                                                    <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full mt-1">
-                                                        {conversation.unreadCount}
-                                                    </span>
+                                                    <span className="w-2 h-2 bg-red-500 rounded-full mt-1"></span>
                                                 )}
                                             </div>
                                         </div>
