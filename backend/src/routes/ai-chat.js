@@ -159,9 +159,11 @@ router.post('/sessions/:sessionId/messages', asyncHandler(async (req, res) => {
         });
     }
 
-    // Verify session belongs to user
+    // Verify session belongs to user and get available user information
     const sessionResult = await query(`
-        SELECT s.*, u.first_name, u.last_name
+        SELECT s.*, 
+               u.first_name, u.last_name, u.email, u.role, u.created_at as user_created_at,
+               u.bio, u.phone, u.profile_picture_url
         FROM ai_chat_sessions s
         JOIN users u ON s.user_id = u.id
         WHERE s.id = $1 AND s.user_id = $2 AND s.is_active = true
@@ -177,28 +179,34 @@ router.post('/sessions/:sessionId/messages', asyncHandler(async (req, res) => {
     const session = sessionResult.rows[0];
 
     try {
-        // Get conversation history (last 10 messages)
+        // Get conversation history (recent messages for context)
         const historyResult = await query(`
-            SELECT message_type, content
+            SELECT message_type, content, created_at
             FROM ai_chat_messages
             WHERE session_id = $1
             ORDER BY created_at DESC
             LIMIT 10
         `, [sessionId]);
 
-        // Format conversation history for AI service
-        const conversationHistory = historyResult.rows
-            .reverse() // Reverse to get chronological order
-            .map(msg => ({
-                role: msg.message_type === 'user' ? 'user' : 'assistant',
-                content: msg.content
-            }));
+        // Format conversation history for AI service (reverse to chronological order)
+        const conversationHistory = historyResult.rows.reverse();
+
+        // Prepare user profile from available data
+        const userProfile = {
+            first_name: session.first_name,
+            last_name: session.last_name,
+            role: session.role,
+            bio: session.bio || '',
+            email: session.email,
+            user_since: session.user_created_at,
+            current_role: session.role
+        };
 
         // Prepare context for AI
         const context = {
             userName: `${session.first_name} ${session.last_name}`,
-            currentSubject: 'General Studies', // You can enhance this based on user's current courses
-            academicLevel: 'Student' // You can get this from user profile
+            currentSubject: 'General Studies',
+            academicLevel: session.role === 'student' ? 'Student' : session.role === 'tutor' ? 'Tutor' : 'User'
         };
 
         // Save user message first
@@ -208,11 +216,12 @@ router.post('/sessions/:sessionId/messages', asyncHandler(async (req, res) => {
             RETURNING *
         `, [sessionId, userId, validation.message]);
 
-        // Generate AI response
+        // Generate AI response with enhanced context
         const aiResponse = await aiService.generateResponse(
             validation.message,
             conversationHistory,
-            context
+            context,
+            userProfile
         );
 
         // Save AI response

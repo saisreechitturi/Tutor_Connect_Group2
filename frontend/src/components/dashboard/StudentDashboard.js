@@ -261,35 +261,6 @@ const StudentDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <button
-                        onClick={() => setShowBookSessionModal(true)}
-                        className="p-4 text-center rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors"
-                    >
-                        <BookOpen className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm font-medium text-gray-700">Book Session</span>
-                    </button>
-                    <button
-                        onClick={() => setShowAddTaskModal(true)}
-                        className="p-4 text-center rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors"
-                    >
-                        <CheckSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm font-medium text-gray-700">Add Task</span>
-                    </button>
-                    <button className="p-4 text-center rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors">
-                        <Calendar className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm font-medium text-gray-700">Schedule Event</span>
-                    </button>
-                    <button className="p-4 text-center rounded-lg border-2 border-dashed border-gray-300 hover:border-primary-300 hover:bg-primary-50 transition-colors">
-                        <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <span className="text-sm font-medium text-gray-700">View Progress</span>
-                    </button>
-                </div>
-            </div>
-
             {/* Add Task Modal */}
             <AddTaskModal
                 isOpen={showAddTaskModal}
