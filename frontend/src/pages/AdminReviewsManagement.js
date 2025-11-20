@@ -4,7 +4,7 @@ import { adminService } from '../services';
 
 const AdminReviewsManagement = () => {
     const [reviews, setReviews] = useState([]);
-    const [filteredReviews, setFilteredReviews] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -16,166 +16,34 @@ const AdminReviewsManagement = () => {
     const [selectedReview, setSelectedReview] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
 
-    // Mock data for development
-    const mockReviews = [
-        {
-            id: '1',
-            sessionId: 'session-1',
-            rating: 5,
-            comment: 'Excellent tutoring session! Very helpful and patient.',
-            reviewerType: 'student',
-            wouldRecommend: true,
-            createdAt: '2025-11-15T10:30:00Z',
-            reviewer: {
-                firstName: 'John',
-                lastName: 'Doe',
-                email: 'john.doe@example.com',
-                avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
-            },
-            reviewee: {
-                firstName: 'Emily',
-                lastName: 'Johnson',
-                email: 'emily.tutor@example.com'
-            },
-            session: {
-                subject: 'Mathematics',
-                duration: 60,
-                date: '2025-11-15'
-            }
-        },
-        {
-            id: '2',
-            sessionId: 'session-2',
-            rating: 2,
-            comment: 'Session was not very helpful. Tutor seemed unprepared.',
-            reviewerType: 'student',
-            wouldRecommend: false,
-            createdAt: '2025-11-14T14:20:00Z',
-            reviewer: {
-                firstName: 'Sarah',
-                lastName: 'Smith',
-                email: 'sarah.smith@example.com',
-                avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-            },
-            reviewee: {
-                firstName: 'Michael',
-                lastName: 'Davis',
-                email: 'michael.tutor@example.com'
-            },
-            session: {
-                subject: 'Physics',
-                duration: 45,
-                date: '2025-11-14'
-            }
-        },
-        {
-            id: '3',
-            sessionId: 'session-3',
-            rating: 4,
-            comment: 'Great student! Very engaged and prepared for the session.',
-            reviewerType: 'tutor',
-            wouldRecommend: true,
-            createdAt: '2025-11-13T16:45:00Z',
-            reviewer: {
-                firstName: 'Emily',
-                lastName: 'Johnson',
-                email: 'emily.tutor@example.com',
-                avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
-            },
-            reviewee: {
-                firstName: 'Alex',
-                lastName: 'Wilson',
-                email: 'alex.student@example.com'
-            },
-            session: {
-                subject: 'Chemistry',
-                duration: 90,
-                date: '2025-11-13'
-            }
-        }
-    ];
-
     useEffect(() => {
         fetchReviews();
-    }, []);
-
-    useEffect(() => {
-        filterReviews();
-    }, [reviews, searchTerm, filters]);
+    }, [filters, searchTerm]);
 
     const fetchReviews = async () => {
         try {
             setLoading(true);
             setError(null);
 
-            // Try to fetch from API first
-            try {
-                const response = await adminService.getAllReviews();
-                const reviewsData = response.reviews || response;
+            const queryFilters = {
+                ...filters,
+                search: searchTerm || undefined
+            };
 
-                if (reviewsData && reviewsData.length > 0) {
-                    setReviews(reviewsData);
-                } else {
-                    // Fallback to mock data if no real data
-                    setReviews(mockReviews);
-                }
-            } catch (apiError) {
-                console.warn('API not available, using mock data:', apiError);
-                // Fallback to mock data
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setReviews(mockReviews);
-            }
+            const response = await adminService.getAllReviews(queryFilters);
+            const reviewsData = response.reviews || [];
+            setReviews(reviewsData);
         } catch (err) {
             console.error('Error fetching reviews:', err);
             setError('Failed to load reviews. Please try again.');
-            setReviews(mockReviews); // Fallback to mock data on error
+            setReviews([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const filterReviews = () => {
-        let filtered = reviews;
 
-        // Search filter
-        if (searchTerm) {
-            filtered = filtered.filter(review =>
-                review.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.reviewer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.reviewer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.reviewee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.reviewee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.session?.subject?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
 
-        // Rating filter
-        if (filters.rating) {
-            filtered = filtered.filter(review => review.rating === parseInt(filters.rating));
-        }
-
-        // Reviewer type filter
-        if (filters.reviewerType) {
-            filtered = filtered.filter(review => review.reviewerType === filters.reviewerType);
-        }
-
-        // Date range filter
-        if (filters.dateRange !== 'all') {
-            const now = new Date();
-            const days = {
-                'week': 7,
-                'month': 30,
-                'quarter': 90
-            };
-
-            if (days[filters.dateRange]) {
-                const cutoffDate = new Date(now.getTime() - (days[filters.dateRange] * 24 * 60 * 60 * 1000));
-                filtered = filtered.filter(review => new Date(review.createdAt) >= cutoffDate);
-            }
-        }
-
-        setFilteredReviews(filtered);
-    };
 
     const handleDeleteReview = async (reviewId) => {
         if (window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
@@ -199,6 +67,25 @@ const AdminReviewsManagement = () => {
         if (rating >= 4) return 'text-green-600';
         if (rating >= 3) return 'text-yellow-600';
         return 'text-red-600';
+    };
+
+    const getUserInitial = (firstName, lastName) => {
+        if (firstName) {
+            return firstName.charAt(0).toUpperCase();
+        }
+        if (lastName) {
+            return lastName.charAt(0).toUpperCase();
+        }
+        return 'U'; // Default for 'User'
+    };
+
+    const getAvatarColor = (name) => {
+        const colors = [
+            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+        ];
+        const charCode = name ? name.charCodeAt(0) : 0;
+        return colors[charCode % colors.length];
     };
 
     const renderStars = (rating) => {
@@ -329,13 +216,13 @@ const AdminReviewsManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 className="text-sm font-medium text-gray-500">Total Reviews</h3>
-                    <p className="text-2xl font-bold text-gray-900">{filteredReviews.length}</p>
+                    <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 className="text-sm font-medium text-gray-500">Average Rating</h3>
                     <p className="text-2xl font-bold text-gray-900">
-                        {filteredReviews.length > 0
-                            ? (filteredReviews.reduce((sum, r) => sum + r.rating, 0) / filteredReviews.length).toFixed(1)
+                        {reviews.length > 0
+                            ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
                             : '0.0'
                         }
                     </p>
@@ -343,13 +230,13 @@ const AdminReviewsManagement = () => {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 className="text-sm font-medium text-gray-500">Positive Reviews</h3>
                     <p className="text-2xl font-bold text-green-600">
-                        {filteredReviews.filter(r => r.rating >= 4).length}
+                        {reviews.filter(r => r.rating >= 4).length}
                     </p>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 className="text-sm font-medium text-gray-500">Low Ratings</h3>
                     <p className="text-2xl font-bold text-red-600">
-                        {filteredReviews.filter(r => r.rating <= 2).length}
+                        {reviews.filter(r => r.rating <= 2).length}
                     </p>
                 </div>
             </div>
@@ -358,11 +245,11 @@ const AdminReviewsManagement = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900">
-                        Reviews ({filteredReviews.length})
+                        Reviews ({reviews.length})
                     </h2>
                 </div>
 
-                {filteredReviews.length === 0 ? (
+                {reviews.length === 0 ? (
                     <div className="p-8 text-center">
                         <Star className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews found</h3>
@@ -375,15 +262,13 @@ const AdminReviewsManagement = () => {
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-200">
-                        {filteredReviews.map((review) => (
+                        {reviews.map((review) => (
                             <div key={review.id} className="p-6 hover:bg-gray-50 transition-colors">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start space-x-4 flex-1">
-                                        <img
-                                            src={review.reviewer.avatar}
-                                            alt={`${review.reviewer.firstName} ${review.reviewer.lastName}`}
-                                            className="h-12 w-12 rounded-full object-cover"
-                                        />
+                                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-medium ${getAvatarColor(review.reviewer.firstName || review.reviewer.lastName || review.reviewer.email)}`}>
+                                            {getUserInitial(review.reviewer.firstName, review.reviewer.lastName)}
+                                        </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="flex items-center">
@@ -393,8 +278,8 @@ const AdminReviewsManagement = () => {
                                                     {review.rating}/5
                                                 </span>
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${review.reviewerType === 'student'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-green-100 text-green-800'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-green-100 text-green-800'
                                                     }`}>
                                                     {review.reviewerType}
                                                 </span>
@@ -502,19 +387,17 @@ const AdminReviewsManagement = () => {
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <h4 className="font-medium text-gray-900 mb-2">Reviewer</h4>
                                         <div className="flex items-center space-x-3">
-                                            <img
-                                                src={selectedReview.reviewer.avatar}
-                                                alt={`${selectedReview.reviewer.firstName} ${selectedReview.reviewer.lastName}`}
-                                                className="h-10 w-10 rounded-full object-cover"
-                                            />
+                                            <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-medium ${getAvatarColor(selectedReview.reviewer.firstName || selectedReview.reviewer.lastName || selectedReview.reviewer.email)}`}>
+                                                {getUserInitial(selectedReview.reviewer.firstName, selectedReview.reviewer.lastName)}
+                                            </div>
                                             <div>
                                                 <p className="font-medium text-gray-900">
                                                     {selectedReview.reviewer.firstName} {selectedReview.reviewer.lastName}
                                                 </p>
                                                 <p className="text-sm text-gray-500">{selectedReview.reviewer.email}</p>
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${selectedReview.reviewerType === 'student'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-green-100 text-green-800'
+                                                    ? 'bg-blue-100 text-blue-800'
+                                                    : 'bg-green-100 text-green-800'
                                                     }`}>
                                                     {selectedReview.reviewerType}
                                                 </span>

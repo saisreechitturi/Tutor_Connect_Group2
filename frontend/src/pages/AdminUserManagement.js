@@ -2,118 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus, Edit, Trash2, User, Mail, Phone, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { adminService } from '../services';
 
-// Mock data for users
-const mockUsers = [
-    {
-        id: 1,
-        first_name: 'John',
-        last_name: 'Admin',
-        email: 'john.admin@tutorconnect.com',
-        role: 'admin',
-        status: 'active',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-        phone: '+1-555-0101',
-        joinedDate: '2025-01-15',
-        lastLogin: '2025-09-30',
-        verified: true,
-        totalSessions: 0,
-        totalSpent: 0,
-        totalEarned: 0,
-        rating: 0,
-        subjects: []
-    },
-    {
-        id: 2,
-        first_name: 'Emily',
-        last_name: 'Johnson',
-        email: 'emily.tutor@tutorconnect.com',
-        role: 'tutor',
-        status: 'active',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-        phone: '+1-555-0102',
-        joinedDate: '2025-02-10',
-        lastLogin: '2025-09-29',
-        verified: true,
-        totalSessions: 45,
-        totalSpent: 0,
-        totalEarned: 2250,
-        rating: 4.8,
-        subjects: ['Mathematics', 'Physics', 'Chemistry']
-    },
-    {
-        id: 3,
-        first_name: 'Michael',
-        last_name: 'Davis',
-        email: 'michael.tutor@tutorconnect.com',
-        role: 'tutor',
-        status: 'pending',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        phone: '+1-555-0103',
-        joinedDate: '2025-09-28',
-        lastLogin: '2025-09-28',
-        verified: false,
-        totalSessions: 0,
-        totalSpent: 0,
-        totalEarned: 0,
-        rating: 0,
-        subjects: ['Computer Science', 'Web Development']
-    },
-    {
-        id: 4,
-        first_name: 'Alex',
-        last_name: 'Thompson',
-        email: 'alex.student@tutorconnect.com',
-        role: 'student',
-        status: 'active',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-        phone: '+1-555-0104',
-        joinedDate: '2025-08-15',
-        lastLogin: '2025-09-30',
-        verified: true,
-        totalSessions: 15,
-        totalSpent: 750,
-        totalEarned: 0,
-        rating: 0,
-        subjects: []
-    },
-    {
-        id: 5,
-        first_name: 'Taylor',
-        last_name: 'Brown',
-        email: 'taylor.study@tutorconnect.com',
-        role: 'student',
-        status: 'active',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        phone: '+1-555-0105',
-        joinedDate: '2025-09-01',
-        lastLogin: '2025-09-29',
-        verified: true,
-        totalSessions: 8,
-        totalSpent: 400,
-        totalEarned: 0,
-        rating: 0,
-        subjects: []
-    },
-    {
-        id: 6,
-        first_name: 'Jamie',
-        last_name: 'Wilson',
-        email: 'jamie.learner@tutorconnect.com',
-        role: 'student',
-        status: 'suspended',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-        phone: '+1-555-0106',
-        joinedDate: '2025-07-10',
-        lastLogin: '2025-09-25',
-        verified: true,
-        totalSessions: 22,
-        totalSpent: 1100,
-        totalEarned: 0,
-        rating: 0,
-        subjects: []
-    }
-];
-
 const AdminUserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -130,6 +18,7 @@ const AdminUserManagement = () => {
     }, []);
 
     useEffect(() => {
+        console.log('Setting user list:', users.map(u => ({ id: u.id, email: u.email, role: u.role })));
         setUserList(users);
     }, [users]);
 
@@ -138,39 +27,30 @@ const AdminUserManagement = () => {
             setLoading(true);
             setError(null);
 
-            // Try to fetch from API first
-            try {
-                const response = await adminService.getAllUsers();
-                const usersData = response.users || response;
+            const response = await adminService.getAllUsers();
+            const usersData = response.users || response;
 
-                // Transform API data to match expected format
-                const transformedUsers = usersData.map(user => ({
-                    id: user.id,
-                    first_name: user.firstName || user.first_name,
-                    last_name: user.lastName || user.last_name,
-                    email: user.email,
-                    role: user.role,
-                    status: user.status,
-                    phone: user.phone || 'N/A',
-                    joinedDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'N/A',
-                    lastLogin: user.lastLogin || user.createdAt || 'Never',
-                    verified: user.emailVerified !== false,
-                    isActive: user.isActive,
-                    totalSessions: user.tutorStats?.totalSessions || 0,
-                    totalSpent: 0,
-                    totalEarned: 0,
-                    rating: user.tutorStats?.rating || 0,
-                    subjects: user.subjects || [],
-                    avatar: `https://images.unsplash.com/photo-${user.role === 'tutor' ? '1494790108755-2616b612b786' : user.role === 'admin' ? '1560250097-f9871d5e6e74' : '1472099645785-5658abf4ff4e'}?w=150`
-                }));
+            // Transform API data to match expected format
+            const transformedUsers = usersData.map(user => ({
+                id: user.id,
+                first_name: user.firstName || user.first_name,
+                last_name: user.lastName || user.last_name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                phone: user.phone || 'N/A',
+                joinedDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'N/A',
+                lastLogin: user.lastLogin || user.createdAt || 'Never',
+                emailVerified: user.emailVerified !== false,
+                totalSessions: user.tutorStats?.totalSessions || 0,
+                totalEarned: user.tutorStats?.totalEarnings || 0,
+                rating: user.tutorStats?.rating || 0,
+                subjects: user.subjects || [],
+                isVerified: user.tutorStats?.isVerified || false, // For tutors
+                avatar: `https://images.unsplash.com/photo-${user.role === 'tutor' ? '1494790108755-2616b612b786' : user.role === 'admin' ? '1560250097-f9871d5e6e74' : '1472099645785-5658abf4ff4e'}?w=150`
+            }));
 
-                setUsers(transformedUsers);
-            } catch (apiError) {
-                console.warn('API not available, using mock data:', apiError);
-                // Fallback to mock data
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setUsers(mockUsers);
-            }
+            setUsers(transformedUsers);
         } catch (err) {
             console.error('Error fetching users:', err);
             setError('Failed to load users. Please try again.');
@@ -227,19 +107,19 @@ const AdminUserManagement = () => {
             ));
 
         const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-        const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+        const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'active' && user.isActive) ||
+            (statusFilter === 'inactive' && !user.isActive);
 
         return matchesSearch && matchesRole && matchesStatus;
     });
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'active': return 'bg-green-100 text-green-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'suspended': return 'bg-red-100 text-red-800';
-            case 'inactive': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
+    const getStatusColor = (isActive) => {
+        return isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    };
+
+    const getStatusText = (isActive) => {
+        return isActive ? 'Active' : 'Inactive';
     };
 
     const getRoleColor = (role) => {
@@ -251,31 +131,70 @@ const AdminUserManagement = () => {
         }
     };
 
-    const updateUserStatus = async (userId, newStatus) => {
-        try {
-            // Call the backend API to update user status
-            const response = await adminService.toggleUserStatus(userId, newStatus);
+    const getUserInitial = (firstName, lastName) => {
+        if (firstName) {
+            return firstName.charAt(0).toUpperCase();
+        }
+        if (lastName) {
+            return lastName.charAt(0).toUpperCase();
+        }
+        return 'U'; // Default for 'User'
+    };
 
-            // Update local state with API response or fallback
+    const getAvatarColor = (name) => {
+        const colors = [
+            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+        ];
+        const charCode = name ? name.charCodeAt(0) : 0;
+        return colors[charCode % colors.length];
+    };
+
+    const updateUserStatus = async (userId, isActive) => {
+        try {
+            console.log(`Attempting to update user status:`, { userId, isActive });
+
+            // Call the backend API to update user status
+            const response = await adminService.toggleUserStatus(userId, isActive ? 'active' : 'inactive');
+            console.log('Status update response:', response);
+
+            // Update local state with API response
             if (response && response.user) {
                 setUserList(prev => prev.map(user =>
                     user.id === userId ? {
                         ...user,
-                        status: response.user.status,
                         isActive: response.user.isActive
                     } : user
                 ));
-            } else {
-                // Fallback to local update
-                setUserList(prev => prev.map(user =>
-                    user.id === userId ? { ...user, status: newStatus, isActive: newStatus === 'active' } : user
-                ));
             }
 
-            console.log(`Updated user ${userId} status to ${newStatus}`);
+            console.log(`Successfully updated user ${userId} status to ${isActive ? 'active' : 'inactive'}`);
         } catch (err) {
             console.error('Error updating user status:', err);
-            alert('Failed to update user status. Please try again.');
+            alert(`Failed to update user status. Error: ${err.response?.data?.message || err.message}`);
+        }
+    };
+
+    const updateTutorVerification = async (userId, isVerified) => {
+        try {
+            console.log(`Attempting to update tutor verification:`, { userId, isVerified });
+
+            // Call the backend API to update tutor verification
+            const response = await adminService.updateTutorVerification(userId, isVerified);
+            console.log('Tutor verification response:', response);
+
+            // Update local state
+            setUserList(prev => prev.map(user =>
+                user.id === userId ? {
+                    ...user,
+                    isVerified: isVerified
+                } : user
+            ));
+
+            console.log(`Successfully updated tutor ${userId} verification to ${isVerified}`);
+        } catch (err) {
+            console.error('Error updating tutor verification:', err);
+            alert(`Failed to update tutor verification. Error: ${err.response?.data?.message || err.message}`);
         }
     };
 
@@ -299,11 +218,9 @@ const AdminUserManagement = () => {
         <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-4">
-                    <img
-                        src={user.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
-                        alt={`${user.first_name || 'User'} ${user.last_name || ''}`}
-                        className="h-12 w-12 rounded-full object-cover"
-                    />
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-medium text-lg ${getAvatarColor(user.first_name || user.last_name || user.email)}`}>
+                        {getUserInitial(user.first_name, user.last_name)}
+                    </div>
                     <div>
                         <h3 className="font-medium text-gray-900">{user.first_name || 'Unknown'} {user.last_name || 'User'}</h3>
                         <p className="text-sm text-gray-600">{user.email || 'No email'}</p>
@@ -311,9 +228,15 @@ const AdminUserManagement = () => {
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
                                 {user.role || 'No role'}
                             </span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                                {user.status}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.isActive)}`}>
+                                {getStatusText(user.isActive)}
                             </span>
+                            {user.role === 'tutor' && (
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                    {user.isVerified ? 'Verified' : 'Unverified'}
+                                </span>
+                            )}
                             {user.role === 'tutor' && user.verified && (
                                 <CheckCircle className="h-4 w-4 text-green-600" title="Verified Tutor" />
                             )}
@@ -380,36 +303,27 @@ const AdminUserManagement = () => {
             </div>
 
             <div className="mt-4 flex space-x-2">
-                {user.status === 'pending' && (
-                    <>
-                        <button
-                            onClick={() => updateUserStatus(user.id, 'active')}
-                            className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
-                        >
-                            Approve
-                        </button>
-                        <button
-                            onClick={() => updateUserStatus(user.id, 'suspended')}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
-                        >
-                            Reject
-                        </button>
-                    </>
-                )}
-                {user.status === 'active' && (
+                {user.role === 'tutor' && !user.isVerified && (
                     <button
-                        onClick={() => updateUserStatus(user.id, 'suspended')}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
+                        onClick={() => updateTutorVerification(user.id, true)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
                     >
-                        Suspend
+                        Approve Tutor
                     </button>
                 )}
-                {user.status === 'suspended' && (
+                {user.isActive ? (
                     <button
-                        onClick={() => updateUserStatus(user.id, 'active')}
+                        onClick={() => updateUserStatus(user.id, false)}
+                        className="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
+                    >
+                        Deactivate
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => updateUserStatus(user.id, true)}
                         className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                     >
-                        Reactivate
+                        Activate
                     </button>
                 )}
             </div>
@@ -427,11 +341,9 @@ const AdminUserManagement = () => {
                 </div>
                 <div className="p-6 space-y-6">
                     <div className="flex items-center space-x-4">
-                        <img
-                            src={user.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'}
-                            alt={`${user.first_name || 'User'} ${user.last_name || ''}`}
-                            className="h-16 w-16 rounded-full object-cover"
-                        />
+                        <div className={`h-16 w-16 rounded-full flex items-center justify-center text-white font-medium text-xl ${getAvatarColor(user.first_name || user.last_name || user.email)}`}>
+                            {getUserInitial(user.first_name, user.last_name)}
+                        </div>
                         <div>
                             <h3 className="text-xl font-bold text-gray-900">{user.first_name || 'Unknown'} {user.last_name || 'User'}</h3>
                             <p className="text-gray-600">{user.email || 'No email'}</p>
@@ -439,9 +351,15 @@ const AdminUserManagement = () => {
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
                                     {user.role}
                                 </span>
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                                    {user.status}
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.isActive)}`}>
+                                    {getStatusText(user.isActive)}
                                 </span>
+                                {user.role === 'tutor' && (
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {user.isVerified ? 'Verified' : 'Unverified'}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -555,9 +473,9 @@ const AdminUserManagement = () => {
         students: userList.filter(u => u.role === 'student').length,
         tutors: userList.filter(u => u.role === 'tutor').length,
         admins: userList.filter(u => u.role === 'admin').length,
-        active: userList.filter(u => u.status === 'active').length,
-        pending: userList.filter(u => u.status === 'pending').length,
-        suspended: userList.filter(u => u.status === 'suspended').length
+        active: userList.filter(u => u.isActive).length,
+        inactive: userList.filter(u => !u.isActive).length,
+        verified_tutors: userList.filter(u => u.role === 'tutor' && u.isVerified).length
     };
 
     return (
@@ -599,12 +517,12 @@ const AdminUserManagement = () => {
                     <p className="text-2xl font-bold text-green-600">{stats.active}</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <p className="text-sm text-yellow-600">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                    <p className="text-sm text-red-600">Inactive</p>
+                    <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <p className="text-sm text-red-600">Suspended</p>
-                    <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
+                    <p className="text-sm text-blue-600">Verified Tutors</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.verified_tutors}</p>
                 </div>
             </div>
 
@@ -652,8 +570,6 @@ const AdminUserManagement = () => {
                         >
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
-                            <option value="pending">Pending</option>
-                            <option value="suspended">Suspended</option>
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>

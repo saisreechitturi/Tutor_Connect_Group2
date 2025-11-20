@@ -44,7 +44,7 @@ router.get('/users', [
 
         let queryText = `
         SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
-               tp.rating, tp.total_sessions
+               tp.rating, tp.total_sessions, tp.is_verified
         FROM users u
         LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
         WHERE 1=1
@@ -91,7 +91,8 @@ router.get('/users', [
             ...(row.role === 'tutor' && {
                 tutorStats: {
                     rating: row.rating || 0,
-                    totalSessions: row.total_sessions || 0
+                    totalSessions: row.total_sessions || 0,
+                    isVerified: row.is_verified || false
                 }
             })
         }));
@@ -617,7 +618,7 @@ router.post('/populate-tutor-subjects', asyncHandler(async (req, res) => {
 router.get('/reviews', [
     expressQuery('rating').optional().isInt({ min: 1, max: 5 }),
     expressQuery('reviewerType').optional().isIn(['student', 'tutor']),
-    expressQuery('dateRange').optional().isIn(['week', 'month', 'quarter']),
+    expressQuery('dateRange').optional().isIn(['all', 'week', 'month', 'quarter']),
     expressQuery('search').optional().isString(),
     expressQuery('limit').optional().isInt({ min: 1, max: 100 }),
     expressQuery('offset').optional().isInt({ min: 0 })
@@ -653,13 +654,15 @@ router.get('/reviews', [
                    reviewee.first_name as reviewee_first_name,
                    reviewee.last_name as reviewee_last_name,
                    reviewee.email as reviewee_email,
-                   ts.subject_name,
-                   ts.scheduled_start_time,
-                   ts.duration_minutes
+                   s.name as subject_name,
+                   ts.scheduled_start,
+                   ts.duration_minutes,
+                   ts.status as session_status
             FROM session_reviews sr
             JOIN users reviewer ON sr.reviewer_id = reviewer.id
             JOIN users reviewee ON sr.reviewee_id = reviewee.id
             LEFT JOIN tutoring_sessions ts ON sr.session_id = ts.id
+            LEFT JOIN subjects s ON ts.subject_id = s.id
             WHERE 1=1
         `;
 
@@ -678,7 +681,7 @@ router.get('/reviews', [
         }
 
         // Date range filter
-        if (dateRange) {
+        if (dateRange && dateRange !== 'all') {
             const days = { week: 7, month: 30, quarter: 90 };
             if (days[dateRange]) {
                 queryText += ` AND sr.created_at >= NOW() - INTERVAL '${days[dateRange]} days'`;
@@ -693,7 +696,7 @@ router.get('/reviews', [
                 reviewer.last_name ILIKE $${params.length + 1} OR
                 reviewee.first_name ILIKE $${params.length + 1} OR
                 reviewee.last_name ILIKE $${params.length + 1} OR
-                ts.subject_name ILIKE $${params.length + 1}
+                s.name ILIKE $${params.length + 1}
             )`;
             params.push(`%${search}%`);
         }
@@ -714,12 +717,14 @@ router.get('/reviews', [
             wouldRecommend: row.would_recommend,
             createdAt: row.created_at,
             reviewer: {
+                id: row.reviewer_id,
                 firstName: row.reviewer_first_name,
                 lastName: row.reviewer_last_name,
                 email: row.reviewer_email,
-                avatar: row.reviewer_avatar || `https://images.unsplash.com/photo-${row.reviewer_type === 'tutor' ? '1494790108755-2616b612b786' : '1472099645785-5658abf4ff4e'}?w=150`
+                avatar: row.reviewer_avatar
             },
             reviewee: {
+                id: row.reviewee_id,
                 firstName: row.reviewee_first_name,
                 lastName: row.reviewee_last_name,
                 email: row.reviewee_email
@@ -727,7 +732,8 @@ router.get('/reviews', [
             session: row.subject_name ? {
                 subject: row.subject_name,
                 duration: row.duration_minutes,
-                date: row.scheduled_start_time ? new Date(row.scheduled_start_time).toISOString().split('T')[0] : null
+                scheduledStart: row.scheduled_start,
+                status: row.session_status
             } : null
         }));
 
@@ -744,7 +750,7 @@ router.get('/reviews', [
             countQueryText += ` AND sr.reviewer_type = $${++paramIndex}`;
             countParams.push(reviewerType);
         }
-        if (dateRange) {
+        if (dateRange && dateRange !== 'all') {
             const days = { week: 7, month: 30, quarter: 90 };
             if (days[dateRange]) {
                 countQueryText += ` AND sr.created_at >= NOW() - INTERVAL '${days[dateRange]} days'`;
@@ -801,6 +807,96 @@ router.delete('/reviews/:id', asyncHandler(async (req, res) => {
     } catch (error) {
         logger.error(`[${requestId}] Error deleting review:`, error);
         throw error;
+    }
+}));
+
+// Update tutor verification status
+router.patch('/tutors/:id/verification', [
+    body('isVerified').isBoolean()
+], asyncHandler(async (req, res) => {
+    const requestId = Math.random().toString(36).substr(2, 9);
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+        logger.warn(`[${requestId}] Validation failed:`, errors.array());
+        return res.status(400).json({
+            message: 'Validation failed',
+            errors: errors.array()
+        });
+    }
+
+    const { isVerified } = req.body;
+    const userId = req.params.id;
+
+    try {
+        // First check if user exists and is a tutor
+        const userResult = await query(
+            'SELECT id, role FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (userResult.rows[0].role !== 'tutor') {
+            return res.status(400).json({ message: 'User is not a tutor' });
+        }
+
+        // Update or insert tutor profile verification status
+        logger.info(`[${requestId}] Attempting to update tutor verification:`, { userId, isVerified });
+
+        // First check if tutor profile exists
+        const existingProfile = await query(
+            'SELECT user_id FROM tutor_profiles WHERE user_id = $1',
+            [userId]
+        );
+
+        let result;
+        if (existingProfile.rows.length > 0) {
+            // Update existing profile
+            result = await query(`
+                UPDATE tutor_profiles 
+                SET is_verified = $2, updated_at = NOW()
+                WHERE user_id = $1
+                RETURNING user_id, is_verified
+            `, [userId, isVerified]);
+        } else {
+            // Insert new profile with default values
+            result = await query(`
+                INSERT INTO tutor_profiles (
+                    user_id, 
+                    is_verified, 
+                    hourly_rate, 
+                    years_of_experience,
+                    created_at,
+                    updated_at
+                )
+                VALUES ($1, $2, 0.00, 0, NOW(), NOW())
+                RETURNING user_id, is_verified
+            `, [userId, isVerified]);
+        }
+
+        logger.info(`[${requestId}] Tutor verification updated successfully:`, { userId, isVerified, result: result.rows[0] });
+
+        res.json({
+            message: 'Tutor verification status updated successfully',
+            tutor: {
+                id: result.rows[0].user_id,
+                isVerified: result.rows[0].is_verified
+            }
+        });
+    } catch (error) {
+        logger.error(`[${requestId}] Error updating tutor verification:`, {
+            error: error.message,
+            stack: error.stack,
+            userId,
+            isVerified
+        });
+        res.status(500).json({
+            message: 'Internal server error',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 }));
 

@@ -51,12 +51,20 @@ class AdminService {
     // Activate/Deactivate user (admin only)
     async toggleUserStatus(userId, status) {
         try {
+            console.log(`[AdminService] Updating user status:`, { userId, status });
             const response = await apiClient.patch(`/admin/users/${userId}/status`, {
                 status: status
             });
+            console.log(`[AdminService] Status update successful:`, response);
             return response;
         } catch (error) {
-            console.error('[AdminService] Toggle user status failed:', error);
+            console.error('[AdminService] Toggle user status failed:', {
+                error: error.message,
+                status: error.response?.status,
+                data: error.response?.data,
+                url: `/admin/users/${userId}/status`,
+                requestData: { status }
+            });
             throw error;
         }
     }
@@ -70,6 +78,26 @@ class AdminService {
             return response;
         } catch (error) {
             console.error('[AdminService] Toggle user verification failed:', error);
+        }
+    }
+
+    // Update tutor verification status (admin only)
+    async updateTutorVerification(userId, isVerified) {
+        try {
+            console.log(`[AdminService] Updating tutor verification:`, { userId, isVerified });
+            const response = await apiClient.patch(`/admin/tutors/${userId}/verification`, {
+                isVerified
+            });
+            console.log(`[AdminService] Tutor verification update successful:`, response);
+            return response;
+        } catch (error) {
+            console.error('[AdminService] Update tutor verification failed:', {
+                error: error.message,
+                status: error.response?.status,
+                data: error.response?.data,
+                url: `/admin/tutors/${userId}/verification`,
+                requestData: { isVerified }
+            });
             throw error;
         }
     }

@@ -47,7 +47,7 @@ router.get('/', [
     JOIN tutor_profiles tp ON u.id = tp.user_id
     LEFT JOIN tutor_subjects ts ON tp.user_id = ts.tutor_id
     LEFT JOIN subjects s ON ts.subject_id = s.id
-    WHERE u.role = 'tutor' AND u.is_active = true
+    WHERE u.role = 'tutor' AND u.is_active = true AND tp.is_verified = true
   `;
 
     const params = [];
@@ -91,7 +91,8 @@ router.get('/', [
         totalSessions: row.total_sessions,
         languages: row.languages_spoken,
         education: row.education_background,
-        isAvailable: row.is_verified, // Using is_verified as availability indicator
+        isVerified: row.is_verified,
+        isAvailable: true, // All returned tutors are verified and available
         subjects: row.subjects || []
     }));
 
@@ -109,7 +110,7 @@ router.get('/:tutorId/details', asyncHandler(async (req, res) => {
                tp.languages_spoken, tp.education_background, tp.is_verified
         FROM users u
         JOIN tutor_profiles tp ON u.id = tp.user_id
-        WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true
+        WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true AND tp.is_verified = true
     `, [tutorId]);
 
     if (tutorResult.rows.length === 0) {
@@ -169,7 +170,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
            tp.languages_spoken, tp.rating, tp.total_sessions, tp.is_verified
     FROM users u
     JOIN tutor_profiles tp ON u.id = tp.user_id
-    WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true
+    WHERE u.id = $1 AND u.role = 'tutor' AND u.is_active = true AND tp.is_verified = true
   `, [req.params.id]);
 
     if (result.rows.length === 0) {
