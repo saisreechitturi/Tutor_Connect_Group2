@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Plus, Edit2, Trash2, AlertCircle, Calendar } from 'lucide-react';
+import { Clock, Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import { availabilityService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { DAY_OF_WEEK_MIN, DAY_OF_WEEK_MAX } from '../constants/schema';
@@ -13,9 +13,7 @@ const TutorAvailability = () => {
     const [error, setError] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingSlot, setEditingSlot] = useState(null);
-    const [activeTab, setActiveTab] = useState('weekly');
     const [recurringSlots, setRecurringSlots] = useState([]);
-    const [specificSlots, setSpecificSlots] = useState([]);
 
     useEffect(() => {
         if (user?.id) {
@@ -31,10 +29,8 @@ const TutorAvailability = () => {
                 includeBooked: false
             });
             const recurring = data.availability?.recurringSlots || [];
-            const specific = data.availability?.specificSlots || [];
             setAvailabilitySlots(recurring);
             setRecurringSlots(recurring);
-            setSpecificSlots(specific);
         } catch (err) {
             console.error('Failed to load availability', err);
             setError(err.message || 'Failed to load availability');
@@ -110,191 +106,88 @@ const TutorAvailability = () => {
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">Manage Availability</h1>
                 <p className="mt-2 text-gray-600">
-                    Set your weekly schedule and manage specific date overrides
+                    Set your weekly recurring schedule for tutoring availability
                 </p>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
-                    <button
-                        onClick={() => setActiveTab('weekly')}
-                        className={`${activeTab === 'weekly'
-                            ? 'border-primary-600 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <Clock className="h-5 w-5 inline-block mr-2" />
-                        Weekly Schedule
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('specific')}
-                        className={`${activeTab === 'specific'
-                            ? 'border-primary-600 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <Calendar className="h-5 w-5 inline-block mr-2" />
-                        Specific Dates
-                    </button>
-                </nav>
-            </div>
 
-            {/* Weekly Schedule Tab */}
-            {activeTab === 'weekly' && (
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold text-gray-900">Recurring Weekly Availability</h2>
+
+            {/* Weekly Schedule */}
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900">Recurring Weekly Availability</h2>
+                    <button
+                        onClick={handleAddSlot}
+                        className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Time Slot
+                    </button>
+                </div>
+
+                {recurringSlots.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-12 text-center">
+                        <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-4">No weekly availability set</p>
                         <button
                             onClick={handleAddSlot}
                             className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                         >
                             <Plus className="h-4 w-4 mr-2" />
-                            Add Time Slot
+                            Add Your First Time Slot
                         </button>
                     </div>
+                ) : (
+                    <div className="space-y-4">
+                        {DAYS_OF_WEEK.map((day, index) => {
+                            const daySlots = availabilitySlots.filter(slot => slot.dayOfWeek === index);
+                            if (daySlots.length === 0) return null;
 
-                    {recurringSlots.length === 0 ? (
-                        <div className="bg-gray-50 rounded-lg p-12 text-center">
-                            <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-600 mb-4">No weekly availability set</p>
-                            <button
-                                onClick={handleAddSlot}
-                                className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Your First Time Slot
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {DAYS_OF_WEEK.map((day, index) => {
-                                const daySlots = availabilitySlots.filter(slot => slot.dayOfWeek === index);
-                                if (daySlots.length === 0) return null;
-
-                                return (
-                                    <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                                        <h3 className="font-semibold text-gray-900 mb-3">{day}</h3>
-                                        <div className="space-y-2">
-                                            {daySlots.map(slot => (
-                                                <div
-                                                    key={slot.id}
-                                                    className="flex items-center justify-between bg-gray-50 rounded p-3"
-                                                >
-                                                    <div className="flex items-center space-x-4">
-                                                        <Clock className="h-5 w-5 text-gray-400" />
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">
-                                                                {slot.startTime} - {slot.endTime}
-                                                            </p>
-                                                            <p className="text-sm text-gray-500">
-                                                                Available for tutoring sessions
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <button
-                                                            onClick={() => handleEditSlot(slot)}
-                                                            className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded"
-                                                            aria-label="Edit slot"
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteSlot(slot.id)}
-                                                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-gray-100 rounded"
-                                                            aria-label="Delete slot"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                            return (
+                                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                    <h3 className="font-semibold text-gray-900 mb-3">{day}</h3>
+                                    <div className="space-y-2">
+                                        {daySlots.map(slot => (
+                                            <div
+                                                key={slot.id}
+                                                className="flex items-center justify-between bg-gray-50 rounded p-3"
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <Clock className="h-5 w-5 text-gray-400" />
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">
+                                                            {slot.startTime} - {slot.endTime}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Available for tutoring sessions
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Specific Dates Tab */}
-            {activeTab === 'specific' && (
-                <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold text-gray-900">Specific Date Overrides</h2>
-                        <button
-                            onClick={handleAddSlot}
-                            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Date Override
-                        </button>
-                    </div>
-
-                    {specificSlots.length === 0 ? (
-                        <div className="bg-gray-50 rounded-lg p-12 text-center">
-                            <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-600 mb-4">No specific date overrides set</p>
-                            <p className="text-sm text-gray-500 mb-4">
-                                Use date overrides to block time off or add extra availability on specific dates
-                            </p>
-                            <button
-                                onClick={handleAddSlot}
-                                className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Date Override
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {specificSlots.map(slot => (
-                                <div
-                                    key={slot.id}
-                                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between"
-                                >
-                                    <div className="flex items-center space-x-4">
-                                        <Calendar className="h-5 w-5 text-gray-400" />
-                                        <div>
-                                            <p className="font-medium text-gray-900">
-                                                {new Date(`${slot.date}T00:00:00Z`).toLocaleDateString('en-US', {
-                                                    weekday: 'short',
-                                                    year: 'numeric',
-                                                    month: 'short',
-                                                    day: 'numeric',
-                                                    timeZone: 'UTC'
-                                                })}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                {slot.startTime} - {slot.endTime}
-                                                {slot.isAvailable ? ' (Available)' : ' (Blocked)'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <button
-                                            onClick={() => handleEditSlot(slot)}
-                                            className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded"
-                                            aria-label="Edit override"
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteSlot(slot.id)}
-                                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-gray-100 rounded"
-                                            aria-label="Delete override"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                                <div className="flex items-center space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditSlot(slot)}
+                                                        className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded"
+                                                        aria-label="Edit slot"
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSlot(slot.id)}
+                                                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-gray-100 rounded"
+                                                        aria-label="Delete slot"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
 
             {/* Add/Edit Modal */}
             {showAddModal && (
@@ -304,7 +197,6 @@ const TutorAvailability = () => {
                     onSave={handleSaveSlot}
                     slot={editingSlot}
                     tutorId={user?.id}
-                    isWeekly={activeTab === 'weekly'}
                 />
             )}
         </div>
@@ -312,7 +204,7 @@ const TutorAvailability = () => {
 };
 
 // Slot Modal Component
-const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly = true }) => {
+const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId }) => {
     // Helper function to convert HH:MM:SS to HH:MM
     const formatTimeForInput = (time) => {
         if (!time) return '';
@@ -325,9 +217,7 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly = true }) 
     const [formData, setFormData] = useState({
         dayOfWeek: slot?.dayOfWeek ?? 1,
         startTime: formatTimeForInput(slot?.startTime) || '09:00',
-        endTime: formatTimeForInput(slot?.endTime) || '10:00',
-        specificDate: slot?.specificDate || '',
-        isAvailable: slot?.isAvailable ?? true
+        endTime: formatTimeForInput(slot?.endTime) || '10:00'
     });
     const [saving, setSaving] = useState(false);
     const [validationError, setValidationError] = useState(null);
@@ -431,22 +321,6 @@ const SlotModal = ({ isOpen, onClose, onSave, slot, tutorId, isWeekly = true }) 
                             />
                         </div>
                     </div>
-
-                    {!isWeekly && (
-                        <div>
-                            <label className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.isAvailable}
-                                    onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
-                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                />
-                                <span className="ml-2 text-sm text-gray-700">Available (uncheck to block this time)</span>
-                            </label>
-                        </div>
-                    )}
-
-
 
                     <div className="flex space-x-3 pt-4">
                         <button
