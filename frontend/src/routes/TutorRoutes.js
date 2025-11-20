@@ -7,7 +7,7 @@ import TutorAvailability from '../pages/TutorAvailability';
 import TutorSettings from '../pages/TutorSettings';
 // Use the same working components that students use
 import TaskManager from '../components/ui/TaskManager';
-import Calendar from '../components/ui/Calendar';
+import TutorCalendar from '../pages/TutorCalendar';
 import Messages from '../components/ui/Messages';
 import MySessions from '../components/ui/MySessions';
 
@@ -20,7 +20,7 @@ const TutorRoutes = () => {
                 <Route path="analytics" element={<TutorAnalytics />} />
                 <Route path="availability" element={<TutorAvailability />} />
                 <Route path="tasks" element={<TaskManager />} />
-                <Route path="calendar" element={<Calendar />} />
+                <Route path="calendar" element={<TutorCalendar />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="settings" element={<TutorSettings />} />
             </Routes>

@@ -12,7 +12,8 @@ import {
     Menu,
     X,
     Clock,
-    Star
+    Star,
+    Calendar
 } from 'lucide-react';
 import Toaster from '../ui/Toaster';
 
@@ -27,7 +28,8 @@ const DashboardLayout = ({ userRole, children }) => {
         const baseCommonItems = [
             { name: 'Dashboard', href: `/${userRole}`, icon: Home },
             { name: 'Messages', href: `/${userRole}/messages`, icon: MessageSquare },
-            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare }
+            { name: 'Tasks', href: `/${userRole}/tasks`, icon: CheckSquare },
+            { name: 'Calendar', href: `/${userRole}/calendar`, icon: Calendar }
         ];
 
         // Admin gets basic navigation without calendar, tasks or platform messages
