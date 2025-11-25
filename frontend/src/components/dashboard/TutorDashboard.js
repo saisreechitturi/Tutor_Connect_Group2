@@ -126,7 +126,7 @@ const TutorDashboard = () => {
             <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-lg p-6 text-white">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h1 className="text-2xl font-bold">Tutor Dashboard</h1>
+                        <h1 className="text-2xl font-bold">Welcome back, {user?.firstName || user?.profile?.firstName || 'Tutor'}!</h1>
                         <p className="mt-2 text-green-100">
                             Manage your students, sessions, and track your teaching progress.
                         </p>

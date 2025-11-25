@@ -138,7 +138,7 @@ const StudentDashboard = () => {
             {/* Welcome Header */}
             <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-6 text-white">
                 <h1 className="text-2xl font-bold">
-                    Welcome back, {user?.profile?.firstName}!
+                    Welcome back, {user?.firstName || user?.profile?.firstName || 'Student'}!
                 </h1>
                 <p className="mt-2 text-primary-100">
                     Ready to continue your learning journey? Check out your upcoming sessions and tasks below.
