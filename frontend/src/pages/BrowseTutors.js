@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
+import { Star, MapPin, Clock, DollarSign, Filter, BookOpen, Users, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { tutorService, subjectsService } from '../services';
 import BookSessionModal from '../components/modals/BookSessionModal';
@@ -150,16 +150,13 @@ const BrowseTutors = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         {/* Search Input */}
                         <div className="lg:col-span-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search tutors, subjects..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search by subject, tutor name..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
                         </div>
 
                         {/* Subject Filter */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Star, MapPin, Clock, DollarSign, Filter, BookOpen } from 'lucide-react';
+import { Star, MapPin, Clock, DollarSign, Filter, BookOpen } from 'lucide-react';
 import { tutorService } from '../../services';
 import BookSessionModal from '../modals/BookSessionModal';
 
@@ -126,12 +126,11 @@ const TutorSearch = () => {
                 <div className="space-y-4">
                     {/* Search Bar with Filter Button */}
                     <div className="flex space-x-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <div className="flex-1">
                             <input
                                 type="text"
                                 placeholder="Search by subject, tutor name..."
-                                className="input-field pl-10"
+                                className="input-field"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -311,7 +310,7 @@ const TutorSearch = () => {
 
             {filteredTutors.length === 0 && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No tutors found</h3>
                     <p className="text-gray-600">
                         Try adjusting your search criteria or browse all available tutors.
