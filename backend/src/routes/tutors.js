@@ -917,31 +917,31 @@ router.post('/:tutorId/refresh-stats', authenticateToken, asyncHandler(async (re
             SET 
                 total_sessions = (
                     SELECT COUNT(*) FROM tutoring_sessions 
-                    WHERE tutor_id = $1 AND status = 'completed'
+                    WHERE tutor_id = $1::uuid AND status = 'completed'
                 ),
                 total_students = (
                     SELECT COUNT(DISTINCT student_id) FROM tutoring_sessions 
-                    WHERE tutor_id = $1
+                    WHERE tutor_id = $1::uuid
                 ),
                 rating = (
                     SELECT COALESCE(ROUND(AVG(rating)::numeric, 2), 0)
                     FROM session_reviews sr
                     JOIN tutoring_sessions ts ON sr.session_id = ts.id
-                    WHERE ts.tutor_id = $1
+                    WHERE ts.tutor_id = $1::uuid
                 ),
                 total_earnings = (
                     SELECT COALESCE(SUM(p.amount), 0) FROM payments p
-                    WHERE p.recipient_id = $1 AND p.status = 'completed'
+                    WHERE p.recipient_id = $1::uuid AND p.status = 'completed'
                 ),
                 monthly_earnings = (
                     SELECT COALESCE(SUM(p.amount), 0) FROM payments p
-                    WHERE p.recipient_id = $1 
+                    WHERE p.recipient_id = $1::uuid 
                     AND p.status = 'completed'
-                    AND EXTRACT(MONTH FROM p.created_at) = $2
-                    AND EXTRACT(YEAR FROM p.created_at) = $3
+                    AND EXTRACT(MONTH FROM p.created_at) = $2::integer
+                    AND EXTRACT(YEAR FROM p.created_at) = $3::integer
                 ),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $1
+            WHERE user_id = $1::uuid
         `, [tutorId, currentMonth, currentYear]);
 
         // Update performance metrics for current month
@@ -951,9 +951,9 @@ router.post('/:tutorId/refresh-stats', authenticateToken, asyncHandler(async (re
                 total_earnings, total_hours, average_rating, total_reviews
             )
             SELECT 
-                $1,
-                $3,
-                $2,
+                $1::uuid,
+                $3::integer,
+                $2::integer,
                 COUNT(*) FILTER (WHERE ts.status IN ('completed', 'scheduled', 'in_progress')),
                 COUNT(*) FILTER (WHERE ts.status = 'completed'),
                 COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'completed'), 0),
@@ -966,19 +966,19 @@ router.post('/:tutorId/refresh-stats', authenticateToken, asyncHandler(async (re
                 ))/3600) FILTER (WHERE ts.status = 'completed'), 0),
                 (SELECT COALESCE(AVG(rating), 0) FROM session_reviews sr 
                  JOIN tutoring_sessions ts2 ON sr.session_id = ts2.id 
-                 WHERE ts2.tutor_id = $1
-                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2
-                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3),
+                 WHERE ts2.tutor_id = $1::uuid
+                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2::integer
+                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3::integer),
                 (SELECT COUNT(*) FROM session_reviews sr 
                  JOIN tutoring_sessions ts2 ON sr.session_id = ts2.id 
-                 WHERE ts2.tutor_id = $1
-                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2
-                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3)
+                 WHERE ts2.tutor_id = $1::uuid
+                 AND EXTRACT(MONTH FROM ts2.scheduled_start) = $2::integer
+                 AND EXTRACT(YEAR FROM ts2.scheduled_start) = $3::integer)
             FROM tutoring_sessions ts
-            LEFT JOIN payments p ON ts.id = p.session_id AND p.recipient_id = $1
-            WHERE ts.tutor_id = $1
-            AND EXTRACT(MONTH FROM ts.scheduled_start) = $2
-            AND EXTRACT(YEAR FROM ts.scheduled_start) = $3
+            LEFT JOIN payments p ON ts.id = p.session_id AND p.recipient_id = $1::uuid
+            WHERE ts.tutor_id = $1::uuid
+            AND EXTRACT(MONTH FROM ts.scheduled_start) = $2::integer
+            AND EXTRACT(YEAR FROM ts.scheduled_start) = $3::integer
             ON CONFLICT (tutor_id, year, month) DO UPDATE SET
                 total_sessions = EXCLUDED.total_sessions,
                 completed_sessions = EXCLUDED.completed_sessions,
