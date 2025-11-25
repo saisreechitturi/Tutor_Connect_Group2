@@ -175,7 +175,7 @@ router.put('/:id', [
     body('hourlyRate').optional().isFloat({ min: 0 }),
     body('yearsOfExperience').optional().isInt({ min: 0 }),
     body('educationBackground').optional().isString(),
-    body('certifications').optional().isString(),
+    body('certifications').optional().isArray(),
     body('teachingPhilosophy').optional().isString(),
     body('languagesSpoken').optional().isArray(),
     body('preferredTeachingMethod').optional().isString(),
