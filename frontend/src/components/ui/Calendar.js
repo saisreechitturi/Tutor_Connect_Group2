@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus, RefreshCw, AlertCircle, CheckSquare } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, MapPin, Plus, RefreshCw, AlertCircle, CheckSquare, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { calendarService } from '../../services';
+import { exportToICalendar } from '../../utils/icalGenerator';
 import AddTaskModal from '../modals/AddTaskModal';
 import BookSessionModal from '../modals/BookSessionModal';
 import TaskDetailsModal from '../modals/TaskDetailsModal';
@@ -344,6 +345,30 @@ const Calendar = () => {
         fetchCalendarData();
     };
 
+    // Export calendar to iCalendar format
+    const handleExportCalendar = () => {
+        if (!calendarEvents || calendarEvents.length === 0) {
+            alert('No events to export. Please add some events to your calendar first.');
+            return;
+        }
+
+        const calendarName = user?.role === 'student'
+            ? 'TutorConnect - Student Calendar'
+            : user?.role === 'tutor'
+                ? 'TutorConnect - Tutor Calendar'
+                : 'TutorConnect Calendar';
+
+        const result = exportToICalendar(calendarEvents, calendarName);
+
+        if (result.success) {
+            // Show success feedback
+            const eventCount = calendarEvents.length;
+            alert(`✓ Successfully exported ${eventCount} event${eventCount !== 1 ? 's' : ''} to iCalendar file!\n\nYou can import this file into Google Calendar, Outlook, Apple Calendar, or any other calendar application.`);
+        } else {
+            alert(`✗ Failed to export calendar: ${result.message}`);
+        }
+    };
+
     // Generate calendar days
     const generateCalendarDays = () => {
         const year = currentDate.getFullYear();
@@ -499,6 +524,15 @@ const Calendar = () => {
                     </h1>
                     <div className="flex items-center space-x-2">
                         <button
+                            onClick={handleExportCalendar}
+                            disabled={!calendarEvents || calendarEvents.length === 0}
+                            className="flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            title="Export calendar to iCal format"
+                        >
+                            <Download className="h-4 w-4 mr-1" />
+                            Export iCal
+                        </button>
+                        <button
                             onClick={goToToday}
                             className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                         >
@@ -507,6 +541,7 @@ const Calendar = () => {
                         <button
                             onClick={() => fetchCalendarData()}
                             className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Refresh calendar"
                         >
                             <RefreshCw className="h-4 w-4" />
                         </button>
