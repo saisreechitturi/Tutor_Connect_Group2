@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, User, Mail, Phone, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Filter, User, Mail, Phone, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { adminService } from '../services';
 
 const AdminUserManagement = () => {
@@ -198,22 +198,6 @@ const AdminUserManagement = () => {
         }
     };
 
-    const deleteUser = async (userId) => {
-        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            try {
-                // TODO: Replace with actual API call when backend is ready
-                // await adminService.deleteUser(userId);
-
-                setUserList(prev => prev.filter(user => user.id !== userId));
-
-                console.log(`Deleted user ${userId}`);
-            } catch (err) {
-                console.error('Error deleting user:', err);
-                alert('Failed to delete user. Please try again.');
-            }
-        }
-    };
-
     const UserCard = ({ user }) => (
         <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-4">
@@ -242,20 +226,6 @@ const AdminUserManagement = () => {
                             )}
                         </div>
                     </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <button
-                        onClick={() => setSelectedUser(user)}
-                        className="text-gray-400 hover:text-gray-600"
-                    >
-                        <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                        onClick={() => deleteUser(user.id)}
-                        className="text-red-400 hover:text-red-600"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
                 </div>
             </div>
 
@@ -437,15 +407,6 @@ const AdminUserManagement = () => {
                     <div className="flex space-x-3 pt-4 border-t border-gray-200">
                         <button
                             onClick={() => {
-                                console.log('Edit user:', user.first_name, user.last_name);
-                                alert('Edit user functionality will be implemented soon.');
-                            }}
-                            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                        >
-                            Edit User
-                        </button>
-                        <button
-                            onClick={() => {
                                 console.log('Send message to:', user.first_name, user.last_name);
                                 alert('Send message functionality will be implemented soon.');
                             }}
@@ -480,18 +441,9 @@ const AdminUserManagement = () => {
 
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                    <p className="text-gray-600 mt-1">Manage all platform users, roles, and permissions</p>
-                </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors flex items-center space-x-2"
-                >
-                    <Plus className="h-4 w-4" />
-                    <span>Add User</span>
-                </button>
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                <p className="text-gray-600 mt-1">Manage all platform users, roles, and permissions</p>
             </div>
 
             {/* Stats Overview */}
