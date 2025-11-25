@@ -332,21 +332,17 @@ const MySessions = () => {
                             <BookOpen className="h-6 w-6 mr-2 text-primary-600" />
                             My Sessions
                         </h1>
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => {
-                                    if (user.role === 'student') {
-                                        navigate('/student/tutors');
-                                    } else {
-                                        setShowBookingModal(true);
-                                    }
-                                }}
-                                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                {user.role === 'student' ? 'Find Tutors' : 'Add Availability'}
-                            </button>
-                        </div>
+                        {user.role === 'student' && (
+                            <div className="flex items-center">
+                                <button
+                                    onClick={() => navigate('/student/tutors')}
+                                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center"
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Find Tutors
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
