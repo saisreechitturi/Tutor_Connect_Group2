@@ -44,7 +44,13 @@ router.get('/users', [
 
         let queryText = `
         SELECT u.id, u.email, u.role, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
-               tp.rating, tp.total_sessions, tp.is_verified
+               tp.rating, tp.total_sessions, tp.is_verified,
+               COALESCE(
+                   (SELECT json_agg(json_build_object('id', s.id, 'name', s.name))
+                    FROM tutor_subjects ts
+                    JOIN subjects s ON ts.subject_id = s.id
+                    WHERE ts.tutor_id = u.id), '[]'::json
+               ) as subjects
         FROM users u
         LEFT JOIN tutor_profiles tp ON u.id = tp.user_id
         WHERE 1=1
@@ -88,6 +94,7 @@ router.get('/users', [
             status: row.is_active ? 'active' : 'inactive',
             isActive: row.is_active,
             createdAt: row.created_at,
+            subjects: Array.isArray(row.subjects) ? row.subjects : [],
             ...(row.role === 'tutor' && {
                 tutorStats: {
                     rating: row.rating || 0,
