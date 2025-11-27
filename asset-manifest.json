@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Tutor_Connect_Group2/static/css/main.9c8a7cdb.css",
+    "main.js": "/Tutor_Connect_Group2/static/js/main.d1559e81.js",
+    "index.html": "/Tutor_Connect_Group2/index.html",
+    "main.9c8a7cdb.css.map": "/Tutor_Connect_Group2/static/css/main.9c8a7cdb.css.map",
+    "main.d1559e81.js.map": "/Tutor_Connect_Group2/static/js/main.d1559e81.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.9c8a7cdb.css",
+    "static/js/main.d1559e81.js"
+  ]
+}
